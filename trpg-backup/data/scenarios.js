@@ -1,5 +1,6 @@
 // 시나리오 목록. 새 로그를 올릴 때마다 맨 위에 항목 하나만 추가하면 인덱스에 반영돼.
 // tools/new-log.html 에서 이 형식의 항목을 자동으로 만들어줘.
+// cast 의 image 는 비워도 돼. 비우면 이름 첫 글자로 아바타가 만들어져.
 window.SCENARIOS = [
   {
     title: "샘플 시나리오 — 첫 번째 밤",
@@ -11,6 +12,11 @@ window.SCENARIOS = [
     tags: ["샘플", "현대"],
     cover: "",
     description: "이 항목은 형식 확인용 샘플이야. 지우고 내 로그로 교체하면 돼.",
+    cast: [
+      { name: "한서진", image: "" },
+      { name: "윤하", image: "" },
+      { name: "???", image: "" }
+    ],
     url: "logs/sample.html"
   }
 ];

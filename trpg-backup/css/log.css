@@ -1,0 +1,76 @@
+:root {
+  --navy: #1c3768;
+  --navy-deep: #12244a;
+  --ink: #15171c;
+  --muted: #6b7280;
+  --line: #e3e6eb;
+  --bg: #f6f7f9;
+  --font: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --log-size: 15px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.6; }
+a { color: var(--navy); }
+
+.topbar { background: var(--navy-deep); color: #fff; }
+.topbar-inner {
+  max-width: 800px; margin: 0 auto; padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.topbar a.back { color: #fff; text-decoration: none; font-size: .85rem; opacity: .85; }
+.topbar a.back:hover { opacity: 1; text-decoration: underline; }
+.size { display: flex; gap: 4px; }
+.size button {
+  width: 30px; height: 28px; border: 1px solid rgba(255,255,255,.35); border-radius: 4px;
+  background: transparent; color: #fff; font: inherit; font-size: .8rem; cursor: pointer;
+}
+.size button:hover { background: rgba(255,255,255,.12); }
+
+.container { max-width: 800px; margin: 0 auto; padding: 0 20px 80px; }
+
+.log-head { padding: 36px 0 24px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+.log-head .eyebrow { margin: 0 0 6px; font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: var(--navy); font-weight: 700; }
+.log-head h1 { margin: 0 0 8px; font-size: 1.7rem; line-height: 1.3; word-break: keep-all; }
+.log-head p { margin: 0; font-size: .85rem; color: var(--muted); }
+.log-head img.hero { width: 100%; max-height: 320px; object-fit: cover; border-radius: 4px; margin: 0 0 20px; display: block; }
+
+.log { font-size: var(--log-size); }
+
+/* roll20 chat archive markup */
+.content { display: block; position: relative; line-height: 1.5; word-break: break-all; overflow-wrap: anywhere; }
+.message {
+  position: relative; margin: 0 0 6px; padding: 8px 12px;
+  background: #fff; border: 1px solid var(--line); border-radius: 4px;
+  color: #2a2e36; overflow: hidden;
+}
+.message.you { background: #eef3fb; border-color: #d6e1f3; }
+.message.desc, .desc.message {
+  padding-left: 12px; text-align: center; font-style: italic; font-weight: 600;
+  background: transparent; border-style: dashed;
+}
+.message .avatar { position: absolute; top: 8px; left: 8px; width: 28px; height: 28px; display: flex; }
+.message .avatar img { width: 28px; height: 28px; object-fit: cover; border-radius: 2px; padding: 0; }
+.message .by { font-weight: 700; color: var(--navy-deep); margin-right: 4px; }
+.message:has(> .avatar) { padding-left: 48px; }
+.message .spacer { display: none; }
+.message > a > img, .message img { max-width: 100%; height: auto; }
+.message .avatar img { max-width: none; }
+.tstamp { display: none; }
+.sheet-template-value { padding: 2px 5px; background: rgba(255,255,255,.5); cursor: help; }
+.inlinerollresult { padding: 0 3px; border: 1px solid #c9d3e6; border-radius: 3px; background: #f4f7fc; }
+.inlinerollresult.fullcrit { border-color: #3a8a4a; }
+.inlinerollresult.fullfail { border-color: #b84a4a; }
+table { border-collapse: collapse; }
+td, th { border-bottom: 1px solid var(--line); padding: 2px 6px; }
+
+@media (max-width: 640px) {
+  .container { padding: 0 12px 60px; }
+  .topbar-inner { padding: 10px 12px; }
+  .log-head h1 { font-size: 1.35rem; }
+  .message:has(> .avatar) { padding-left: 44px; }
+}
+@media print {
+  .topbar { display: none; }
+  body { background: #fff; }
+}

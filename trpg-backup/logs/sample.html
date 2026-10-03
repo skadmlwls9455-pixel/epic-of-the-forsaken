@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>샘플 시나리오 — 첫 번째 밤</title>
+  <link rel="stylesheet" href="../css/log.css">
+</head>
+<body>
+  <div class="topbar"><div class="topbar-inner">
+    <a class="back" href="../index.html">← 목록으로</a>
+    <div class="size" aria-label="글자 크기">
+      <button type="button" data-size="-1" aria-label="글자 작게">A−</button>
+      <button type="button" data-size="1" aria-label="글자 크게">A+</button>
+    </div>
+  </div></div>
+
+  <div class="container">
+    <header class="log-head">
+      <p class="eyebrow">CoC 7th</p>
+      <h1>샘플 시나리오 — 첫 번째 밤</h1>
+      <p>GM GM이름 · PL PL1, PL2 · 2026-10-03</p>
+    </header>
+
+    <section class="log" id="log">
+      <!-- 아래 div.content 를 롤20 챗로그의 div.content 로 통째로 교체 -->
+      <div class="content">
+        <div class="message desc"><div class="spacer"></div>폐교의 복도. 비 냄새와 오래된 분필 가루 냄새가 섞여 있다.</div>
+        <div class="message general"><div class="spacer"></div><span class="by">GM:</span>문 안쪽에서 무언가 긁는 소리가 들립니다. 어떻게 하시겠어요?</div>
+        <div class="message general you"><div class="spacer"></div><span class="by">PL1:</span>조심스럽게 문에 귀를 대 볼게요. 청취 굴립니다.</div>
+        <div class="message rollresult"><div class="spacer"></div><span class="by">PL1:</span>1d100 = <span class="inlinerollresult">34</span> / 50 성공</div>
+        <div class="message general"><div class="spacer"></div><span class="by">GM:</span>사람의 숨소리 같습니다. 아주 가까이에서 들려요.</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement, size = 15;
+      try { size = +localStorage.getItem("log-size") || 15; } catch (e) {}
+      function apply() { root.style.setProperty("--log-size", size + "px"); }
+      apply();
+      document.querySelectorAll("[data-size]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          size = Math.max(11, Math.min(24, size + +b.dataset.size));
+          apply();
+          try { localStorage.setItem("log-size", size); } catch (e) {}
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

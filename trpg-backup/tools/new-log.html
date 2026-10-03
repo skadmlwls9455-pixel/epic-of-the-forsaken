@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>새 로그 만들기</title>
+  <link rel="stylesheet" href="../css/site.css">
+  <style>
+    form { display: grid; gap: 14px; padding: 24px 0; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+    input, textarea, select {
+      font: inherit; font-size: .9rem; color: var(--ink); padding: 9px 12px;
+      border: 1px solid var(--line); border-radius: 6px; background: #fff; width: 100%;
+    }
+    textarea { min-height: 200px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; }
+    input:focus, textarea:focus { outline: 2px solid var(--navy); outline-offset: -1px; }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    button.primary, button.ghost { height: 40px; padding: 0 18px; border-radius: 6px; font: inherit; font-size: .9rem; cursor: pointer; }
+    button.primary { background: var(--navy); color: #fff; border: 1px solid var(--navy); }
+    button.ghost { background: #fff; color: var(--navy); border: 1px solid var(--navy); }
+    pre { background: #0f1b36; color: #e8edf7; padding: 14px; border-radius: 6px; overflow: auto; font-size: .78rem; margin: 0; }
+    .hint { font-size: .8rem; color: var(--muted); margin: 0; }
+    .out { display: none; gap: 10px; padding-bottom: 40px; }
+    .out.on { display: grid; }
+    @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="masthead"><div class="masthead-inner">
+    <p class="eyebrow">Tool</p><h1>새 로그 만들기</h1>
+    <p class="lead">정보를 채우고 챗로그 HTML을 붙여넣으면 로그 페이지와 목록 항목이 만들어져.</p>
+  </div></header>
+
+  <main class="wrap">
+    <form id="f">
+      <label>제목 <input name="title" required></label>
+      <div class="row">
+        <label>룰 / 시스템 <input name="system" placeholder="CoC 7th"></label>
+        <label>상태 <select name="status"><option>완료</option><option>진행중</option><option>중단</option></select></label>
+      </div>
+      <div class="row">
+        <label>GM <input name="gm"></label>
+        <label>PL (쉼표로 구분) <input name="players" placeholder="PL1, PL2"></label>
+      </div>
+      <div class="row">
+        <label>날짜 <input name="date" type="date"></label>
+        <label>태그 (쉼표로 구분) <input name="tags" placeholder="현대, 호러"></label>
+      </div>
+      <label>표지 이미지 주소 (비워도 돼) <input name="cover" placeholder="https://..."></label>
+      <label>한 줄 소개 <input name="description"></label>
+      <label>파일 이름 (영문/숫자, 확장자 제외) <input name="slug" required pattern="[A-Za-z0-9_\-]+" placeholder="rotten-teeth"></label>
+      <label>챗로그 HTML
+        <textarea name="body" required placeholder="롤20 챗 아카이브에서 div.content 를 복사해서 붙여넣기"></textarea>
+      </label>
+      <p class="hint">롤20: 챗 아카이브 페이지에서 F12 → <code>&lt;div class="content"&gt;</code> 우클릭 → Copy → Copy outerHTML. 스크립트 태그는 자동으로 제거돼.</p>
+      <div class="btns"><button class="primary" type="submit">만들기</button></div>
+    </form>
+
+    <section id="out" class="out">
+      <p class="hint">1) 아래 버튼으로 받은 파일을 <b>logs/</b> 폴더에 넣어.</p>
+      <div class="btns"><button id="dl" class="primary" type="button"></button></div>
+      <p class="hint">2) 아래 항목을 <b>data/scenarios.js</b> 의 배열 맨 위에 붙여넣어.</p>
+      <pre id="entry"></pre>
+      <div class="btns"><button id="cp" class="ghost" type="button">항목 복사</button></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var f = document.getElementById("f"), out = document.getElementById("out");
+      var entryEl = document.getElementById("entry"), dl = document.getElementById("dl");
+      var current = null;
+
+      function esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+      function list(s) { return s.split(",").map(function (x) { return x.trim(); }).filter(Boolean); }
+
+      function cleanBody(raw) {
+        var doc = new DOMParser().parseFromString("<body>" + raw + "</body>", "text/html");
+        doc.querySelectorAll("script, iframe, object, embed").forEach(function (n) { n.remove(); });
+        doc.querySelectorAll("*").forEach(function (n) {
+          Array.prototype.slice.call(n.attributes).forEach(function (a) {
+            if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
+          });
+        });
+        return doc.body.innerHTML;
+      }
+
+      function page(v, body) {
+        var meta = [v.gm && "GM " + v.gm, v.players.length && "PL " + v.players.join(", "), v.date].filter(Boolean).map(esc).join(" · ");
+        var sc = "scr" + "ipt";
+        return [
+          '<!doctype html>', '<html lang="ko">', '<head>',
+          '  <meta charset="utf-8">',
+          '  <meta name="viewport" content="width=device-width, initial-scale=1">',
+          '  <meta name="robots" content="noindex">',
+          '  <title>' + esc(v.title) + '</title>',
+          '  <link rel="stylesheet" href="../css/log.css">', '</head>', '<body>',
+          '  <div class="topbar"><div class="topbar-inner">',
+          '    <a class="back" href="../index.html">← 목록으로</a>',
+          '    <div class="size" aria-label="글자 크기">',
+          '      <button type="button" data-size="-1" aria-label="글자 작게">A−</button>',
+          '      <button type="button" data-size="1" aria-label="글자 크게">A+</button>',
+          '    </div>', '  </div></div>', '',
+          '  <div class="container">',
+          '    <header class="log-head">',
+          v.cover ? '      <img class="hero" src="' + esc(v.cover) + '" alt="">' : '',
+          '      <p class="eyebrow">' + esc(v.system) + '</p>',
+          '      <h1>' + esc(v.title) + '</h1>',
+          '      <p>' + meta + '</p>',
+          '    </header>',
+          '    <section class="log" id="log">',
+          body,
+          '    </section>', '  </div>', '',
+          '  <' + sc + '>',
+          '    (function () {',
+          '      var root = document.documentElement, size = 15;',
+          '      try { size = +localStorage.getItem("log-size") || 15; } catch (e) {}',
+          '      function apply() { root.style.setProperty("--log-size", size + "px"); }',
+          '      apply();',
+          '      document.querySelectorAll("[data-size]").forEach(function (b) {',
+          '        b.addEventListener("click", function () {',
+          '          size = Math.max(11, Math.min(24, size + +b.dataset.size));',
+          '          apply();',
+          '          try { localStorage.setItem("log-size", size); } catch (e) {}',
+          '        });', '      });', '    })();',
+          '  </' + sc + '>', '</body>', '</html>', ''
+        ].filter(function (l) { return l !== ""  || true; }).join("\n");
+      }
+
+      f.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var d = new FormData(f), v = {};
+        d.forEach(function (val, k) { v[k] = String(val).trim(); });
+        v.players = list(v.players || "");
+        v.tags = list(v.tags || "");
+
+        var html = page(v, cleanBody(v.body));
+        var entry = {
+          title: v.title, system: v.system, gm: v.gm, players: v.players,
+          date: v.date, status: v.status, tags: v.tags, cover: v.cover,
+          description: v.description, url: "logs/" + v.slug + ".html"
+        };
+        entryEl.textContent = "  " + JSON.stringify(entry, null, 2).split("\n").join("\n  ") + ",";
+        current = { name: v.slug + ".html", html: html };
+        dl.textContent = current.name + " 받기";
+        out.classList.add("on");
+        out.scrollIntoView({ behavior: "smooth" });
+      });
+
+      dl.addEventListener("click", function () {
+        if (!current) return;
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([current.html], { type: "text/html;charset=utf-8" }));
+        a.download = current.name;
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      });
+      document.getElementById("cp").addEventListener("click", function () {
+        if (navigator.clipboard) navigator.clipboard.writeText(entryEl.textContent);
+      });
+    })();
+  </script>
+</body>
+</html>

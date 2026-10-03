@@ -7,61 +7,97 @@
   <title>새 로그 만들기</title>
   <link rel="stylesheet" href="../css/site.css">
   <style>
-    form { display: grid; gap: 14px; padding: 24px 0; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+    .masthead { padding-bottom: 56px; }
+    .masthead .inner { padding-top: 44px; }
+    .masthead .title { font-size: clamp(2rem, 7vw, 3.4rem); }
+    form { display: grid; gap: 16px; padding: 28px 0 8px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    label { display: grid; gap: 5px; font-size: .78rem; color: var(--muted); letter-spacing: .02em; }
     input, textarea, select {
-      font: inherit; font-size: .9rem; color: var(--ink); padding: 9px 12px;
-      border: 1px solid var(--line); border-radius: 6px; background: #fff; width: 100%;
+      font: inherit; font-size: .92rem; color: var(--ink); padding: 10px 14px; width: 100%;
+      border: 1px solid var(--line); border-radius: 10px; background: #fff;
     }
-    textarea { min-height: 200px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; }
-    input:focus, textarea:focus { outline: 2px solid var(--navy); outline-offset: -1px; }
+    textarea { min-height: 120px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; line-height: 1.55; }
+    textarea.big { min-height: 260px; }
+    input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+    fieldset { border: 0; padding: 0; margin: 8px 0 0; display: grid; gap: 14px; }
+    legend { padding: 0; margin-bottom: 4px; font-family: var(--display); font-weight: 700; font-size: 1.15rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+    .hint { margin: 0; font-size: .78rem; color: var(--muted); }
+    .hint code { background: #e6ebf7; padding: 1px 5px; border-radius: 4px; }
     .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-    button.primary, button.ghost { height: 40px; padding: 0 18px; border-radius: 6px; font: inherit; font-size: .9rem; cursor: pointer; }
-    button.primary { background: var(--navy); color: #fff; border: 1px solid var(--navy); }
+    button.primary, button.ghost { height: 42px; padding: 0 22px; border-radius: 999px; font: inherit; font-size: .9rem; cursor: pointer; }
+    button.primary { background: linear-gradient(135deg, var(--navy), var(--blue)); color: #fff; border: 0; }
     button.ghost { background: #fff; color: var(--navy); border: 1px solid var(--navy); }
-    pre { background: #0f1b36; color: #e8edf7; padding: 14px; border-radius: 6px; overflow: auto; font-size: .78rem; margin: 0; }
-    .hint { font-size: .8rem; color: var(--muted); margin: 0; }
-    .out { display: none; gap: 10px; padding-bottom: 40px; }
+    .out { display: none; gap: 12px; padding: 24px 0 70px; }
     .out.on { display: grid; }
+    pre { background: #0f1b36; color: #e8edf7; padding: 16px; border-radius: 12px; overflow: auto; font-size: .76rem; margin: 0; max-height: 280px; }
+    iframe { width: 100%; height: 640px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
     @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <header class="masthead"><div class="masthead-inner">
-    <p class="eyebrow">Tool</p><h1>새 로그 만들기</h1>
-    <p class="lead">정보를 채우고 챗로그 HTML을 붙여넣으면 로그 페이지와 목록 항목이 만들어져.</p>
+  <header class="masthead"><div class="inner">
+    <h1 class="title"><span class="ghost">New</span> Log</h1>
+    <p class="lead">정보를 채우고 채팅 내역을 붙여넣으면 로그 페이지와 목록 항목이 만들어져.</p>
   </div></header>
 
-  <main class="wrap">
+  <main class="inner">
     <form id="f">
-      <label>제목 <input name="title" required></label>
-      <div class="row">
-        <label>룰 / 시스템 <input name="system" placeholder="CoC 7th"></label>
-        <label>상태 <select name="status"><option>완료</option><option>진행중</option><option>중단</option></select></label>
-      </div>
-      <div class="row">
-        <label>GM <input name="gm"></label>
-        <label>PL (쉼표로 구분) <input name="players" placeholder="PL1, PL2"></label>
-      </div>
-      <div class="row">
-        <label>날짜 <input name="date" type="date"></label>
-        <label>태그 (쉼표로 구분) <input name="tags" placeholder="현대, 호러"></label>
-      </div>
-      <label>표지 이미지 주소 (비워도 돼) <input name="cover" placeholder="https://..."></label>
-      <label>한 줄 소개 <input name="description"></label>
-      <label>파일 이름 (영문/숫자, 확장자 제외) <input name="slug" required pattern="[A-Za-z0-9_\-]+" placeholder="rotten-teeth"></label>
-      <label>챗로그 HTML
-        <textarea name="body" required placeholder="롤20 챗 아카이브에서 div.content 를 복사해서 붙여넣기"></textarea>
-      </label>
-      <p class="hint">롤20: 챗 아카이브 페이지에서 F12 → <code>&lt;div class="content"&gt;</code> 우클릭 → Copy → Copy outerHTML. 스크립트 태그는 자동으로 제거돼.</p>
+      <fieldset>
+        <legend>Info</legend>
+        <label>제목 <input name="title" required></label>
+        <div class="row">
+          <label>룰 / 시스템 <input name="system" placeholder="CoC 7th"></label>
+          <label>상태 <select name="status"><option>완료</option><option>진행중</option><option>중단</option></select></label>
+        </div>
+        <div class="row">
+          <label>GM <input name="gm"></label>
+          <label>PL (쉼표로 구분) <input name="players" placeholder="PL1, PL2"></label>
+        </div>
+        <div class="row">
+          <label>날짜 <input name="date" type="date"></label>
+          <label>태그 (쉼표로 구분) <input name="tags" placeholder="현대, 호러"></label>
+        </div>
+        <label>표지 이미지 주소 (비워도 돼) <input name="cover" placeholder="https://..."></label>
+        <label>한 줄 소개 <input name="description"></label>
+        <label>파일 이름 (영문/숫자, 확장자 제외) <input name="slug" required pattern="[A-Za-z0-9_\-]+" placeholder="rotten-teeth"></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Cast</legend>
+        <label>등장인물 — 한 줄에 한 명: <code>이름 | 역할 | 이미지 주소 | 한 줄 설명</code>
+          <textarea name="cast" placeholder="한서진 | PC | https://.../seojin.png | 사립 탐정. 말수가 적다.&#10;윤하 | PC | | 대학원생&#10;GM | GM"></textarea>
+        </label>
+        <p class="hint">역할, 이미지, 설명은 비워도 돼. 이미지가 없으면 이름 첫 글자로 아바타가 만들어져. 로그 안에 나오는 이름과 똑같이 써야 연결돼.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Log</legend>
+        <label>형식
+          <select name="mode">
+            <option value="auto">자동 감지</option>
+            <option value="text">일반 텍스트 (이름: 대사 / 카톡 / 디스코드)</option>
+            <option value="html">롤20 챗 아카이브 HTML</option>
+          </select>
+        </label>
+        <label>채팅 내역
+          <textarea name="body" class="big" required placeholder="한서진: 문에 귀를 대 볼게요.&#10;GM: 안쪽에서 긁는 소리가 들립니다.&#10;&gt; 복도에 비 냄새가 가득하다.&#10;---&#10;윤하: 열지 마."></textarea>
+        </label>
+        <p class="hint">
+          일반 텍스트: <code>이름: 대사</code> 한 줄씩. 화자 없는 줄은 이전 대사에 이어 붙고, <code>&gt; 문장</code> 은 나레이션, <code>---</code> 은 장면 전환이야.
+          카카오톡 내보내기(<code>2025. 4. 10. 오후 3:21, 이름 : 내용</code>)와 디스코드 복사도 인식해.
+          롤20은 챗 아카이브에서 F12 → <code>div.content</code> 우클릭 → Copy outerHTML.
+        </p>
+      </fieldset>
+
       <div class="btns"><button class="primary" type="submit">만들기</button></div>
     </form>
 
     <section id="out" class="out">
-      <p class="hint">1) 아래 버튼으로 받은 파일을 <b>logs/</b> 폴더에 넣어.</p>
-      <div class="btns"><button id="dl" class="primary" type="button"></button></div>
-      <p class="hint">2) 아래 항목을 <b>data/scenarios.js</b> 의 배열 맨 위에 붙여넣어.</p>
+      <p class="hint" id="info"></p>
+      <div class="btns"><button id="dl" class="primary" type="button"></button><button id="pv" class="ghost" type="button">미리보기</button></div>
+      <iframe id="frame" title="미리보기" hidden></iframe>
+      <p class="hint">받은 파일을 <b>logs/</b> 폴더에 넣고, 아래 항목을 <b>data/scenarios.js</b> 배열 맨 위에 붙여넣어.</p>
       <pre id="entry"></pre>
       <div class="btns"><button id="cp" class="ghost" type="button">항목 복사</button></div>
     </section>
@@ -71,33 +107,86 @@
     (function () {
       var f = document.getElementById("f"), out = document.getElementById("out");
       var entryEl = document.getElementById("entry"), dl = document.getElementById("dl");
+      var frame = document.getElementById("frame"), info = document.getElementById("info");
       var current = null;
 
       function esc(s) {
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
-      function list(s) { return s.split(",").map(function (x) { return x.trim(); }).filter(Boolean); }
+      function list(s) { return String(s || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean); }
 
-      function cleanBody(raw) {
+      /* cast: "이름 | 역할 | 이미지 | 설명" */
+      function parseCast(raw) {
+        return String(raw || "").split("\n").map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
+          var p = l.split("|").map(function (x) { return x.trim(); });
+          return { name: p[0], role: p[1] || "", image: p[2] || "", desc: p.slice(3).join(" | ") };
+        }).filter(function (c) { return c.name; });
+      }
+
+      /* ---------- plain text -> messages ---------- */
+      var RE_KAKAO = /^\d{4}[.\-\/]\s*\d{1,2}[.\-\/]\s*\d{1,2}\.?\s*((?:오전|오후|AM|PM)?\s*\d{1,2}:\d{2})\s*,\s*([^:]{1,30}?)\s*:\s?(.*)$/;
+      var RE_DISCORD = /^(.{1,30}?)\s+[—–-]\s+((?:오늘|어제|Today|Yesterday|\d{4}[./-]).*|.*\d{1,2}:\d{2}.*)$/;
+      var RE_COLON = /^([^:：\[\]>]{1,20}?)(?:\s*：\s*|\s*:\s+)(.*)$/;
+      var RE_BRACKET = /^\[([^\]]{1,30})\]\s*(?:\[([^\]]{1,15})\]\s*)?(.*)$/;
+      var RE_BREAK = /^\s*(?:-{3,}|={3,}|\*{3,}|•\s*•\s*•)\s*$/;
+      var RE_DATEHDR = /^-{2,}.*-{2,}$|^\d{4}년\s*\d{1,2}월\s*\d{1,2}일.*$/;
+
+      function parseText(raw) {
+        var out = [], cur = null;
+        function push(m) { out.push(m); cur = m.type === "say" ? m : null; }
+        raw.replace(/\r/g, "").split("\n").forEach(function (line) {
+          var t = line.replace(/\s+$/, ""), m;
+          if (!t.trim()) { if (cur) cur.pendingBlank = true; return; }
+          if (RE_BREAK.test(t)) { push({ type: "brk" }); return; }
+          if (RE_DATEHDR.test(t.trim())) { push({ type: "narr", text: t.trim() }); return; }
+          if (/^\s*>\s?/.test(t)) { push({ type: "narr", text: t.replace(/^\s*>\s?/, "") }); return; }
+          if (/^\s*\*[^*].*[^*]\*\s*$/.test(t)) { push({ type: "narr", text: t.trim().replace(/^\*|\*$/g, "") }); return; }
+          if ((m = t.match(RE_KAKAO))) { push({ type: "say", who: m[2].trim(), time: m[1].trim(), text: m[3] }); return; }
+          if ((m = t.match(RE_BRACKET)) && m[3] !== undefined && /^\S/.test(m[1])) { push({ type: "say", who: m[1].trim(), time: m[2] || "", text: m[3] }); return; }
+          if ((m = t.match(RE_DISCORD))) { push({ type: "say", who: m[1].trim(), time: m[2].trim(), text: "" }); return; }
+          if ((m = t.match(RE_COLON))) { push({ type: "say", who: m[1].trim(), time: "", text: m[2] }); return; }
+          if (cur) {
+            cur.text += (cur.text ? (cur.pendingBlank ? "\n\n" : "\n") : "") + t.trim();
+            cur.pendingBlank = false;
+          } else {
+            push({ type: "narr", text: t.trim() });
+          }
+        });
+        return out.filter(function (m) { return m.type !== "say" || m.text.trim() || true; });
+      }
+
+      function renderMsgs(msgs) {
+        return msgs.map(function (m) {
+          if (m.type === "brk") return '        <div class="msg brk"></div>';
+          if (m.type === "narr") return '        <div class="msg narr"><div class="tx">' + esc(m.text) + '</div></div>';
+          return '        <div class="msg" data-who="' + esc(m.who) + '"><div class="bd"><span class="nm">' + esc(m.who) + '</span>' +
+            (m.time ? '<time class="tm">' + esc(m.time) + '</time>' : '') +
+            '<div class="tx">' + esc(m.text.trim()) + '</div></div></div>';
+        }).join("\n");
+      }
+
+      /* ---------- roll20 html ---------- */
+      function cleanHtml(raw) {
         var doc = new DOMParser().parseFromString("<body>" + raw + "</body>", "text/html");
-        doc.querySelectorAll("script, iframe, object, embed").forEach(function (n) { n.remove(); });
+        doc.querySelectorAll("script, iframe, object, embed, style, link").forEach(function (n) { n.remove(); });
         doc.querySelectorAll("*").forEach(function (n) {
           Array.prototype.slice.call(n.attributes).forEach(function (a) {
             if (/^on/i.test(a.name) || /^\s*javascript:/i.test(a.value)) n.removeAttribute(a.name);
           });
         });
-        return doc.body.innerHTML;
+        var c = doc.querySelector(".content");
+        return c ? c.outerHTML : '<div class="content">' + doc.body.innerHTML + '</div>';
       }
 
-      function page(v, body) {
-        var meta = [v.gm && "GM " + v.gm, v.players.length && "PL " + v.players.join(", "), v.date].filter(Boolean).map(esc).join(" · ");
+      function page(meta, body) {
         var sc = "scr" + "ipt";
+        var json = JSON.stringify(meta, null, 2).replace(/</g, "\\u003c");
         return [
           '<!doctype html>', '<html lang="ko">', '<head>',
           '  <meta charset="utf-8">',
           '  <meta name="viewport" content="width=device-width, initial-scale=1">',
           '  <meta name="robots" content="noindex">',
-          '  <title>' + esc(v.title) + '</title>',
+          '  <title>' + esc(meta.title) + '</title>',
           '  <link rel="stylesheet" href="../css/log.css">', '</head>', '<body>',
           '  <div class="topbar"><div class="topbar-inner">',
           '    <a class="back" href="../index.html">← 목록으로</a>',
@@ -105,52 +194,67 @@
           '      <button type="button" data-size="-1" aria-label="글자 작게">A−</button>',
           '      <button type="button" data-size="1" aria-label="글자 크게">A+</button>',
           '    </div>', '  </div></div>', '',
-          '  <div class="container">',
-          '    <header class="log-head">',
-          v.cover ? '      <img class="hero" src="' + esc(v.cover) + '" alt="">' : '',
-          '      <p class="eyebrow">' + esc(v.system) + '</p>',
-          '      <h1>' + esc(v.title) + '</h1>',
-          '      <p>' + meta + '</p>',
-          '    </header>',
+          '  <header id="hero" class="hero"><div class="hero-in"><h1>' + esc(meta.title) + '</h1></div></header>', '',
+          '  <main class="container">',
+          '    <section id="cast" class="cast" hidden></section>',
+          '    <h2 class="sec-title">Log</h2>',
           '    <section class="log" id="log">',
           body,
-          '    </section>', '  </div>', '',
-          '  <' + sc + '>',
-          '    (function () {',
-          '      var root = document.documentElement, size = 15;',
-          '      try { size = +localStorage.getItem("log-size") || 15; } catch (e) {}',
-          '      function apply() { root.style.setProperty("--log-size", size + "px"); }',
-          '      apply();',
-          '      document.querySelectorAll("[data-size]").forEach(function (b) {',
-          '        b.addEventListener("click", function () {',
-          '          size = Math.max(11, Math.min(24, size + +b.dataset.size));',
-          '          apply();',
-          '          try { localStorage.setItem("log-size", size); } catch (e) {}',
-          '        });', '      });', '    })();',
-          '  </' + sc + '>', '</body>', '</html>', ''
-        ].filter(function (l) { return l !== ""  || true; }).join("\n");
+          '    </section>',
+          '  </main>', '',
+          '  <' + sc + ' type="application/json" id="meta">', json, '  </' + sc + '>',
+          '  <' + sc + ' src="../js/log.js"></' + sc + '>',
+          '</body>', '</html>', ''
+        ].join("\n");
       }
 
       f.addEventListener("submit", function (e) {
         e.preventDefault();
         var d = new FormData(f), v = {};
         d.forEach(function (val, k) { v[k] = String(val).trim(); });
-        v.players = list(v.players || "");
-        v.tags = list(v.tags || "");
+        var raw = d.get("body");
+        var mode = v.mode;
+        if (mode === "auto") mode = /<div[\s>]|class=["']message/i.test(raw) ? "html" : "text";
 
-        var html = page(v, cleanBody(v.body));
+        var body, count;
+        if (mode === "html") {
+          body = "      " + cleanHtml(raw);
+          count = "롤20 HTML";
+        } else {
+          var msgs = parseText(raw);
+          body = '      <div class="chat">\n' + renderMsgs(msgs) + '\n      </div>';
+          var who = {};
+          msgs.forEach(function (m) { if (m.who) who[m.who] = true; });
+          count = "대사/문단 " + msgs.length + "개, 화자 " + Object.keys(who).join(", ");
+        }
+
+        var cast = parseCast(v.cast);
+        var players = list(v.players), tags = list(v.tags);
+        var meta = {
+          title: v.title, system: v.system, status: v.status, gm: v.gm, players: players,
+          date: v.date, cover: v.cover, description: v.description, cast: cast
+        };
+        var html = page(meta, body);
         var entry = {
-          title: v.title, system: v.system, gm: v.gm, players: v.players,
-          date: v.date, status: v.status, tags: v.tags, cover: v.cover,
-          description: v.description, url: "logs/" + v.slug + ".html"
+          title: v.title, system: v.system, gm: v.gm, players: players, date: v.date, status: v.status,
+          tags: tags, cover: v.cover, description: v.description,
+          cast: cast.map(function (c) { return { name: c.name, image: c.image }; }),
+          url: "logs/" + v.slug + ".html"
         };
         entryEl.textContent = "  " + JSON.stringify(entry, null, 2).split("\n").join("\n  ") + ",";
+        info.textContent = "변환 결과: " + count;
         current = { name: v.slug + ".html", html: html };
         dl.textContent = current.name + " 받기";
+        frame.hidden = true;
         out.classList.add("on");
         out.scrollIntoView({ behavior: "smooth" });
       });
 
+      document.getElementById("pv").addEventListener("click", function () {
+        if (!current) return;
+        frame.hidden = false;
+        frame.srcdoc = current.html.replace("<head>", '<head><base href="../logs/">');
+      });
       dl.addEventListener("click", function () {
         if (!current) return;
         var a = document.createElement("a");

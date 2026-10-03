@@ -16,39 +16,44 @@
     </div>
   </div></div>
 
-  <div class="container">
-    <header class="log-head">
-      <p class="eyebrow">CoC 7th</p>
-      <h1>샘플 시나리오 — 첫 번째 밤</h1>
-      <p>GM GM이름 · PL PL1, PL2 · 2026-10-03</p>
-    </header>
+  <header id="hero" class="hero"><div class="hero-in"><h1>샘플 시나리오 — 첫 번째 밤</h1></div></header>
 
+  <main class="container">
+    <section id="cast" class="cast" hidden></section>
+
+    <h2 class="sec-title">Log</h2>
     <section class="log" id="log">
-      <!-- 아래 div.content 를 롤20 챗로그의 div.content 로 통째로 교체 -->
-      <div class="content">
-        <div class="message desc"><div class="spacer"></div>폐교의 복도. 비 냄새와 오래된 분필 가루 냄새가 섞여 있다.</div>
-        <div class="message general"><div class="spacer"></div><span class="by">GM:</span>문 안쪽에서 무언가 긁는 소리가 들립니다. 어떻게 하시겠어요?</div>
-        <div class="message general you"><div class="spacer"></div><span class="by">PL1:</span>조심스럽게 문에 귀를 대 볼게요. 청취 굴립니다.</div>
-        <div class="message rollresult"><div class="spacer"></div><span class="by">PL1:</span>1d100 = <span class="inlinerollresult">34</span> / 50 성공</div>
-        <div class="message general"><div class="spacer"></div><span class="by">GM:</span>사람의 숨소리 같습니다. 아주 가까이에서 들려요.</div>
+      <div class="chat">
+        <div class="msg narr"><div class="tx">폐교의 복도. 비 냄새와 오래된 분필 가루 냄새가 섞여 있다. 두 사람은 말없이 걷다가 맨 끝 교실 앞에서 멈춰 섰다.</div></div>
+        <div class="msg" data-who="GM"><div class="bd"><span class="nm">GM</span><div class="tx">문 안쪽에서 무언가 긁는 소리가 들립니다. 어떻게 하시겠어요?</div></div></div>
+        <div class="msg" data-who="한서진"><div class="bd"><span class="nm">한서진</span><time class="tm">오후 9:02</time><div class="tx">조심스럽게 문에 귀를 대 볼게요. 청취 굴립니다.</div></div></div>
+        <div class="msg" data-who="한서진"><div class="bd"><span class="nm">한서진</span><div class="tx">1d100 = 34 / 50 성공</div></div></div>
+        <div class="msg" data-who="GM"><div class="bd"><span class="nm">GM</span><div class="tx">사람의 숨소리 같습니다. 아주 가까이에서 들려요.</div></div></div>
+        <div class="msg" data-who="윤하"><div class="bd"><span class="nm">윤하</span><div class="tx">잠깐만, 저 소리 나도 들려. 문 열지 마. 아직.</div></div></div>
+        <div class="msg brk"></div>
+        <div class="msg narr"><div class="tx">문틈으로 희미한 빛이 새어 나온다. 긁는 소리가 뚝 그쳤다.</div></div>
+        <div class="msg" data-who="???"><div class="bd"><span class="nm">???</span><div class="tx">…거기, 누구 있어요?</div></div></div>
       </div>
     </section>
-  </div>
+  </main>
 
-  <script>
-    (function () {
-      var root = document.documentElement, size = 15;
-      try { size = +localStorage.getItem("log-size") || 15; } catch (e) {}
-      function apply() { root.style.setProperty("--log-size", size + "px"); }
-      apply();
-      document.querySelectorAll("[data-size]").forEach(function (b) {
-        b.addEventListener("click", function () {
-          size = Math.max(11, Math.min(24, size + +b.dataset.size));
-          apply();
-          try { localStorage.setItem("log-size", size); } catch (e) {}
-        });
-      });
-    })();
+  <script type="application/json" id="meta">
+  {
+    "title": "샘플 시나리오 — 첫 번째 밤",
+    "system": "CoC 7th",
+    "status": "완료",
+    "gm": "GM이름",
+    "players": ["PL1", "PL2"],
+    "date": "2026-10-03",
+    "cover": "",
+    "description": "형식 확인용 샘플이야. 지우고 내 로그로 교체하면 돼.",
+    "cast": [
+      { "name": "한서진", "role": "PC", "image": "", "desc": "사립 탐정. 말수가 적고 의심이 많다." },
+      { "name": "윤하", "role": "PC", "image": "", "desc": "대학원생. 오컬트에 밝다." },
+      { "name": "???", "role": "NPC", "image": "", "desc": "문 안쪽의 무언가." }
+    ]
+  }
   </script>
+  <script src="../js/log.js"></script>
 </body>
 </html>

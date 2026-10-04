@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0b1020">
+  <title>TRPG ROOM — CoC Session Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;900&family=Oswald:wght@500;700&display=swap">
+  <link rel="stylesheet" href="css/room.css">
+</head>
+<body>
+<div id="app" data-theme="summer">
+
+  <!-- 타이틀 -->
+  <section id="title" class="title-screen">
+    <div class="title-bg"></div>
+    <div class="title-inner">
+      <p class="t-sys" id="t-sys"></p>
+      <h1 id="t-title"></h1>
+      <div class="t-copy" id="t-copy"></div>
+      <div class="t-actions">
+        <button class="btn big primary" data-act="start">SESSION START</button>
+        <button class="btn big" data-act="continue" id="btn-continue">CONTINUE</button>
+        <button class="btn big ghost" data-act="saves">LOAD SESSION</button>
+        <button class="btn big ghost" data-act="assets">IMAGES</button>
+      </div>
+      <p class="t-sub" id="t-sub"></p>
+      <p class="t-cast" id="t-cast"></p>
+    </div>
+  </section>
+
+  <!-- 플레이 화면 -->
+  <section id="game" hidden>
+    <header class="topbar">
+      <div class="tb-title"><b id="tb-title"></b><span id="tb-scene"></span></div>
+      <div class="tb-actions">
+        <button class="chip" data-act="toggle-mode" id="btn-mode" title="PC 시점 / KP 시점 (같은 화면에서 전환하는 용도라 보안 기능은 아니야)">PC 시점</button>
+        <button class="icon" data-act="panel" data-side="left" title="캐릭터 패널">캐릭터</button>
+        <button class="icon" data-act="panel" data-side="right" title="로그 패널">로그</button>
+        <button class="icon" data-act="saves" title="저장 / 불러오기">저장</button>
+        <button class="chip" data-act="edit-mode" id="btn-edit" title="이미지 교체용 편집 모드">편집 모드</button>
+        <button class="icon" data-act="settings" title="설정">설정</button>
+      </div>
+    </header>
+
+    <div class="layout" id="layout">
+      <aside id="left" class="side left"></aside>
+
+      <main id="stage" class="stage">
+        <div class="bg bg-a on"></div>
+        <div class="bg bg-b"></div>
+        <div id="fx-layer" class="fx-layer"></div>
+        <div id="sprites" class="sprites"></div>
+        <div id="hotspots" class="hotspots"></div>
+        <div class="edit-bar" id="edit-bar" hidden>
+          <b>편집 모드</b><span>점선 슬롯을 눌러 이미지를 교체해 (붙여넣기 · 끌어놓기 가능)</span>
+          <button class="chip" data-act="pick" id="edit-bg">배경 교체</button>
+          <button class="chip" data-act="assets">에셋 관리</button>
+          <button class="chip on" data-act="edit-mode">완료</button>
+        </div>
+        <div class="stage-tools">
+          <button class="chip" data-act="investigate" id="btn-investigate">조사 모드</button>
+        </div>
+        <div class="textbox" id="textbox" data-act="skip-type">
+          <div class="tb-speaker" id="tb-speaker"></div>
+          <div class="tb-line" id="tb-line"></div>
+        </div>
+        <div id="handout-view" class="handout-view" hidden></div>
+        <div class="transition"></div>
+        <div class="result-flash"></div>
+      </main>
+
+      <aside id="right" class="side right">
+        <div class="log-head">
+          <div class="filters" id="filters"></div>
+        </div>
+        <div class="log" id="log"></div>
+        <form class="chat" id="chat" autocomplete="off">
+          <select id="chat-who" aria-label="화자"></select>
+          <input id="chat-input" type="text" placeholder="대사 입력 · /r 2d6+3 · //잡담" maxlength="600">
+          <button class="btn primary" type="submit">전송</button>
+        </form>
+      </aside>
+    </div>
+
+    <nav class="dock" id="dock"></nav>
+  </section>
+
+  <!-- 모달 -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <header><h2 id="modal-title"></h2><button class="icon" data-act="close-modal" aria-label="닫기">×</button></header>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <input type="file" id="import-file" accept="application/json,.json" hidden>
+</div>
+
+<script src="js/coc.js"></script>
+<script src="data/scenario.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/store.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

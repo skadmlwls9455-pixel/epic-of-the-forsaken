@@ -12,6 +12,7 @@ css/site.css        목록 스타일
 css/log.css         로그 스타일 (소설형 본문, 프로필 카드, 롤20 마크업 대응)
 js/                 목록/로그 페이지 스크립트
 tools/new-log.html  로그 페이지 + 목록 항목 생성 도구
+room/               TRPG ROOM (CoC 세션 플레이어). 자세한 건 room/README.md
 ```
 
 ## 로그 추가하는 법

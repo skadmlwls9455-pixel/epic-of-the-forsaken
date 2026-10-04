@@ -125,3 +125,11 @@ footer.site { background: var(--bg0); padding: 22px 0 28px; font-size: .74rem; c
   .grid { grid-template-columns: 1fr; }
   .names { columns: 1; }
 }
+
+/* ---------- TRPG ROOM 링크 ---------- */
+.room-link {
+  display: inline-block; margin-top: 18px; padding: 10px 20px; border-radius: 999px;
+  border: 1px solid rgba(169, 198, 255, .55); color: #fff; font-size: .9rem; letter-spacing: .06em;
+  background: rgba(255, 255, 255, .08); transition: background .15s;
+}
+.room-link:hover { background: rgba(255, 255, 255, .2); }

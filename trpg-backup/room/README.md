@@ -1,5 +1,7 @@
 # TRPG ROOM — CoC Session Player
 
+`trpg-backup/room/`에 있어. 사이트 주소 뒤에 `/room/`을 붙이면 열려.
+
 CoC 7판 세션을 브라우저 하나로 진행하는 비주얼노벨형 룸. 빌드 없이 정적 파일만 올리면 돼 (Netlify 등 폴더째 업로드).
 `index.html`을 바로 열어도 동작해.
 
@@ -40,7 +42,7 @@ tests/coc.test.js   룰 엔진 테스트
 ## 테스트
 
 ```
-node trpg-room/tests/coc.test.js
+node trpg-backup/room/tests/coc.test.js
 ```
 
 ## 이미지 교체
@@ -62,4 +64,4 @@ node trpg-room/tests/coc.test.js
 
 - 브라우저 자동재생 정책 때문에 BGM은 첫 클릭 이후에 재생돼.
 - 저장은 브라우저 localStorage, 교체한 이미지는 IndexedDB라 브라우저/기기가 바뀌면 JSON과 이미지 내보내기로 옮겨야 해. 브라우저 사이트 데이터를 지우면 둘 다 사라져.
-- `.github/workflows/pages.yml`은 `trpg-backup`만 배포해. 이 폴더도 GitHub Pages로 올리려면 별도 설정이 필요해.
+- 이 폴더는 `trpg-backup` 사이트 안의 `/room/` 경로라서, 기존 사이트를 올리는 방법 그대로 올리면 같이 반영돼. 목록 페이지 상단에 링크가 있어.

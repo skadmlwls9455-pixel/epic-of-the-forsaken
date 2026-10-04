@@ -26,18 +26,28 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0}
 @keyframes pulse{50%{opacity:.5}}
 .card{position:relative;min-height:330px;background:#1a1816;border:1px solid #2e2a27;border-radius:22px;padding:22px;touch-action:pan-y;cursor:grab;transition:transform .25s ease,opacity .2s;box-shadow:0 12px 30px rgba(0,0,0,.45)}
 .card:active{cursor:grabbing}
-.card.result{background:#f6ecd2;color:#1a1612;border-color:#e7d9b5}
+.card.result{background:#f6ecd2;color:#1a1612;border-color:#e7d9b5;padding-bottom:46px}
 .deck{position:absolute;inset:8px -6px -8px 6px;background:#151311;border:1px solid #24211f;border-radius:22px;transform:rotate(2deg)}
 .swipe-label{position:absolute;top:-14px;left:10px;right:10px;padding:10px 12px;border-radius:12px;background:#0e0c0a;border:1px solid #facc15;color:#fef3c7;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:5}
 .choice{border:1px solid #3a3633;border-radius:12px;padding:10px;text-align:left;font-size:13px;line-height:1.45;color:#a8a29e;transition:border-color .15s,color .15s}
 .choice:hover,.choice.sel{border-color:#facc15;color:#fef3c7}
 .fade{animation:fade .25s ease}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+:root{--story-fs:15px}
+html[data-size="l"]{--story-fs:17px}html[data-size="xl"]{--story-fs:19px}
+.story{font-size:var(--story-fs);line-height:2.05}
+.choice{font-size:calc(var(--story-fs) * .87)}
+.known{color:#fcd34d}
+.opt{border:1px solid #3a3633;border-radius:10px;padding:6px 12px;font-size:13px;color:#a8a29e}
+.opt.on{border-color:#facc15;color:#fef3c7}
+html.calm *,html.calm *::before,html.calm *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div id="app" class="w-full max-w-[780px] mx-auto min-h-screen flex flex-col"></div>
 <div id="modal"></div>
 <div id="panel"></div>
+<div id="banner"></div>
 <script>
 "use strict";
 /* =========================================================
@@ -53,6 +63,13 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0}
             단서: 테오(이름의 문), 저울 받침 글귀, 1층 이온의 말(그림자), 오틀린(장부엔 피가 아니라 이름이 적힌다).
             숨겨진 결말: 마지막 사생아(원장을 광장에서 읽고 왕관을 내려놓음), 별지기(첨탑으로 돌아감).
    - 막(act)은 일수가 아니라 핵심 카드 소화 + 결정 횟수로 넘어간다. 일수는 연도/나이 표시용.
+     결투·첨탑 방 한 수는 결정 횟수에 세지 않는다. 최대 횟수에 닿아도 핵심 카드가 남아 있으면 먼저 보여 준다.
+   v5.5 변경
+   - 버그: 결투가 길어지면 막이 핵심 카드 없이 넘어가던 문제, 끄는 동안 선택지 라벨이 안 뜨던 문제,
+           결과 화면에서 세로 스크롤하면 다음 장으로 넘어가던 문제, 빠르게 두 번 누르면 결과 장을 건너뛰던 문제,
+           첨탑 관문에서 스탯이 바뀌는데 스탯 막대가 가려지던 문제, 결말 화면에서 Esc로 기록이 안 닫히던 문제.
+   - 편의: 판정 성공 확률 표시, 결투에서 이미 아는 수 표시, 막 전환 화면, 결말에 이번 생 요약,
+           설정(글자 크기·움직임 줄이기·한 번 눌러 고르기), 키보드 A/D·1/2.
    ========================================================= */
 const SAVE_KEY="bastard_v5_save", DISC_KEY="bastard_v5_disc";
 const STAT_KEYS=["military","people","legitimacy","gold"];
@@ -70,6 +87,9 @@ const START_YEAR=603, START_AGE=20;
 const FX_HINT_MODE="preview";
 const SHOW_CHECK_HINT=true;
 const SHOW_RESULT_FX=true;
+const SHOW_CHECK_PCT=true;   // 판정 난이도 옆에 성공 확률(%)을 같이 보여줄지
+const SHOW_KNOWN_TELL=true;  // 결투에서 이미 알아낸 대응 수에 "아는 수"를 붙일지
+const ACT_SOFT_EXTRA=8;      // 막 최대 결정 수에 닿아도 핵심 카드가 남았으면 이만큼 더 기다린다
 const CRISIS_HI=84, CRISIS_LO=16; // 스탯이 이 선을 넘으면 위기 카드가 끼어든다
 
 const ACTS=[
@@ -967,6 +987,13 @@ function hasRelic(id){const r=RELICS.find(x=>x.id===id);return getDisc().length>
 function fxMult(){const early=state.act<=1;return hasRelic("lullaby")?(early?1.15:1.0):(early?1.5:1.1);}
 function addDisc(id){const d=getDisc();if(!d.includes(id)){d.push(id);try{localStorage.setItem(DISC_KEY,JSON.stringify(d));}catch(e){}}}
 
+/* ---------------- 설정 (기기마다 따로 저장) ---------------- */
+const OPTS_KEY="bastard_v5_opts", OPTS_DEFAULT={size:"m",calm:false,oneTap:false};
+let opts=(()=>{try{return Object.assign({},OPTS_DEFAULT,JSON.parse(localStorage.getItem(OPTS_KEY)||"{}"));}catch(e){return{...OPTS_DEFAULT};}})();
+function saveOpts(){try{localStorage.setItem(OPTS_KEY,JSON.stringify(opts));}catch(e){}}
+function applyOpts(){if(typeof document==="undefined"||!document.documentElement)return;const r=document.documentElement;r.dataset.size=opts.size;r.classList.toggle("calm",!!opts.calm);}
+const calm=()=>!!opts.calm||(typeof window!=="undefined"&&!!window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
 /* ---------------- 엔진 ---------------- */
 let state=load()||newState();
 let pending=null;
@@ -981,6 +1008,8 @@ const pick=a=>a[Math.floor(Math.random()*a.length)];
 function sync(){const y=Math.floor(state.totalDays/365);state.year=START_YEAR+y;state.age=START_AGE+y;}
 function effective(chk){let v=state.stats[chk.stat];if(chk.bonus)v+=chk.bonus(state);if(chk.stat==="military"&&state.flags.injury>0)v-=12;return v;}
 function diffWord(d){return d>=8?"유리":d>=-2?"해볼 만함":d>=-10?"불리":"무모";}
+// resolve()의 판정과 같은 식: effective + (-10..10 균등) >= base
+function checkChance(chk){const need=chk.base-effective(chk);return Math.max(0,Math.min(21,10-need+1))/21;}
 
 function resolve(ch){
   const out={fx:{...(ch.fx||{})},set:{...(ch.set||{})},add:{...(ch.add||{})},queue:[...(ch.queue||[])],ending:ch.ending||null,result:val(ch.result)||"",check:null,clues:ch.clue?[ch.clue]:[],then:ch.then||null};
@@ -1033,11 +1062,14 @@ function commit(){
   state.stats=p.ns; state.flags=p.nf; if(p.out.coin) state.coinUsed=true;
   if(p.out.hasTower) state.tower=p.out.tower;
   if(p.out.hasDuel) state.duel=p.out.duel;
-  state.decisions++; state.actDecisions++;
+  // 결투·첨탑 방은 한 장면 안의 수 싸움이라 막 진행 횟수에는 세지 않는다
+  const round=c.id==="duel"||c.id==="tower";
+  state.decisions++; if(!round) state.actDecisions++;
+  const actBefore=state.act;
   state.totalDays+=c.dur||1;
   state.lastSeen[c.id]=state.decisions;
   p.out.queue.forEach(q=>state.queue.push({id:q.id,at:state.decisions+(q.delay||0)}));
-  state.history.unshift({who:val(c.who),label:p.label,result:pagesOf(p.out.result)[0]});
+  state.history.unshift({who:val(c.who),label:p.label,result:pagesOf(p.out.result)[0],round});
   state.history=state.history.slice(0,30);
   addClues([...(c.clue?[c.clue]:[]),...p.out.clues]);
   state.chainNext=p.out.then||null;
@@ -1051,14 +1083,16 @@ function commit(){
   if(!inSpire(state)) state.tower=null;
   if(!seen(next.id)) state.seen.push(next.id);
   save(); render();
+  if(state.act!==actBefore&&state.act>=1) showActBanner();
 }
 
 const CHAPTER={1:"a1_dawn",2:"ch_2",3:"ch_3"}; // 막이 바뀔 때 먼저 나오는 연결 장면
 function enterAct(n){state.act=n;state.actDecisions=0;state.flags.regionOverride=state.flags.throneReady?"왕도":null;state.chapter=CHAPTER[n]||null;}
 function maybeAdvance(){
   if(state.act<1||state.act>=4) return;
-  const A=ACTS[state.act], done=A.required.every(seen);
-  if((state.actDecisions>=A.min&&done)||state.actDecisions>=val(A.max)) enterAct(state.act+1);
+  const A=ACTS[state.act], left=A.required.filter(id=>!seen(id)&&condOk(card(id)));
+  // 최대 횟수는 부드러운 상한: 핵심 카드가 남아 있으면 pickNext가 먼저 꺼내 보여 줄 시간을 준다
+  if((state.actDecisions>=A.min&&!left.length)||state.actDecisions>=val(A.max)+(left.length?ACT_SOFT_EXTRA:0)) enterAct(state.act+1);
 }
 function cool(c){const t=state.lastSeen[c.id];return t==null||state.decisions-t>=(c.cooldown||3);}
 function pickNext(){
@@ -1111,9 +1145,13 @@ function chips(){const f=state.flags,a=[];
 function hint(ch){
   if(ch.check){
     if(!SHOW_CHECK_HINT) return "위험이 따른다";
-    return `판정 · ${STAT_LABEL[ch.check.stat]} · ${diffWord(effective(ch.check)-ch.check.base)}`;}
+    return `판정 · ${STAT_LABEL[ch.check.stat]} · ${diffWord(effective(ch.check)-ch.check.base)}`+(SHOW_CHECK_PCT?` · ${Math.round(checkChance(ch.check)*100)}%`:"");}
   if(ch.ending) return "이 길로 끝난다";
-  if(ch.duel) return "싸움";
+  if(ch.duel) return `싸움 · 너 ${"♥".repeat(myHearts())} · 상대 ${"■".repeat(ch.duel.hp)}`;
+  if(SHOW_KNOWN_TELL&&(ch.duelAct||ch.towerAct)){
+    const act=ch.duelAct||ch.towerAct, foe=ch.duelAct?state.duel:(state.tower&&state.tower.enemy), tells=getMeta().tells||{};
+    if(foe&&!foe.dark&&tells[foe.tell]===act) return `<span class="known">아는 수</span>`;
+    return "";}
   if(FX_HINT_MODE!=="always") return "";
   const fx=ch.fx||{};
   return Object.keys(fx).filter(k=>fx[k]).map(k=>`<span class="inline-flex items-center gap-1 mr-2"><i class="dot ${Math.abs(fx[k])>5?"b":"s"}"></i>${STAT_LABEL[k]}</span>`).join("");
@@ -1150,14 +1188,15 @@ function build(){
       <div id="lab-${k}" class="lab flex items-center gap-1 text-[11px] text-stone-400 mb-1"><svg class="stat-ico" viewBox="0 0 24 24">${ICON[k]}</svg>${STAT_LABEL[k]}</div>
       <div class="bar"><div id="fill-${k}" class="fill"></div><div id="ghost-${k}" class="ghost"></div></div>
       <div id="ind-${k}" class="ind h-[12px] mt-1 flex justify-center items-center"></div></div>`).join("")}</div>
-    <div class="flex justify-between items-center mt-1 text-[11px] text-stone-400"><span id="where"></span><span class="flex gap-3"><button id="people" class="underline text-stone-300 hover:text-white">기록</button><button id="restart" class="underline text-stone-500 hover:text-stone-300">새로 시작</button></span></div>
+    <div class="flex justify-between items-center mt-1 text-[11px] text-stone-400"><span id="where"></span><span class="flex gap-3"><button id="people" class="underline text-stone-300 hover:text-white">기록</button><button id="opts" class="underline text-stone-400 hover:text-white">설정</button><button id="restart" class="underline text-stone-500 hover:text-stone-300">새로 시작</button></span></div>
     <div id="goal" class="mt-1 text-[12px] text-stone-300"></div>
     <div id="chips" class="flex flex-wrap gap-1 mt-2"></div>
   </header>
   <main class="flex-1 flex flex-col items-center px-5 pt-6 pb-10">
     <div id="stage" class="relative w-full max-w-[400px] select-none">
       <div class="deck"></div>
-      <div id="card" class="card"></div>
+      <div id="swipe-label" class="swipe-label" aria-hidden="true"></div>
+      <div id="card" class="card" aria-live="polite"></div>
     </div>
     <div id="choices" class="w-full max-w-[400px] grid grid-cols-2 gap-2 mt-4"></div>
     <div id="howto" class="text-[11px] text-stone-600 mt-3 text-center"></div>
@@ -1165,13 +1204,15 @@ function build(){
   </main>`;
   $("restart").onclick=()=>{if(confirm("처음부터 다시 시작할까?")) restart();};
   $("people").onclick=()=>openRecord("now");
+  $("opts").onclick=openOpts;
   bindDrag($("card"));
   shown={...state.stats}; built=true;
 }
 
 function updateHeader(stats){
   const A=ACTS[state.act];
-  const tw=pending&&pending.out.hasTower?pending.out.tower:(towerMode()?state.tower:null);
+  // 첨탑 관문(spire_1~4) 카드는 왕국 스탯을 건드리므로 스탯 막대를 보여 준다
+  const tw=pending?(pending.out.hasTower?pending.out.tower:null):(towerMode()&&state.currentId==="tower"?state.tower:null);
   const du=pending&&pending.out.hasDuel?pending.out.duel:state.duel;
   $("statsrow").classList.toggle("hidden",!!(tw||du)); $("towerbar").classList.toggle("hidden",!(tw||du));
   if(du&&!tw) $("towerbar").innerHTML=`<div class="flex justify-between items-end text-[13px]">
@@ -1223,51 +1264,57 @@ function tilt(dx,th){
   if(side!==previewSide) preview(side);
   const lab=$("swipe-label"); if(lab) lab.style.opacity=side?Math.min(1,Math.abs(dx)/(th||110)):0;
 }
+let busy=false; // 카드가 날아가는 동안 입력을 막는다 (연타로 결과 장을 건너뛰거나 두 번 고르는 것 방지)
 function fly(side,cb){
-  const el=$("card");
+  const el=$("card"); busy=true;
   el.style.transition="transform .22s ease-in, opacity .22s";
   el.style.transform=`translateX(${side==="left"?-520:520}px) rotate(${side==="left"?-24:24}deg)`;
-  el.style.opacity="0"; setTimeout(cb,200);
+  el.style.opacity="0"; setTimeout(()=>{busy=false;cb();},calm()?0:200);
 }
-function commitSwipe(side){ if(pending||state.ended) return; fly(side,()=>{preview(null);choose(side);}); }
+function commitSwipe(side){ if(busy||pending||state.ended) return; fly(side,()=>{preview(null);choose(side);}); }
 function pressSide(side){
-  if(pending||state.ended) return;
-  if(previewSide!==side){ preview(side); tilt(side==="left"?-56:56,110); const l=$("swipe-label"); if(l) l.style.opacity=.9; return; }
+  if(busy||pending||state.ended) return;
+  if(previewSide!==side&&!(TOUCH&&opts.oneTap)){ preview(side); tilt(side==="left"?-56:56,110); const l=$("swipe-label"); if(l) l.style.opacity=.9;
+    $("howto").textContent="같은 쪽을 한 번 더 누르면 고른다"; return; }
   commitSwipe(side);
 }
 function bindDrag(el){
   const TH=()=>Math.min(110,(el.offsetWidth||400)*0.28);
-  el.addEventListener("pointerdown",e=>{ if(state.ended) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
+  el.addEventListener("pointerdown",e=>{ if(state.ended||busy) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
   el.addEventListener("pointermove",e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; tilt(drag.dx,TH()); });
   const end=()=>{ if(!drag) return; const dx=drag.dx; drag=null; el.style.transition="";
     if(pending){ if(Math.abs(dx)>TH()||Math.abs(dx)<6) nextResult(dx>=0?"right":"left"); else tilt(0); return; }
     if(Math.abs(dx)>TH()) commitSwipe(dx<0?"left":"right"); else { tilt(0); preview(null); } };
-  el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);
+  el.addEventListener("pointerup",end);
+  // 브라우저가 세로 스크롤로 가져가면 pointercancel이 온다. 이건 탭이 아니니 넘기지 않는다.
+  el.addEventListener("pointercancel",()=>{ if(!drag) return; drag=null; el.style.transition=""; tilt(0); if(!pending) preview(null); });
 }
 
 function showFront(){
   const c=card(state.currentId), el=$("card");
   el.className="card fade"; el.style.transition=""; el.style.transform=""; el.style.opacity="";
   el.innerHTML=`<div class="flex items-center gap-3">${sigil({who:val(c.who)})}<div><div class="text-[15px] font-bold">${esc(val(c.who))}</div><div class="text-[11px] text-stone-500">${esc(val(c.role))}</div></div></div>
-    <div class="mt-5 text-[15px] leading-8 whitespace-pre-line">${esc(val(c.text))}</div>`;
+    <div class="mt-5 story whitespace-pre-line">${esc(val(c.text))}</div>`;
+  const sl=$("swipe-label"); if(sl) sl.style.opacity=0;
   const ch={left:choiceOf(c,"left"),right:choiceOf(c,"right")};
   $("choices").innerHTML=["left","right"].map(sd=>`<button data-side="${sd}" class="choice ${sd==="right"?"text-right":""}"><div>${sd==="left"?"← ":""}${esc(ch[sd].label)}${sd==="right"?" →":""}</div><div class="text-[11px] mt-1 text-stone-500">${hint(ch[sd])}</div></button>`).join("");
   document.querySelectorAll("#choices [data-side]").forEach(b=>{
     b.onclick=()=>pressSide(b.dataset.side);
-    if(!TOUCH){ b.onmouseenter=()=>{preview(b.dataset.side);tilt(b.dataset.side==="left"?-28:28,110);}; b.onmouseleave=()=>{if(!pending){tilt(0);preview(null);}}; }
+    if(!TOUCH){ b.onmouseenter=()=>{preview(b.dataset.side);tilt(b.dataset.side==="left"?-28:28,110);}; b.onmouseleave=()=>{if(!pending&&!busy){tilt(0);preview(null);}}; }
   });
-  $("howto").textContent=TOUCH?"카드를 꾹 눌러 좌우로 끌어 놓으면 고른다":"카드를 좌우로 끌어 놓거나, 방향키를 두 번 누른다";
+  $("howto").textContent=TOUCH?(opts.oneTap?"카드를 좌우로 끌어 놓거나, 선택지를 누르면 고른다":"카드를 좌우로 끌어 놓거나, 선택지를 두 번 누르면 고른다"):"카드를 좌우로 끌어 놓거나, 방향키(A·D)를 두 번 누른다";
 }
 function showResult(){
   const p=pending, el=$("card"), pages=pagesOf(p.out.result), last=resultPage>=pages.length-1;
   el.className="card result fade"; el.style.transition=""; el.style.transform=""; el.style.opacity="";
   el.innerHTML=`${p.out.check&&resultPage===0?`<div class="text-[11px] tracking-widest text-stone-600 mb-3">판정 ${p.out.check.ok?"성공":"실패"}</div>`:""}
-    <div class="text-[15px] leading-8 whitespace-pre-line">${esc(pages[resultPage])}</div>
+    <div class="story whitespace-pre-line">${esc(pages[resultPage])}</div>
     ${last?`<div class="text-[12px] text-stone-600 mt-5">${arrows(p.delta)}</div>`:""}
     <div class="absolute bottom-4 left-0 right-0 text-center text-[11px] text-stone-500">${pages.length>1?`${resultPage+1} / ${pages.length} · `:""}${!last?"넘겨서 계속":p.ending?"넘겨서 결말 보기":"넘겨서 계속"}</div>`;
   $("choices").innerHTML=""; $("howto").textContent="";
 }
 function nextResult(side){
+  if(busy||!pending) return;
   const pages=pagesOf(pending.out.result);
   if(resultPage<pages.length-1){resultPage++;fly(side,showResult);}
   else fly(side,commit);
@@ -1353,7 +1400,7 @@ function showIntro(i){
     <div class="w-full max-w-[420px] fade">
       <div class="text-[11px] tracking-widest text-stone-500 mb-3">${i+1} / ${INTRO.length}</div>
       <h2 class="text-[22px] font-bold mb-4">${x.t}</h2>
-      <div class="text-[15px] leading-8 text-stone-300 whitespace-pre-line">${esc(x.b)}</div>
+      <div class="story text-stone-300 whitespace-pre-line">${esc(x.b)}</div>
       <div class="flex justify-between items-center mt-8">
         <button id="intro-skip" class="text-[12px] text-stone-500 underline">건너뛰기</button>
         <button id="intro-next" class="px-5 py-2 rounded-[12px] bg-[#f6ecd2] text-[#1a1612] text-[14px]">${last?"시작":"다음"}</button>
@@ -1363,8 +1410,37 @@ function showIntro(i){
   $("intro-next").onclick=()=>last?done():showIntro(i+1);
 }
 function closePeople(){$("panel").innerHTML="";}
+function openOpts(){
+  const row=(t,key,vals)=>sec(t,`<div class="flex flex-wrap gap-2">${vals.map(([v,l])=>`<button data-opt="${key}" data-v="${v}" class="opt ${String(opts[key])===v?"on":""}">${l}</button>`).join("")}</div>`);
+  $("panel").innerHTML=`<div class="fixed inset-0 bg-black/80 z-[65] flex justify-center items-start overflow-y-auto p-4" id="panel-bg">
+    <div class="bg-[#151311] border border-stone-800 rounded-[20px] w-full max-w-[480px] my-6 fade p-5">
+      <div class="flex justify-between items-center mb-5"><h2 class="text-[17px] font-bold">설정</h2><button id="panel-close" class="text-stone-400 text-[13px]">닫기 ✕</button></div>
+      ${row("글자 크기","size",[["m","보통"],["l","크게"],["xl","아주 크게"]])}
+      ${row("움직임 줄이기","calm",[["false","끔"],["true","켬"]])}
+      ${TOUCH?row("고르는 방식","oneTap",[["false","두 번 눌러 고르기"],["true","한 번 눌러 고르기"]]):""}
+      <div class="text-[12px] text-stone-500 leading-6">기기에서 ‘동작 줄이기’를 켜 두었다면 움직임은 자동으로 줄어든다.<br>키보드: ← → · A D · 1 2 로 고르고 같은 키를 한 번 더 누르면 확정. Enter·Space로 결과를 넘긴다. Esc로 창을 닫는다.</div>
+    </div></div>`;
+  $("panel-close").onclick=closePeople;
+  $("panel-bg").onclick=e=>{if(e.target.id==="panel-bg")closePeople();};
+  document.querySelectorAll("[data-opt]").forEach(b=>b.onclick=()=>{const v=b.dataset.v;opts[b.dataset.opt]=v==="true"?true:v==="false"?false:v;saveOpts();applyOpts();openOpts();if(!pending&&!state.ended)showFront();});
+}
+let bannerTimer=null;
+function showActBanner(){
+  if(typeof document==="undefined"||!document.querySelector) return;
+  const A=ACTS[state.act], have=chips().filter(t=>t!=="반지 없음");
+  $("banner").innerHTML=`<div id="banner-bg" class="fixed inset-0 bg-[#0e0c0a] z-[68] flex justify-center items-center p-6 cursor-pointer">
+    <div class="w-full max-w-[420px] text-center fade">
+      <div class="text-[11px] tracking-widest text-stone-500 mb-2">${esc(state.flags.regionOverride||A.region)} · ${state.year}년 · ${state.age}세</div>
+      <h2 class="text-[26px] font-bold mb-3">${esc(A.name)}</h2>
+      <div class="story text-stone-300">${esc(val(A.goal))}</div>
+      ${have.length?`<div class="mt-6 text-[11px] tracking-widest text-stone-500 mb-2">지금 지닌 것</div><div>${have.map(t=>chip(esc(t))).join("")}</div>`:""}
+      <div class="mt-8 text-[11px] text-stone-600">눌러서 계속</div></div></div>`;
+  $("banner-bg").onclick=hideBanner;
+  clearTimeout(bannerTimer); bannerTimer=setTimeout(hideBanner,3500);
+}
+function hideBanner(){clearTimeout(bannerTimer);const b=$("banner");if(b)b.innerHTML="";}
 function renderLog(){
-  const log=state.history.slice(0,4).map(h=>`<li class="truncate"><span class="text-stone-500">${esc(h.who)}</span> · ${esc(h.label)}</li>`).join("");
+  const log=state.history.filter(h=>!h.round).slice(0,4).map(h=>`<li class="truncate"><span class="text-stone-500">${esc(h.who)}</span> · ${esc(h.label)}</li>`).join("");
   $("log").innerHTML=log?`<div class="text-[11px] text-stone-600 mb-1">지나온 길</div><ul class="text-[12px] text-stone-500 space-y-1">${log}</ul>`:"";
 }
 function showEnding(){
@@ -1374,8 +1450,10 @@ function showEnding(){
   const nc=(state.newClues||[]).filter(k=>CLUES[k]);
   const newClueHTML=nc.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생에 알게 된 것</div><ul class="text-[12px] leading-6">${nc.map(k=>`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`).join("")}</ul>`:"";
   const relicHTML=`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">유물</div><ul class="text-[12px] leading-6">${RELICS.map(r=>hasRelic(r.id)?`<li class="${(state.newRelics||[]).includes(r.id)?"font-bold":""}">${(state.newRelics||[]).includes(r.id)?"새로 얻음 · ":""}${r.name} · ${r.desc}</li>`:`<li class="text-stone-400">??? · 결말 ${r.need}개</li>`).join("")}</ul>`;
+  const trail=state.history.filter(h=>!h.round).slice(0,10).reverse();
+  const recapHTML=trail.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생 · ${state.year}년 · ${state.age}세${state.history.filter(h=>!h.round).length>10?" · 마지막 열 번의 선택":""}</div><ol class="text-[12px] leading-6">${trail.map(h=>`<li><span class="text-stone-500">${esc(h.who)}</span> · ${esc(h.label)}</li>`).join("")}</ol>`:"";
   const codex=got.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">기록 ${got.length} / ${ck.length}</div><ul class="text-[12px] leading-6">${ck.map(k=>m.clues.includes(k)?`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`:`<li class="text-stone-400">???</li>`).join("")}</ul>`:"";
-  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8"><div class="text-[11px] tracking-widest text-stone-600">${E.tag}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div class="text-[14px] leading-8 whitespace-pre-wrap">${esc(endingDesc(id,state))}</div><div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">발견한 결말 ${disc.length} / ${Object.keys(ENDINGS).length}</div><div class="leading-6">${list}</div>${newClueHTML}${relicHTML}<button id="again" class="mt-6 w-full bg-[#1a1612] text-[#f6ecd2] py-3 rounded-[12px]">다음 생</button><button id="end-rec" class="mt-2 w-full text-[12px] text-stone-600 underline py-2">기록 보기 · 못 본 결말의 실마리</button></div></div>`;
+  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8"><div class="text-[11px] tracking-widest text-stone-600">${E.tag}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div class="story whitespace-pre-wrap">${esc(endingDesc(id,state))}</div>${recapHTML}<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">발견한 결말 ${disc.length} / ${Object.keys(ENDINGS).length}</div><div class="leading-6">${list}</div>${newClueHTML}${relicHTML}<button id="again" class="mt-6 w-full bg-[#1a1612] text-[#f6ecd2] py-3 rounded-[12px]">다음 생</button><button id="end-rec" class="mt-2 w-full text-[12px] text-stone-600 underline py-2">기록 보기 · 못 본 결말의 실마리</button></div></div>`;
   $("again").onclick=restart;
   $("end-rec").onclick=()=>openRecord("endings");
 }
@@ -1389,17 +1467,22 @@ function render(){
   if(state.ended) showEnding(); else $("modal").innerHTML="";
   if(!getMeta().introSeen&&!$("panel").innerHTML) showIntro(0);
 }
-function restart(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}state=newState();pending=null;
+function restart(){try{localStorage.removeItem(SAVE_KEY);}catch(e){}state=newState();pending=null;busy=false;hideBanner();
   if(built){for(const k of STAT_KEYS){const f=$("fill-"+k),g=$("ghost-"+k);f.style.transition="none";g.style.opacity="0";shown[k]=state.stats[k];f.style.width=state.stats[k]+"%";}}
   render();
   if(built) requestAnimationFrame(()=>STAT_KEYS.forEach(k=>{$("fill-"+k).style.transition="";}));}
 if(typeof document!=="undefined"&&document.addEventListener) document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if($("banner").innerHTML){ hideBanner(); return; }
+  // 기록·설정 창은 결말 화면 위에서도 열리므로 ended 검사보다 먼저 본다
+  if($("panel").innerHTML){ if(e.key==="Escape"){const m=getMeta();m.introSeen=true;setMeta(m);closePeople();} return; }
   if(state.ended) return;
-  if(document.getElementById("panel").innerHTML){ if(e.key==="Escape"){const m=getMeta();m.introSeen=true;setMeta(m);closePeople();} return; }
-  if(pending){ if(["Enter"," ","ArrowLeft","ArrowRight"].includes(e.key)){e.preventDefault();nextResult(e.key==="ArrowLeft"?"left":"right");} return; }
-  const side=e.key==="ArrowLeft"?"left":e.key==="ArrowRight"?"right":null;
-  if(side){e.preventDefault();pressSide(side);} else if(e.key==="Enter"&&previewSide){e.preventDefault();commitSwipe(previewSide);}
+  const k=e.key.length===1?e.key.toLowerCase():e.key;
+  const side=(k==="ArrowLeft"||k==="a"||k==="1")?"left":(k==="ArrowRight"||k==="d"||k==="2")?"right":null;
+  if(pending){ if(side||k==="Enter"||k===" "){e.preventDefault();nextResult(side||"right");} return; }
+  if(side){e.preventDefault();pressSide(side);} else if(k==="Enter"&&previewSide){e.preventDefault();commitSwipe(previewSide);}
 });
+applyOpts();
 render();
 </script>
 </body>

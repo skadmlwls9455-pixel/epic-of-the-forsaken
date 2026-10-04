@@ -16,10 +16,10 @@
   const STATUSES = ["부상", "중상", "기절", "광기", "독", "구속", "출혈", "추적당함"];
   const EXPRS = { neutral: "기본", smile: "미소", angry: "분노", sad: "슬픔", surprised: "놀람" };
 
-  let logFilter = "all", investigate = false, editing = false, activeKey = "";
+  let logFilter = "all", investigate = false, editing = false, activeKey = "", statusOpen = false;
   let renderedScene = null, renderedLine = null, pendingTransition = null;
   let lastLogKey = "", lastModeKey = "";
-  let modalClose = null;
+  let modalClose = null, modalGen = 0;
 
   // ---------- 작은 도구 ----------
   function toast(msg, ms) {
@@ -39,11 +39,14 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
+  // 모달 안의 숫자를 굴리는 연출. 그 사이 창이 닫히거나 바뀌면 done 을 부르지 않는다
   function animateNumber(el, final, enabled, done) {
-    if (!enabled) { el.textContent = final; if (done) done(); return; }
+    const gen = modalGen;
+    const finish = () => { el.textContent = final; if (done && gen === modalGen) done(); };
+    if (!enabled) { finish(); return; }
     const t0 = Date.now();
     const id = setInterval(() => {
-      if (Date.now() - t0 > 650) { clearInterval(id); el.textContent = final; if (done) done(); return; }
+      if (Date.now() - t0 > 650) { clearInterval(id); finish(); return; }
       el.textContent = 1 + Math.floor(Math.random() * 100);
     }, 55);
   }
@@ -72,12 +75,15 @@
     $(".modal-card").classList.toggle("wide", !!opts.wide);
     $("#modal").hidden = false;
     modalClose = opts.onClose || null;
-    return $("#modal-body");
+    const body = $("#modal-body");
+    body.gen = ++modalGen; // 지연 콜백이 나중에 열린 다른 창을 덮어쓰지 않게 하는 표시
+    return body;
   }
 
   function closeModal(silent) {
     if ($("#modal").hidden) return;
     $("#modal").hidden = true;
+    modalGen++;
     const cb = modalClose;
     modalClose = null;
     if (cb && !silent) cb();
@@ -218,7 +224,7 @@
       const pushFailed = isPush && !res.ok;
       $("#rl-num", body).className = "big-num g-" + res.level;
       $("#rl-after", body).innerHTML =
-        '<div class="grade g-' + res.level + '"><span>' + gr.en + '</span><b>' + gr.label + '</b></div>' +
+        '<div class="grade g-' + res.level + '"><b>' + gr.label + '</b></div>' +
         (detail ? '<p class="muted center">' + esc(detail) + '</p>' : "") +
         (pushFailed ? '<p class="warn">강행 실패' + (pushNote ? " — " + esc(pushNote) : " — KP가 결과를 정해줘") + '</p>' : "") +
         '<div class="row end">' +
@@ -276,7 +282,8 @@
           const res = rollExprFor(txt, s.activePc);
           const out = $("#dice-out", body);
           out.innerHTML = '<div class="big-num">--</div><p class="muted center">' + esc(res.expr + " = " + CoC.formatExpr(res)) + "</p>";
-          animateNumber($(".big-num", out), res.total, s.settings.anim, () => { setTimeout(() => draw(txt), 900); });
+          const gen = modalGen;
+          animateNumber($(".big-num", out), res.total, s.settings.anim, () => { setTimeout(() => { if (gen === modalGen) draw(txt); }, 900); });
         } catch (e) { toast(e.message); }
       };
       body.querySelectorAll(".die").forEach((b) => (b.onclick = () => run("1d" + b.dataset.d)));
@@ -318,7 +325,7 @@
         out.innerHTML = '<div class="big-num">--</div><div id="sn-res"></div>';
         animateNumber($(".big-num", out), r.check.value, s.settings.anim, () => {
           $(".big-num", out).className = "big-num g-" + r.check.level;
-          $("#sn-res", out).innerHTML = '<div class="grade g-' + r.check.level + '"><span>' + gr.en + '</span><b>' + gr.label + '</b></div>' +
+          $("#sn-res", out).innerHTML = '<div class="grade g-' + r.check.level + '"><b>' + gr.label + '</b></div>' +
             '<p class="center san-line">' + esc(lossTxt) + (r.loss.maxed ? " · 대실패: 최대 손실" : r.lost ? " · " + esc(CoC.formatExpr(r.loss)) : "") + "</p>" +
             (isKP() ? CoC.madnessFlags(c.sanStart, c.san, c.sanLost, r.lost).map((f) => '<p class="warn">' + esc(f.text) + "</p>").join("") : "");
         });
@@ -397,7 +404,7 @@
 
   function openClues() {
     const s = st(), kp = isKP();
-    const body = openModal("CASE FILE", "", { wide: true });
+    const body = openModal("단서", "", { wide: true });
     const found = SC.clues.filter((c) => s.clues[c.id]).length;
     body.innerHTML = '<p class="muted">' + found + " / " + SC.clues.length + '</p><div class="cards">' + SC.clues.map((c, i) => {
       const got = !!s.clues[c.id];
@@ -455,7 +462,7 @@
   // ---------- KP 패널 ----------
   function openKeeper() {
     const s = st(), sc = sceneDef(s.sceneId);
-    const body = openModal("KEEPER", "", { wide: true });
+    const body = openModal("KP", "", { wide: true });
     const chars = SC.chars.filter((c) => c.role !== "NPC");
     body.innerHTML =
       '<section><h3>이 장면의 KP 메모</h3><p class="keeper-note">' + esc(sc.keeper || "메모 없음") + "</p></section>" +
@@ -500,7 +507,7 @@
     const body = openModal("저장 / 불러오기", "", {});
     const rows = Store.slots();
     body.innerHTML = '<div class="slots">' + rows.map((r) => {
-      const m = r.meta, label = r.slot === "auto" ? "AUTO SAVE" : "SAVE " + pad(r.slot);
+      const m = r.meta, label = r.slot === "auto" ? "자동 저장" : "슬롯 " + r.slot;
       return '<div class="slot"><div><b>' + label + "</b>" + (m ? '<p class="muted">' + new Date(m.savedAt).toLocaleString("ko-KR") + "<br>" + esc(m.scene) + " · HP " + m.hp + " · SAN " + m.san + " · LUCK " + m.luck + " · 단서 " + m.clues + "</p>" : '<p class="muted">비어 있음</p>') + "</div>" +
         '<div class="row">' + (inGame && r.slot !== "auto" ? '<button class="chip" data-save="' + r.slot + '">저장</button>' : "") + (m ? '<button class="chip" data-load="' + r.slot + '">불러오기</button>' : "") + "</div></div>";
     }).join("") + "</div>" +
@@ -544,9 +551,9 @@
     addLog("system", "SYSTEM", "SESSION COMPLETE");
     Store.commit();
     const x = Store.stats();
-    const body = openModal("SESSION COMPLETE", "", {});
+    const body = openModal("세션 종료", "", {});
     body.innerHTML = '<h3 class="center">' + esc(SC.title) + "</h3>" +
-      '<div class="stats">' + [["PLAY TIME", hms(x.playMs)], ["ROLLS", x.rolls], ["CRITICAL", x.critical], ["FUMBLE", x.fumble], ["SAN LOSS", x.sanLoss], ["CLUES", x.clues + " / " + SC.clues.length]].map(([k, v]) => "<div><small>" + k + "</small><b>" + v + "</b></div>").join("") + "</div>" +
+      '<div class="stats">' + [["플레이 시간", hms(x.playMs)], ["판정", x.rolls], ["대성공", x.critical], ["대실패", x.fumble], ["SAN 손실", x.sanLoss], ["단서", x.clues + " / " + SC.clues.length]].map(([k, v]) => "<div><small>" + k + "</small><b>" + v + "</b></div>").join("") + "</div>" +
       '<div class="row end"><button class="btn" id="en-log">로그 내보내기</button><button class="btn" id="en-save">세이브 내보내기</button><button class="btn primary" id="en-back">계속 플레이</button></div>';
     $("#en-log", body).onclick = exportLog;
     $("#en-save", body).onclick = () => download(SC.id + "_save.json", Store.exportJson(), "application/json");
@@ -657,33 +664,36 @@
     const s = st(), sc = sceneDef(s.sceneId);
     $("#tb-title").textContent = SC.title;
     $("#tb-scene").textContent = "SCENE " + pad(SC.scenes.indexOf(sc) + 1) + " · " + sc.place + " · " + sc.time;
-    const b = $("#btn-mode");
-    b.textContent = isKP() ? "KP 시점" : "PC 시점";
-    b.classList.toggle("on", isKP());
+    $("#mode-pc").classList.toggle("on", !isKP());
+    $("#mode-kp").classList.toggle("on", isKP());
     $("#btn-edit").classList.toggle("on", editing);
     $("#app").classList.toggle("editing", editing);
     $("#edit-bar").hidden = !editing;
     $("#edit-bg").dataset.key = "bg:" + s.sceneId;
   }
 
-  function bar(label, key, c, max, id) {
+  function stat(label, key, c, max) {
     const pct = max ? Math.max(0, Math.min(100, (c[key] / max) * 100)) : 0;
-    return '<div class="stat stat-' + key + '"><span>' + label + '</span><div class="bar"><i style="width:' + pct + '%"></i></div><b>' + c[key] + (key === "luck" ? "" : "/" + max) + "</b>" +
-      '<button class="mini" data-act="adj" data-k="' + key + '" data-d="-1" aria-label="' + label + ' 감소">−</button><button class="mini" data-act="adj" data-k="' + key + '" data-d="1" aria-label="' + label + ' 증가">+</button></div>';
+    return '<div class="stat stat-' + key + '"><div class="stat-top"><span>' + label + "</span><b>" + c[key] + (key === "luck" ? "" : "<small>/" + max + "</small>") + "</b>" +
+      '<span class="adj"><button class="mini" data-act="adj" data-k="' + key + '" data-d="-1" aria-label="' + label + ' 감소">−</button><button class="mini" data-act="adj" data-k="' + key + '" data-d="1" aria-label="' + label + ' 증가">+</button></span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div></div>';
   }
 
   function renderLeft() {
     const s = st(), id = s.activePc, c = s.chars[id], cd = charDef(id);
     const learned = Object.entries(c.skills).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const pcs = SC.chars.filter((x) => x.role !== "NPC");
+    const shown = statusOpen ? STATUSES.concat(c.statuses.filter((x) => !STATUSES.includes(x))) : c.statuses;
     $("#left").innerHTML =
-      '<select id="pc-select" aria-label="캐릭터">' + SC.chars.filter((x) => x.role !== "NPC").map((x) => '<option value="' + x.id + '"' + (x.id === id ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select>" +
-      '<div class="portrait' + (editing ? " editable" : "") + '" style="--c:' + cd.color + '"' + (editing ? ' data-act="pick" data-key="portrait:' + id + '" title="프로필 이미지 교체"' : "") + ">" + (portraitFor(cd) ? '<img src="' + esc(portraitFor(cd)) + '" alt="">' : "<span>" + esc(cd.name[0]) + "</span>") + "</div>" +
-      "<h2>" + esc(cd.name) + '</h2><p class="muted">' + esc(cd.role) + " · " + esc(cd.job) + "</p>" +
-      bar("HP", "hp", c, c.hpMax) + bar("MP", "mp", c, c.mpMax) + bar("SAN", "san", c, c.sanMax) + bar("LUCK", "luck", c, 99) +
-      '<div class="statuses">' + STATUSES.concat(c.statuses.filter((x) => !STATUSES.includes(x))).map((x) => '<button class="chip sm' + (c.statuses.includes(x) ? " on" : "") + '" data-act="status" data-s="' + esc(x) + '">' + esc(x) + "</button>").join("") + "</div>" +
-      '<h3>기능치</h3><div class="quick">' + learned.map(([n, v]) => '<button data-act="roll" data-n="' + esc(n) + '"><span>' + esc(n) + "</span><b>" + v + "</b></button>").join("") + "</div>" +
-      '<button class="chip" data-act="sheet">전체 시트</button>';
-    $("#pc-select").onchange = (e) => { s.activePc = e.target.value; Store.commit(); };
+      (pcs.length > 1 ? '<div class="pc-tabs">' + pcs.map((x) => '<button class="' + (x.id === id ? "on" : "") + '" data-act="pc" data-id="' + x.id + '">' + esc(x.name) + "</button>").join("") + "</div>" : "") +
+      '<div class="pc-head"><div class="portrait' + (editing ? " editable" : "") + '" style="--c:' + cd.color + '"' + (editing ? ' data-act="pick" data-key="portrait:' + id + '" title="프로필 이미지 교체"' : "") + ">" +
+        (portraitFor(cd) ? '<img src="' + esc(portraitFor(cd)) + '" alt="">' : "<span>" + esc(cd.name[0]) + "</span>") + "</div>" +
+        "<div><h2>" + esc(cd.name) + '</h2><p class="muted">' + esc(cd.role) + " · " + esc(cd.job) + "</p></div></div>" +
+      '<div class="stats-list">' + stat("HP", "hp", c, c.hpMax) + stat("MP", "mp", c, c.mpMax) + stat("SAN", "san", c, c.sanMax) + stat("LUCK", "luck", c, 99) + "</div>" +
+      '<div class="sec-head"><h3>상태</h3><button class="link" data-act="status-open">' + (statusOpen ? "완료" : "편집") + "</button></div>" +
+      '<div class="statuses">' + (shown.length ? shown.map((x) => '<button class="chip sm' + (c.statuses.includes(x) ? " on" : "") + '" data-act="status" data-s="' + esc(x) + '">' + esc(x) + "</button>").join("") : '<span class="muted">이상 없음</span>') + "</div>" +
+      '<div class="sec-head"><h3>기능치</h3><button class="link" data-act="sheet">전체 시트</button></div>' +
+      '<div class="quick">' + learned.map(([n, v]) => '<button data-act="roll" data-n="' + esc(n) + '"><span>' + esc(n) + "</span><b>" + v + "</b></button>").join("") + "</div>";
   }
 
   function renderStage() {
@@ -730,17 +740,18 @@
 
   function renderLog() {
     const s = st(), kp = isKP();
-    const types = [["all", "ALL"], ["rp", "RP"], ["dice", "DICE"], ["system", "SYSTEM"], ["clue", "CLUE"], ["ooc", "OOC"]].concat(kp ? [["secret", "SECRET"]] : []);
+    const types = [["all", "전체"], ["rp", "대사"], ["dice", "판정"], ["system", "시스템"], ["clue", "단서"], ["ooc", "잡담"]].concat(kp ? [["secret", "비밀"]] : []);
     const key = [s.log.length, s.log.length ? s.log[s.log.length - 1].text : "", logFilter, kp].join("|");
     if (key === lastLogKey) return;
     lastLogKey = key;
-    $("#filters").innerHTML = types.map(([k, l]) => '<button class="chip sm' + (logFilter === k ? " on" : "") + '" data-act="filter" data-f="' + k + '">' + l + "</button>").join("");
+    $("#filters").innerHTML = types.map(([k, l]) => '<button class="tab' + (logFilter === k ? " on" : "") + '" data-act="filter" data-f="' + k + '">' + l + "</button>").join("");
     const list = s.log.filter((e) => (kp || e.type !== "secret") && (logFilter === "all" || e.type === logFilter || (logFilter === "dice" && e.type === "secret" && kp))).slice(-300);
     const box = $("#log");
     const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     box.innerHTML = list.map((e) => {
       const gr = e.data && e.data.level ? " g-" + e.data.level : "";
-      return '<div class="entry t-' + e.type + gr + '"><time>' + hhmm(e.t) + "</time>" + (e.type === "rp" || e.type === "ooc" ? "<b>" + esc(e.who) + "</b>" : "") + "<p>" + esc(e.text) + "</p></div>";
+      const who = e.type === "rp" || e.type === "ooc" ? "<b>" + esc(e.who) + "</b>" : "";
+      return '<div class="entry t-' + e.type + gr + '"><div class="meta">' + who + "<time>" + hhmm(e.t) + "</time></div><p>" + esc(e.text) + "</p></div>";
     }).join("");
     if (near) box.scrollTop = box.scrollHeight;
     const who = $("#chat-who"), prev = who.value;
@@ -754,7 +765,7 @@
     const key = items.length + String(kp);
     if ($("#dock").dataset.key === key) return;
     $("#dock").dataset.key = key;
-    $("#dock").innerHTML = items.map(([k, l]) => '<button data-act="' + k + '">' + l + "</button>").join("");
+    $("#dock").innerHTML = items.map(([k, l]) => '<button class="' + (k === "keeper" ? "kp" : "") + '" data-act="' + k + '">' + l + "</button>").join("");
   }
 
   function render() {
@@ -806,7 +817,9 @@
     "edit-mode"() { editing = !editing; render(); toast(editing ? "편집 모드 — 점선 슬롯을 눌러 이미지를 교체해" : "편집 모드 종료"); },
     pick(t) { pickImage(t.dataset.key); },
     assets: openAssets,
-    "toggle-mode"() { const s = st(); s.mode = s.mode === "kp" ? "pc" : "kp"; Store.commit(); },
+    "set-mode"(t) { const s = st(); if (s.mode !== t.dataset.m) { s.mode = t.dataset.m; Store.commit(); } },
+    pc(t) { st().activePc = t.dataset.id; Store.commit(); },
+    "status-open"() { statusOpen = !statusOpen; renderLeft(); },
     panel(t) { $("#layout").classList.toggle("hide-" + t.dataset.side); },
     investigate() { investigate = !investigate; render(); },
     "skip-type"() { FX.skipType(); },

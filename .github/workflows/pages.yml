@@ -1,9 +1,7 @@
 name: Deploy TRPG backup
 
+# GitHub Pages 가 켜져 있지 않으면 실패해서 수동 실행으로만 둠. 실제 배포는 netlify.yml.
 on:
-  push:
-    branches: [main]
-    paths: ["trpg-backup/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:

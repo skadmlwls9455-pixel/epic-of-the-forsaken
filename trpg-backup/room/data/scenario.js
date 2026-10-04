@@ -15,7 +15,7 @@ window.SCENARIO = {
   system: "Call of Cthulhu 7th",
   date: "2026-10-04",
   theme: "summer", // summer | gothic | vhs
-  titleBg: "radial-gradient(60% 80% at 70% 20%, #f7d9a8 0%, transparent 60%), linear-gradient(170deg, #5c8fc9 0%, #223a63 60%, #0d1428 100%)",
+  titleBg: "linear-gradient(180deg, #1c1b19 0%, #0e0e0e 100%)", // 편집 모드에서 이미지로 교체 가능
   bgm: { title: "" }, // 장면 id 별 음원. 예: { title: "music/title.mp3", rooftop: "music/evening.mp3" }
 
   chars: [

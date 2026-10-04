@@ -224,7 +224,7 @@
       const pushFailed = isPush && !res.ok;
       $("#rl-num", body).className = "big-num g-" + res.level;
       $("#rl-after", body).innerHTML =
-        '<div class="grade g-' + res.level + '"><span>' + gr.en + '</span><b>' + gr.label + '</b></div>' +
+        '<div class="grade g-' + res.level + '"><b>' + gr.label + '</b></div>' +
         (detail ? '<p class="muted center">' + esc(detail) + '</p>' : "") +
         (pushFailed ? '<p class="warn">강행 실패' + (pushNote ? " — " + esc(pushNote) : " — KP가 결과를 정해줘") + '</p>' : "") +
         '<div class="row end">' +
@@ -325,7 +325,7 @@
         out.innerHTML = '<div class="big-num">--</div><div id="sn-res"></div>';
         animateNumber($(".big-num", out), r.check.value, s.settings.anim, () => {
           $(".big-num", out).className = "big-num g-" + r.check.level;
-          $("#sn-res", out).innerHTML = '<div class="grade g-' + r.check.level + '"><span>' + gr.en + '</span><b>' + gr.label + '</b></div>' +
+          $("#sn-res", out).innerHTML = '<div class="grade g-' + r.check.level + '"><b>' + gr.label + '</b></div>' +
             '<p class="center san-line">' + esc(lossTxt) + (r.loss.maxed ? " · 대실패: 최대 손실" : r.lost ? " · " + esc(CoC.formatExpr(r.loss)) : "") + "</p>" +
             (isKP() ? CoC.madnessFlags(c.sanStart, c.san, c.sanLost, r.lost).map((f) => '<p class="warn">' + esc(f.text) + "</p>").join("") : "");
         });
@@ -404,7 +404,7 @@
 
   function openClues() {
     const s = st(), kp = isKP();
-    const body = openModal("CASE FILE", "", { wide: true });
+    const body = openModal("단서", "", { wide: true });
     const found = SC.clues.filter((c) => s.clues[c.id]).length;
     body.innerHTML = '<p class="muted">' + found + " / " + SC.clues.length + '</p><div class="cards">' + SC.clues.map((c, i) => {
       const got = !!s.clues[c.id];
@@ -462,7 +462,7 @@
   // ---------- KP 패널 ----------
   function openKeeper() {
     const s = st(), sc = sceneDef(s.sceneId);
-    const body = openModal("KEEPER", "", { wide: true });
+    const body = openModal("KP", "", { wide: true });
     const chars = SC.chars.filter((c) => c.role !== "NPC");
     body.innerHTML =
       '<section><h3>이 장면의 KP 메모</h3><p class="keeper-note">' + esc(sc.keeper || "메모 없음") + "</p></section>" +
@@ -507,7 +507,7 @@
     const body = openModal("저장 / 불러오기", "", {});
     const rows = Store.slots();
     body.innerHTML = '<div class="slots">' + rows.map((r) => {
-      const m = r.meta, label = r.slot === "auto" ? "AUTO SAVE" : "SAVE " + pad(r.slot);
+      const m = r.meta, label = r.slot === "auto" ? "자동 저장" : "슬롯 " + r.slot;
       return '<div class="slot"><div><b>' + label + "</b>" + (m ? '<p class="muted">' + new Date(m.savedAt).toLocaleString("ko-KR") + "<br>" + esc(m.scene) + " · HP " + m.hp + " · SAN " + m.san + " · LUCK " + m.luck + " · 단서 " + m.clues + "</p>" : '<p class="muted">비어 있음</p>') + "</div>" +
         '<div class="row">' + (inGame && r.slot !== "auto" ? '<button class="chip" data-save="' + r.slot + '">저장</button>' : "") + (m ? '<button class="chip" data-load="' + r.slot + '">불러오기</button>' : "") + "</div></div>";
     }).join("") + "</div>" +
@@ -551,9 +551,9 @@
     addLog("system", "SYSTEM", "SESSION COMPLETE");
     Store.commit();
     const x = Store.stats();
-    const body = openModal("SESSION COMPLETE", "", {});
+    const body = openModal("세션 종료", "", {});
     body.innerHTML = '<h3 class="center">' + esc(SC.title) + "</h3>" +
-      '<div class="stats">' + [["PLAY TIME", hms(x.playMs)], ["ROLLS", x.rolls], ["CRITICAL", x.critical], ["FUMBLE", x.fumble], ["SAN LOSS", x.sanLoss], ["CLUES", x.clues + " / " + SC.clues.length]].map(([k, v]) => "<div><small>" + k + "</small><b>" + v + "</b></div>").join("") + "</div>" +
+      '<div class="stats">' + [["플레이 시간", hms(x.playMs)], ["판정", x.rolls], ["대성공", x.critical], ["대실패", x.fumble], ["SAN 손실", x.sanLoss], ["단서", x.clues + " / " + SC.clues.length]].map(([k, v]) => "<div><small>" + k + "</small><b>" + v + "</b></div>").join("") + "</div>" +
       '<div class="row end"><button class="btn" id="en-log">로그 내보내기</button><button class="btn" id="en-save">세이브 내보내기</button><button class="btn primary" id="en-back">계속 플레이</button></div>';
     $("#en-log", body).onclick = exportLog;
     $("#en-save", body).onclick = () => download(SC.id + "_save.json", Store.exportJson(), "application/json");
@@ -740,7 +740,7 @@
 
   function renderLog() {
     const s = st(), kp = isKP();
-    const types = [["all", "ALL"], ["rp", "RP"], ["dice", "DICE"], ["system", "SYSTEM"], ["clue", "CLUE"], ["ooc", "OOC"]].concat(kp ? [["secret", "SECRET"]] : []);
+    const types = [["all", "전체"], ["rp", "대사"], ["dice", "판정"], ["system", "시스템"], ["clue", "단서"], ["ooc", "잡담"]].concat(kp ? [["secret", "비밀"]] : []);
     const key = [s.log.length, s.log.length ? s.log[s.log.length - 1].text : "", logFilter, kp].join("|");
     if (key === lastLogKey) return;
     lastLogKey = key;

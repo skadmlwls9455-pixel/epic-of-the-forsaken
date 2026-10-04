@@ -24,6 +24,7 @@
         <button class="btn big primary" data-act="start">SESSION START</button>
         <button class="btn big" data-act="continue" id="btn-continue">CONTINUE</button>
         <button class="btn big ghost" data-act="saves">LOAD SESSION</button>
+        <button class="btn big ghost" data-act="assets">IMAGES</button>
       </div>
       <p class="t-sub" id="t-sub"></p>
       <p class="t-cast" id="t-cast"></p>
@@ -39,6 +40,7 @@
         <button class="icon" data-act="panel" data-side="left" title="캐릭터 패널">캐릭터</button>
         <button class="icon" data-act="panel" data-side="right" title="로그 패널">로그</button>
         <button class="icon" data-act="saves" title="저장 / 불러오기">저장</button>
+        <button class="chip" data-act="edit-mode" id="btn-edit" title="이미지 교체용 편집 모드">편집 모드</button>
         <button class="icon" data-act="settings" title="설정">설정</button>
       </div>
     </header>
@@ -52,6 +54,12 @@
         <div id="fx-layer" class="fx-layer"></div>
         <div id="sprites" class="sprites"></div>
         <div id="hotspots" class="hotspots"></div>
+        <div class="edit-bar" id="edit-bar" hidden>
+          <b>편집 모드</b><span>점선 슬롯을 눌러 이미지를 교체해 (붙여넣기 · 끌어놓기 가능)</span>
+          <button class="chip" data-act="pick" id="edit-bg">배경 교체</button>
+          <button class="chip" data-act="assets">에셋 관리</button>
+          <button class="chip on" data-act="edit-mode">완료</button>
+        </div>
         <div class="stage-tools">
           <button class="chip" data-act="investigate" id="btn-investigate">조사 모드</button>
         </div>
@@ -93,6 +101,7 @@
 
 <script src="js/coc.js"></script>
 <script src="data/scenario.js"></script>
+<script src="js/assets.js"></script>
 <script src="js/store.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/app.js"></script>

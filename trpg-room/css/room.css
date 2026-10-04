@@ -260,3 +260,24 @@ section > h3:first-child { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .fx i, .fx-grain, .fx-flicker, .fx-glitch, .fx-fog, .hotspot { animation: none !important; }
 }
+
+/* ---------- 편집 모드 / 이미지 관리 ---------- */
+.edit-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 7; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 12px; background: rgba(0, 0, 0, .72); backdrop-filter: blur(4px); font-size: .85rem; }
+.edit-bar b { color: var(--accent); letter-spacing: .1em; }
+.edit-bar span { color: var(--muted); flex: 1; min-width: 160px; }
+.editing .stage { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.editing .stage-tools { top: 54px; }
+.editing .sprite { filter: none; }
+.editing .sprites { z-index: 4; }
+.edit-btn { pointer-events: auto; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 5px 12px; border-radius: 99px; border: 1.5px dashed var(--accent); background: rgba(0, 0, 0, .7); font-size: .78rem; }
+.edit-btn:hover { background: var(--accent); color: var(--accent-ink); }
+.portrait.editable { cursor: pointer; outline: 2px dashed var(--accent); outline-offset: 3px; position: relative; }
+.portrait.editable::after { content: "교체"; position: absolute; inset: auto 0 0 0; text-align: center; font-size: .7rem; background: rgba(0, 0, 0, .7); padding: 2px 0; }
+.paper-img { display: block; max-width: 100%; max-height: 40vh; margin: 0 auto 14px; border-radius: 2px; }
+.asset-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.asset { border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: rgba(255, 255, 255, .04); }
+.asset.sel { border-color: var(--accent); }
+.asset.drop { background: rgba(125, 180, 255, .2); border-style: dashed; }
+.asset b { font-size: .78rem; font-weight: 600; }
+.thumb { aspect-ratio: 16 / 10; border-radius: 8px; display: grid; place-items: center; overflow: hidden; cursor: pointer; background: repeating-conic-gradient(rgba(255, 255, 255, .06) 0 25%, transparent 0 50%) 0 0 / 14px 14px; border: 1px dashed var(--line); color: var(--muted); font-size: .75rem; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; }

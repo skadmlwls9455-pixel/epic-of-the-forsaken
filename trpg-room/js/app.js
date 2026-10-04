@@ -16,7 +16,7 @@
   const STATUSES = ["부상", "중상", "기절", "광기", "독", "구속", "출혈", "추적당함"];
   const EXPRS = { neutral: "기본", smile: "미소", angry: "분노", sad: "슬픔", surprised: "놀람" };
 
-  let logFilter = "all", investigate = false;
+  let logFilter = "all", investigate = false, editing = false, activeKey = "";
   let renderedScene = null, renderedLine = null, pendingTransition = null;
   let lastLogKey = "", lastModeKey = "";
   let modalClose = null;
@@ -54,6 +54,12 @@
     const def = CoC.SKILLS.find((s) => s.name === name);
     return def ? CoC.baseValue(def, c.attrs) : 0;
   }
+
+  // 편집 모드로 교체한 이미지가 있으면 그걸, 없으면 시나리오 데이터의 값을 쓴다
+  const bgFor = (sc) => Assets.get("bg:" + sc.id) || sc.bg;
+  const portraitFor = (cd) => Assets.get("portrait:" + cd.id) || cd.portrait;
+  const handoutImg = (h) => Assets.get("handout:" + h.id) || h.image || "";
+  const spriteFor = (cd, ex) => Assets.get("sprite:" + cd.id + ":" + ex) || Assets.get("sprite:" + cd.id + ":neutral") || (cd.sprites && cd.sprites[ex]) || cd.sprite || "";
 
   function dbOf(charId) { return CoC.derived(st().chars[charId].attrs).db; }
 
@@ -547,6 +553,94 @@
     $("#en-back", body).onclick = () => { s.ended = false; s.lastTick = Date.now(); Store.commit(); closeModal(); };
   }
 
+  // ---------- 이미지 교체 (편집 모드) ----------
+  function slotList() {
+    const out = [{ key: "title", label: "타이틀 배경", group: "타이틀" }];
+    SC.scenes.forEach((sc) => out.push({ key: "bg:" + sc.id, label: sc.title, group: "장면 배경" }));
+    SC.chars.forEach((c) => {
+      out.push({ key: "portrait:" + c.id, label: c.name + " · 프로필", group: "캐릭터" });
+      Object.entries(EXPRS).forEach(([ex, l]) => out.push({ key: "sprite:" + c.id + ":" + ex, label: c.name + " · 스탠딩 " + l, group: "캐릭터" }));
+    });
+    SC.handouts.forEach((h) => out.push({ key: "handout:" + h.id, label: h.title, group: "핸드아웃" }));
+    return out;
+  }
+
+  function slotLabel(key) { const x = slotList().find((v) => v.key === key); return x ? x.group + " — " + x.label : key; }
+
+  function afterAssetChange() {
+    renderedScene = null; // 배경을 전환 효과 없이 다시 적용
+    render();
+    if (!$("#modal").hidden && $("#asset-grid")) openAssets(true);
+  }
+
+  async function setSlot(key, blob) {
+    try {
+      if (typeof blob === "string") {
+        const r = await Assets.fromUrl(blob, key);
+        Assets.put(key, r.value);
+        if (r.linked) toast("주소 그대로 연결했어. 원본이 사라지면 같이 깨져", 4200);
+      } else Assets.put(key, await Assets.fromBlob(blob, key));
+      if (!Assets.persistent) toast("이 브라우저는 이미지를 저장하지 못해서 새로고침하면 사라져", 4200);
+      else toast("교체했어 — " + slotLabel(key));
+      afterAssetChange();
+    } catch (e) { toast(e.message || "이미지를 읽지 못했어"); }
+  }
+
+  function pickImage(key) {
+    activeKey = key;
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = () => { if (inp.files[0]) setSlot(key, inp.files[0]); };
+    inp.click();
+  }
+
+  function openAssets(keepScroll) {
+    const card = $(".modal-card");
+    const top = keepScroll === true && card ? card.scrollTop : 0;
+    const body = openModal("이미지 관리", "", { wide: true });
+    const groups = {};
+    slotList().forEach((x) => (groups[x.group] = groups[x.group] || []).push(x));
+    body.innerHTML = '<div id="asset-grid"><p class="muted">칸을 눌러 고르거나, 이미지를 끌어다 놓거나, 칸을 누른 뒤 Ctrl+V 로 붙여넣어. 비워두면 기본 그림이 나와.</p>' +
+      Object.entries(groups).map(([g, list]) => "<h3>" + esc(g) + '</h3><div class="asset-cards">' + list.map((x) => {
+        const v = Assets.get(x.key);
+        return '<div class="asset' + (activeKey === x.key ? " sel" : "") + '" data-key="' + x.key + '"><div class="thumb" data-act="pick" data-key="' + x.key + '">' +
+          (v ? '<img src="' + esc(v) + '" alt="">' : "<span>비어 있음</span>") + "</div><b>" + esc(x.label) + "</b>" +
+          (v ? '<button class="chip sm" data-asset-del="' + x.key + '">지우기</button>' : "") + "</div>";
+      }).join("") + "</div>").join("") +
+      '<h3>백업</h3><div class="row"><button class="btn" id="as-export">이미지 내보내기</button><button class="btn" id="as-import">이미지 불러오기</button></div>' +
+      (Assets.persistent ? "" : '<p class="warn">이 브라우저에서는 이미지 저장소를 못 써. 새로고침하면 교체한 이미지가 사라져.</p>') + "</div>";
+    body.querySelectorAll("[data-asset-del]").forEach((b) => (b.onclick = () => { Assets.del(b.dataset.assetDel); afterAssetChange(); if ($("#asset-grid")) openAssets(true); }));
+    body.querySelectorAll(".asset").forEach((el) => {
+      el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("drop"); });
+      el.addEventListener("dragleave", () => el.classList.remove("drop"));
+      el.addEventListener("drop", (e) => { e.preventDefault(); el.classList.remove("drop"); dropOn(el.dataset.key, e); });
+    });
+    $("#as-export", body).onclick = () => download(SC.id + "_images.json", Assets.exportAll(), "application/json");
+    $("#as-import", body).onclick = () => {
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.accept = "application/json,.json";
+      inp.onchange = () => inp.files[0] && inp.files[0].text().then((t) => { const err = Assets.importAll(t); if (err) toast(err); else { toast("불러왔어"); afterAssetChange(); } });
+      inp.click();
+    };
+    if (top) $(".modal-card").scrollTop = top;
+  }
+
+  function dropOn(key, e) {
+    activeKey = key;
+    const f = [...(e.dataTransfer.files || [])].find((x) => /^image\//.test(x.type));
+    if (f) return setSlot(key, f);
+    const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (/^https?:\/\//i.test(url || "")) setSlot(key, url.split("\n")[0]);
+  }
+
+  document.addEventListener("paste", (e) => {
+    if (!activeKey || !(editing || !$("#modal").hidden) || /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+    const f = [...(e.clipboardData ? e.clipboardData.files : [])].find((x) => /^image\//.test(x.type));
+    if (f) { e.preventDefault(); setSlot(activeKey, f); }
+  });
+  $("#stage").addEventListener("dragover", (e) => { if (editing) e.preventDefault(); });
+  $("#stage").addEventListener("drop", (e) => { if (editing) { e.preventDefault(); dropOn("bg:" + st().sceneId, e); } });
+
   // ---------- 렌더링 ----------
   function renderTitle() {
     $("#t-sys").textContent = SC.system;
@@ -554,7 +648,8 @@
     $("#t-copy").innerHTML = SC.copy.map((l) => "<p>" + esc(l) + "</p>").join("");
     $("#t-sub").textContent = SC.subtitle + " · " + SC.date;
     $("#t-cast").textContent = SC.chars.filter((c) => c.role !== "NPC").map((c) => c.role + " " + c.name).join("   ");
-    $(".title-bg").style.background = SC.titleBg || "";
+    const tb = Assets.get("title");
+    $(".title-bg").style.background = tb ? FX.bgCss(tb) : SC.titleBg || "";
     $("#btn-continue").hidden = !Store.slots()[0].meta;
   }
 
@@ -565,6 +660,10 @@
     const b = $("#btn-mode");
     b.textContent = isKP() ? "KP 시점" : "PC 시점";
     b.classList.toggle("on", isKP());
+    $("#btn-edit").classList.toggle("on", editing);
+    $("#app").classList.toggle("editing", editing);
+    $("#edit-bar").hidden = !editing;
+    $("#edit-bg").dataset.key = "bg:" + s.sceneId;
   }
 
   function bar(label, key, c, max, id) {
@@ -578,7 +677,7 @@
     const learned = Object.entries(c.skills).sort((a, b) => b[1] - a[1]).slice(0, 8);
     $("#left").innerHTML =
       '<select id="pc-select" aria-label="캐릭터">' + SC.chars.filter((x) => x.role !== "NPC").map((x) => '<option value="' + x.id + '"' + (x.id === id ? " selected" : "") + ">" + esc(x.name) + "</option>").join("") + "</select>" +
-      '<div class="portrait" style="--c:' + cd.color + '">' + (cd.portrait ? '<img src="' + esc(cd.portrait) + '" alt="">' : "<span>" + esc(cd.name[0]) + "</span>") + "</div>" +
+      '<div class="portrait' + (editing ? " editable" : "") + '" style="--c:' + cd.color + '"' + (editing ? ' data-act="pick" data-key="portrait:' + id + '" title="프로필 이미지 교체"' : "") + ">" + (portraitFor(cd) ? '<img src="' + esc(portraitFor(cd)) + '" alt="">' : "<span>" + esc(cd.name[0]) + "</span>") + "</div>" +
       "<h2>" + esc(cd.name) + '</h2><p class="muted">' + esc(cd.role) + " · " + esc(cd.job) + "</p>" +
       bar("HP", "hp", c, c.hpMax) + bar("MP", "mp", c, c.mpMax) + bar("SAN", "san", c, c.sanMax) + bar("LUCK", "luck", c, 99) +
       '<div class="statuses">' + STATUSES.concat(c.statuses.filter((x) => !STATUSES.includes(x))).map((x) => '<button class="chip sm' + (c.statuses.includes(x) ? " on" : "") + '" data-act="status" data-s="' + esc(x) + '">' + esc(x) + "</button>").join("") + "</div>" +
@@ -590,7 +689,7 @@
   function renderStage() {
     const s = st(), sc = sceneDef(s.sceneId), stage = $("#stage");
     if (renderedScene !== sc.id) {
-      FX.changeScene(stage, sc, pendingTransition, s.settings.anim && renderedScene !== null);
+      FX.changeScene(stage, Object.assign({}, sc, { bg: bgFor(sc) }), pendingTransition, s.settings.anim && renderedScene !== null);
       const src = (SC.bgm || {})[sc.id] || sc.bgm || "";
       FX.bgm.play(src);
       renderedScene = sc.id;
@@ -608,11 +707,12 @@
     const cast = (sc.cast || []);
     $("#sprites").innerHTML = cast.map((cid, i) => {
       const cd = charDef(cid), ex = s.expr[cid] || "neutral";
-      const img = cd.sprites && cd.sprites[ex] ? cd.sprites[ex] : cd.sprite;
+      const img = spriteFor(cd, ex);
       const pos = cast.length === 1 ? 50 : 22 + (56 * i) / (cast.length - 1);
       return '<div class="sprite' + (s.speaker === cd.name ? " speaking" : "") + '" style="left:' + pos + "%;--c:" + cd.color + '">' +
         (img ? '<img src="' + esc(img) + '" alt="' + esc(cd.name) + '">' : '<div class="silhouette"><span>' + esc(cd.name[0]) + "</span></div>") +
-        '<em>' + esc(cd.name) + (ex !== "neutral" ? " · " + EXPRS[ex] : "") + "</em></div>";
+        '<em>' + esc(cd.name) + (ex !== "neutral" ? " · " + EXPRS[ex] : "") + "</em>" +
+        (editing ? '<button class="edit-btn" data-act="pick" data-key="sprite:' + cid + ":" + ex + '">스탠딩 교체</button>' : "") + "</div>";
     }).join("");
     const hs = $("#hotspots");
     hs.classList.toggle("on", investigate);
@@ -623,7 +723,9 @@
     ib.classList.toggle("on", investigate);
     const hv = $("#handout-view"), ho = SC.handouts.find((h) => h.id === s.shownHandout);
     hv.hidden = !ho;
-    if (ho) hv.innerHTML = '<article class="paper"><small>' + esc(ho.kind) + "</small><h3>" + esc(ho.title) + "</h3><p>" + esc(ho.text).replace(/\n/g, "<br>") + '</p><button class="chip" data-act="hide-handout">닫기</button></article>';
+    if (ho) hv.innerHTML = '<article class="paper"><small>' + esc(ho.kind) + "</small><h3>" + esc(ho.title) + "</h3>" +
+      (handoutImg(ho) ? '<img class="paper-img" src="' + esc(handoutImg(ho)) + '" alt="">' : "") +
+      (editing ? '<button class="chip" data-act="pick" data-key="handout:' + ho.id + '">이미지 교체</button> ' : "") + "<p>" + esc(ho.text).replace(/\n/g, "<br>") + '</p><button class="chip" data-act="hide-handout">닫기</button></article>';
   }
 
   function renderLog() {
@@ -701,6 +803,9 @@
     saves: openSaves, settings: openSettings, sheet() { openSheet(); }, dice: openDice, san() { openSan(); },
     clues: openClues, inventory: openInventory, notes: openNotes, keeper: openKeeper,
     "close-modal"() { closeModal(); },
+    "edit-mode"() { editing = !editing; render(); toast(editing ? "편집 모드 — 점선 슬롯을 눌러 이미지를 교체해" : "편집 모드 종료"); },
+    pick(t) { pickImage(t.dataset.key); },
+    assets: openAssets,
     "toggle-mode"() { const s = st(); s.mode = s.mode === "kp" ? "pc" : "kp"; Store.commit(); },
     panel(t) { $("#layout").classList.toggle("hide-" + t.dataset.side); },
     investigate() { investigate = !investigate; render(); },
@@ -752,6 +857,7 @@
   });
 
   Store.subscribe(render);
+  Assets.init(SC.id).then(() => { renderedScene = null; if (st()) render(); });
   setInterval(() => { Store.tick(); }, 5000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && st()) st().lastTick = Date.now(); });
   window.addEventListener("beforeunload", () => { if (st() && st().phase === "play") Store.save("auto"); });

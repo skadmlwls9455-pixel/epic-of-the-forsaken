@@ -46,7 +46,7 @@
   function setBg(el, value) {
     if (!value) { el.style.background = ""; return; }
     // 이미지 경로면 cover 로, 아니면 CSS background 값 그대로
-    if (/^[\w./-]+\.(jpe?g|png|webp|gif|avif)$/i.test(value)) {
+    if (/^(data:image\/|https?:\/\/|blob:)/i.test(value) || /^[\w./-]+\.(jpe?g|png|webp|gif|avif)$/i.test(value)) {
       el.style.background = "url(\"" + value + "\") center / cover no-repeat";
     } else el.style.background = value;
   }
@@ -137,5 +137,7 @@
   }
   const skipType = () => { if (typer) typer.skip(); };
 
-  root.FX = { EFFECTS, TRANSITIONS, renderEffects, changeScene, flash, bgm, sfx, type, skipType };
+  const bgCss = (v) => (/^(data:image\/|https?:\/\/|blob:)/i.test(v) || /^[\w./-]+\.(jpe?g|png|webp|gif|avif)$/i.test(v) ? 'url("' + v + '") center / cover no-repeat' : v);
+
+  root.FX = { bgCss, EFFECTS, TRANSITIONS, renderEffects, changeScene, flash, bgm, sfx, type, skipType };
 })(window);

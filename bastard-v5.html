@@ -358,7 +358,7 @@ const CARDS=[
  right:{label:"모자를 눌러쓴다",fx:{military:2,people:-4},result:"모자를 눌러쓰고 걸음을 재촉했다. 등 뒤에서 농부가 누군가를 부르는 소리가 들렸다."}},
 
 // ===== 2막 =====
-{id:"ch_2",acts:[2],forced:true,dur:90,who:"석 달 뒤",role:"산골 마을",
+{id:"ch_2",acts:[2],forced:true,dur:2,who:"석 달 뒤",role:"산골 마을",
  text:s=>{const f=s.flags;return "강을 건넌 지 석 달이 지났다. 요즘 잠자리는 산골 마을 외양간 다락이었다.\n마을 사람들은 너를 그냥 떠돌이 일꾼으로 알았다.\n\n"
    +(f.hasRing?"반지는 목에.":f.ringAtMerchant?"반지는 아직 장터 진열대 유리 밑에 있을 터였다.":"반지를 끼던 손가락에는 자국만 희미하게 남아 있었다.")
    +(f.lienVillage?"\n갈대 마을에서 리엔이 일러 준 길을 따라온 참이었다.":"")
@@ -459,7 +459,7 @@ const CARDS=[
    failure:{fx:{military:-4,gold:-4},set:{injury:3},result:"어디선가 개가 짖었다. 장부를 떨어뜨린 채로 담을 넘을 수밖에 없었다."}}}},
 
 // ===== 3막 =====
-{id:"ch_3",acts:[3],forced:true,dur:200,who:"이듬해 가을",role:"북쪽으로",
+{id:"ch_3",acts:[3],forced:true,dur:3,who:"이듬해 가을",role:"북쪽으로",
  text:s=>{const f=s.flags;return "현상금은 어느새 금화 이백 닢으로 뛰어 있었다.\n섭정의 병사들이 북쪽 고원으로 올라갔다는 소문이 돌았다. 별지기를 데리러 갔다나.\n대관식까지 남은 시간은 일 년.\n\n"
    +(f.metMaster&&!f.bernanGone?"베르난이 지도를 펼쳤다. “사람이 필요하다.”":"혼자서는 왕도에 못 간다.")
    +(f.lienAccompanies?"\n리엔은 벌써 짐을 다 싸 놓고 기다리고 있었다.":"")
@@ -560,7 +560,7 @@ const CARDS=[
    ?{label:"반지를 올린다",fx:{legitimacy:-8},set:{hasRing:false,spireFloor:3},then:"tower",result:"접시가 천천히 수평을 이뤘다. 반지는 접시 속으로 가라앉아 사라졌고,\n그 뒤로 계단이 열렸다."}
    :{label:"빈손을 얹는다",fx:{legitimacy:-2},set:{spireFloor:3},then:"tower",result:"빈손을 얹자 접시가 스르르 내려갔다.\n“이미 내려놓고 왔구나.”"},
  right:s=>(s.flags.hasLegendaryWeapon||s.flags.hasNormalWeapon)
-   ?{label:"검을 올린다",fx:{military:-8},set:{hasLegendaryWeapon:false,hasNormalWeapon:false},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 꿈쩍도 하지 않았다. 검만 접시 속으로 가라앉았을 뿐.\n그림자가 낄낄댔다. ‘더 무거운 걸 올려야지.’"}
+   ?{label:"검을 올린다",fx:{military:-8},set:{hasLegendaryWeapon:false,hasNormalWeapon:false,swordOffered:!!s.flags.hasLegendaryWeapon},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 꿈쩍도 하지 않았다. 검만 접시 속으로 가라앉았을 뿐.\n그림자가 낄낄댔다. ‘더 무거운 걸 올려야지.’"}
    :{label:"금화 주머니를 올린다",fx:{gold:-10},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 그대로였다. 금화 주머니만 감쪽같이 사라졌다."}},
 {id:"spire_3",acts:[3,4],queueOnly:true,repeat:true,dur:1,who:"이온과 그림자",role:"첨탑 · 두 갈래",cond:s=>s.flags.spireFloor===3&&s.flags.spireMisses<2,
  text:"계단이 두 갈래로 나뉘어 있었다.\n이온이 왼쪽을 가리켰다. “위는 이쪽이다.”\n그림자가 오른쪽으로 길게 늘어났다. ‘저 늙은이 말은 죄다 거짓말이야.’",
@@ -596,13 +596,13 @@ const CARDS=[
    +(f.mercRank>=2?"\n까마귀 백 명이 네 신호를 기다리고 있었다.":"")
    +(f.hasOriginalLedger?"\n짐 밑바닥엔 원장.":"")
    +(s.pastLives>0&&getMeta().lastPath?(getMeta().lastPath==="throne"?"\n지난 생에도 남쪽으로 갔었다. 발이 그 길을 기억하고 있었다.":"\n지난 생에는 북쪽으로 갔었다. 발이 그 길을 기억하고 있었다."):"");},
- left:{label:"왕좌를 노린다",fx:{legitimacy:4,gold:-4},set:{throneReady:true,path:"throne",regionOverride:"왕도"},add:{bernardTrust:1},queue:[{id:"a4_spire_reading",delay:1},{id:"a4_osric_offer",delay:2},{id:"a4_throne_trial",delay:3}],
+ left:{label:"왕위를 요구한다",fx:{legitimacy:4,gold:-4},set:{throneReady:true,path:"throne",regionOverride:"왕도"},add:{bernardTrust:1},queue:[{id:"a4_spire_reading",delay:1},{id:"a4_osric_offer",delay:2},{id:"a4_throne_trial",delay:3}],
    result:"사흘째, 왕도 종탑."},
- right:{label:"왕좌를 포기한다",fx:{people:2,legitimacy:-4},set:{path:"leave"},add:{bernardTrust:-2},queue:[{id:"a4_leave",delay:0}],
+ right:{label:"다른 삶을 택한다",fx:{people:2,legitimacy:-4},set:{path:"leave"},add:{bernardTrust:-2},queue:[{id:"a4_leave",delay:0}],
    result:s=>{const f=s.flags,a=[];if(f.metMaster&&!f.bernanGone)a.push("“전하도 결국 그러셨지.”\n베르난은 혼자서 남쪽으로 떠났다.");if(f.lienAccompanies)a.push("리엔은 짐을 반으로 나눴다.\n“엄마는 제가 찾을게요.”\n그러고는 남쪽으로 걸어갔다. 한 번도 돌아보지 않고.");return a.length?a:"북쪽으로 몸을 돌렸다.";}}},
 {id:"a4_leave",acts:[4],queueOnly:true,dur:5,who:"국경 갈림길",role:"대관식 열흘 전",
  // 열린 길을 하나씩 넘겨 본다. 둘러보는 데는 시간도 수치도 들지 않는다 (browse)
- text:s=>{const r=leaveOpts(s),i=(s.leaveIdx||0)%r.length;return "대관식이 열흘 앞으로 다가왔다는 소식이 국경까지 들려왔다.\n\n"+r[i].why+`\n\n떠오르는 길 ${r.length}곳 가운데 ${i+1}번째.`;},
+ text:s=>{const r=leaveOpts(s),i=(s.leaveIdx||0)%r.length;return "대관식이 열흘 앞으로 다가왔다는 소식이 국경까지 들려왔다.\n\n"+r[i].why+"\n\n"+r.map((x,j)=>(j===i?"▸ ":"· ")+x.go.label).join("\n");},
  left:s=>{const r=leaveOpts(s);return r[(s.leaveIdx||0)%r.length].go;},
  right:{label:"다른 길을 떠올린다",browse:true}},
 {id:"a4_wall",acts:[4],queueOnly:true,dur:3,who:"리엔",role:"동쪽 공사장",
@@ -678,9 +678,9 @@ const CARDS=[
  left:{label:"증거를 들고 나선다",check:{stat:"legitimacy",base:66,bonus:s=>{const f=s.flags;return (f.hasRing?8:0)+(f.document?10:0)+(f.scribeWitness?4:0)+(f.usurperSecret?6:0)+(f.metMaster&&!f.bernanGone&&f.bernardTrust>=2?6:0)+(f.forgedLedger?14:0);},
    success:{fx:{legitimacy:7},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:[s=>{const f=s.flags;return f.forgedLedger?"근위대장이 원장을 펼쳤다. 맨 아래 줄에 네 이름이 있었다. 잉크가 아직 새것 같았다.":f.hasRing&&f.document?"근위대장이 반지 안쪽의 글자와 장부를 한 장씩 맞대어 보았다.":f.document?"근위대장이 장부를 받아 들고 왕실 인장을 오래 들여다보았다.":f.hasRing?"근위대장이 반지를 받아 들고 안쪽 글자를 햇빛에 비춰 보았다.":f.scribeWitness?"오틀린이 앞으로 나서서, 장부에 적혀 있던 내용을 한 줄씩 외워 보였다.":"내밀 증거는 없었다. 대신 별궁이 탄 밤의 일을 처음부터 끝까지 말했다. 근위대장은 끝까지 듣고 있었다.";},"근위대장이 창을 내렸다. 뒤에 선 근위병들도 하나둘 따라 내렸다.\n발코니는 비어 있었다."]},
    failure:{fx:{legitimacy:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"“위조범을 잡아라!”\n군중 틈에 섞여 겨우 빠져나올 수 있었다."}}},
- right:{label:"섭정의 출신을 외친다",check:{stat:"people",base:62,bonus:s=>{const f=s.flags;return (f.kaneAlly?6:0)+(f.gateIntel?6:0)+(f.northGate?6:0)+(f.northGate&&f.promiseLien?6:0)+(f.usurperSecret?4:0)+(f.lienSafe?4:0)+(f.mercRespect?4:0)+(f.militia?4:0)+(f.villageTrust?4:0)+(f.villageReturned&&f.promiseVillage?4:0)+(f.osricRefused&&f.usurperSecret?6:0);},
-   success:{fx:{people:6},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:[s=>s.flags.usurperSecret?"리엔의 할머니가 사람들 사이를 헤치고 앞으로 나섰다.\n“내가 봤어. 그 집 부엌에서. 오스릭은 마구간에서 컸어.”":"출신을 증언해 줄 사람은 없었다. 대신 사람들이 저마다 빼앗긴 것을 외치기 시작했다. 곡식, 아들, 집.","군중이 성문으로 밀려들었다. 창을 내던지는 근위병도 몇 보였다.\n발코니는 비어 있었다."]},
-   failure:{fx:{people:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"근위대가 방패를 세우고 밀고 들어왔다.\n너도 군중과 함께 흩어질 수밖에 없었다."}}}},
+ right:s=>({label:s.flags.usurperSecret?"섭정의 거짓을 고발한다":"섭정이 저지른 일을 고발한다",check:{stat:"people",base:62,bonus:s=>{const f=s.flags;return (f.kaneAlly?6:0)+(f.gateIntel?6:0)+(f.northGate?6:0)+(f.northGate&&f.promiseLien?6:0)+(f.usurperSecret?4:0)+(f.lienSafe?4:0)+(f.mercRespect?4:0)+(f.militia?4:0)+(f.villageTrust?4:0)+(f.villageReturned&&f.promiseVillage?4:0)+(f.osricRefused&&f.usurperSecret?6:0);},
+   success:{fx:{people:6},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:[s=>s.flags.usurperSecret?"리엔의 할머니가 사람들 사이를 헤치고 앞으로 나섰다.\n“저 사람은 마구간에서 컸어. 그게 죄는 아니야. 그걸 숨기려고 왕실 기록을 고치고, 아는 사람들을 성벽 공사장으로 보낸 게 죄지.”":"너는 섭정의 출신 대신 그가 한 일을 하나씩 불렀다. 불탄 별궁, 성문에 매단 일곱, 공사장으로 끌려간 사람들.\n군중 속에서 저마다 빼앗긴 것을 외치기 시작했다. 곡식, 아들, 집.","군중이 성문으로 밀려들었다. 창을 내던지는 근위병도 몇 보였다.\n발코니는 비어 있었다."]},
+   failure:{fx:{people:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"근위대가 방패를 세우고 밀고 들어왔다.\n너도 군중과 함께 흩어질 수밖에 없었다."}}})},
 {id:"a4_exile",acts:[4],queueOnly:true,dur:3,who:"닫힌 성문",role:"대관식 저녁",cond:s=>s.flags.throneFails>=2&&!s.flags.throneTrialPassed,
  text:"성문이 닫혔다. 종이 울렸고, 섭정의 머리에 왕관이 얹혔다.\n새로 나붙은 벽보에는 금화 오백 닢이 적혀 있었다.",
  left:{label:"왕도를 떠난다",ending:"wanderer",result:"서문으로 빠져나왔다."},
@@ -737,7 +737,7 @@ const CARDS=[
    :{label:"은화를 받아 둔다",fx:{legitimacy:2},set:{knowsCoins:true},result:"은화는 아직 따뜻했다."}},
 {id:"rest_kane_rules",acts:[3,4],rest:true,dur:1,who:"케인",role:"천막 입구",cond:s=>s.flags.kaneAlly,
  text:"케인이 손때 묻은 수첩을 펼쳤다. 근위대 규칙이 빽빽하게 적혀 있었다.\n“아버지가 하수구 청소부였어. 규칙만 지키면 아무도 우릴 못 깔볼 줄 알았지.”",
- left:{label:"규칙을 하나 새로 쓰자고 한다",add:{bondKane:1},result:"케인은 빈 쪽을 펼쳤다. 펜을 쥔 채 한참을 망설이더니, 천천히 적어 내려갔다.\n‘하나. 하수구에서 났다고 무시하지 않는다.’"},
+ left:{label:"규칙을 하나 새로 쓰자고 한다",add:{bondKane:1},set:{kaneRule:true},result:"케인은 빈 쪽을 펼쳤다. 펜을 쥔 채 한참을 망설이더니, 천천히 적어 내려갔다.\n‘하나. 하수구에서 났다고 무시하지 않는다.’"},
  right:{label:"수첩을 태우라고 한다",result:"“이게 없으면, 난 뭔데.”\n케인은 수첩을 도로 품에 넣었다."}},
 {id:"rest_bread_child",acts:[2],rest:true,dur:1,who:"우물가의 아이",role:"산골 마을",cond:s=>s.flags.stoleBread,
  text:"우물가에서 웬 여자아이가 너를 빤히 쳐다보고 있었다.\n“빵 가져간 오빠다!”\n강가 농가의 그 아이였다. 엄마랑 이 마을로 옮겨 왔다고 했다.",
@@ -755,7 +755,7 @@ const CARDS=[
  right:{label:"아들 얘기를 묻는다",add:{bondMarta:1},result:s=>s.flags.buriedSeven?"“네가 묻어 줬잖니. 그럼 됐다.”\n마르타는 실을 이로 끊었다.":"“착한 애였어. 너보다 두 살 많았지.”\n마르타는 실을 이로 끊었다."}},
 {id:"a3_dragon_price",acts:[3,4],queueOnly:true,dur:2,who:"룬 검",role:"용이 쓰러진 자리",cond:s=>s.flags.hasLegendaryWeapon&&s.flags.dragonSlain,
  text:"용의 피가 식어 가는 사이, 칼자루의 별 문양이 하나씩 꺼져 갔다.\n왼손 손가락 둘이 굳어서 펴지지 않았다.\n칼날의 글귀가 떠올랐다. ‘힘은 대가를 원한다.’",
- left:{label:"검을 바위에 다시 꽂는다",fx:{military:-4},set:{hasLegendaryWeapon:false},result:"검을 바위에 꽂자 손가락이 조금씩 풀렸다.\n바위에 박힌 검은 다시 무거워 보였다."},
+ left:{label:"검을 바위에 다시 꽂는다",fx:{military:-4},set:{hasLegendaryWeapon:false,swordReturned:true},result:"검을 바위에 꽂자 손가락이 조금씩 풀렸다.\n바위에 박힌 검은 다시 무거워 보였다."},
  right:{label:"검을 계속 쥔다",fx:{military:4,people:-4},set:{swordBound:true},result:"손가락은 끝내 펴지지 않았다.\n검만은 여전히 깃털처럼 가벼웠다."}},
 {id:"spire_last",acts:[3,4],queueOnly:true,dur:2,who:"이온",role:"원장 맨 뒷장",cond:s=>finalOpen(),
  text:s=>`이온이 원장 맨 뒷장을 편다. 네 이름이 ${s.pastLives}번. 줄마다 끝이 다르다.\n“다 기억한다. 왕관 쓴 너도, 숲에 들어간 너도, 길에서 죽은 너도.”\n이온이 펜을 내민다. “이번엔 네가 쥐어라.”`,
@@ -961,7 +961,7 @@ function genFloor(t){
 }
 function newTower(){const hp=Math.max(1,curHp());const t={floor:1,hp,max:maxHp(),light:9,charm:0,potion:0};genFloor(t);return t;}
 const towerMode=()=>inSpire(state)&&!!state.tower;
-function towerSync(){const t=state.tower;if(!t)return;const fl=state.flags.spireFloor;if(fl!==t.floor&&fl<=3){t.floor=fl;t.light+=4;t.hp=Math.min(t.max,t.hp+1);genFloor(t);}} // 층계참: 기름 한 병, 숨 돌리기
+function towerSync(){const t=state.tower;if(!t)return;const fl=state.flags.spireFloor;if(fl!==t.floor&&fl<=3){t.floor=fl;t.light+=4;t.hp=Math.min(t.max,t.hp+1);state.hp=t.hp;genFloor(t);}} // 층계참: 기름 한 병, 숨 돌리기
 function pips(n,m,on,off){return on.repeat(Math.max(0,n))+off.repeat(Math.max(0,m-n));}
 const HEART='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.6h2c.7-1.4 2.2-2.6 4.3-2.6 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>';
 // 하트: 이번 수에 잃은 칸은 깨지는 애니메이션
@@ -1019,7 +1019,7 @@ function towerResolve(act){
       if(t.hp===1) r+="\n숨이 찬다. 한 번 더 맞는다면, 끝장이다.";}
     out.result=r;
   }
-  if(t.hp<=0) return {result:[out.result,"무릎이 꺾였다. 차가운 돌바닥이 뺨에 닿았고, 등잔은 저만치 굴러가 꺼졌다.\n어둠 속 어딘가에서 덜그럭거리는 소리가 가까워지고 있었다."],tower:null,then:null,ending:"spire_bones",set:{diedInSpire:true,spireSealed:true},fx:{},hit:out.hit};
+  if(t.hp<=0) return {result:[out.result,"무릎이 꺾였다. 차가운 돌바닥이 뺨에 닿았고, 등잔은 저만치 굴러가 꺼졌다.\n어둠 속 어딘가에서 덜그럭거리는 소리가 가까워지고 있었다."],tower:null,then:null,ending:"spire_bones",set:{diedInSpire:true,spireSealed:true},fx:{},hit:out.hit,hpAfter:0};
   if(t.phase==="map"&&t.light<=0) return expel("등불이 꺼졌다. 벽을 더듬어 겨우 계단을 찾아 내려갔다.\n문밖으로 나서자 등 뒤에서 빗장이 걸렸다.");
   out.tower=t;return out;
 }
@@ -1114,7 +1114,7 @@ const ENDING_HINT={
   mercenary_king:"까마귀 깃발 아래에서 자리를 맡는다. 그리고 왕도로 가지 않는다.",
   monk_ending:"이름 없이 머물 수 있는 곳을 기억해 두고, 왕도로 가지 않는다.",
   hermit:"아무와도 이어지지 않은 채 왕도를 등진다.",
-  wanderer:"왕좌를 포기하고 어느 길에도 마음을 두지 않는다. 혹은 성문에서 두 번 밀려난 뒤.",
+  wanderer:"다른 삶을 택하고도 어느 길에도 마음을 두지 않는다. 혹은 성문에서 두 번 밀려난 뒤.",
   fallen_gate:"성문에서 두 번 밀려나고도 물러서지 않는다.",
   throne_door:"끝까지 너를 쫓던 사람과, 왕좌의 방 앞에서.",
   death_military_0:"무력이 바닥난다.",death_military_100:"무력이 넘친다.",
@@ -1186,7 +1186,7 @@ const ENDING_TRAIL={
   village_guard:[[f=>f.promiseVillage,"촌장에게 다음엔 막겠다고 약속했다"],[f=>f.villageTrust,"쫓기는 몸이라고 털어놓았다"],[f=>f.militia,"마을 젊은이들에게 칼을 가르쳤다"],[f=>f.villageReturned,"징수관이 왔을 때 마을로 돌아갔다"]],
   shepherd:[[f=>f.motherNorth,"어머니가 북쪽 고원 사람이라는 걸 들었다"],[f=>f.hairpin,"잿더미에서 별 일곱 머리핀을 찾았다"],[f=>f.heardSpire,"북쪽 첨탑 이야기를 들었다"]],
   last_knight:[[f=>f.metMaster,"베르난을 따라갔다"],[f=>f.masterTrialPassed,"에드릭의 검을 받았다"],[f=>f.bernardTrust>=1,"베르난이 끝까지 너를 믿었다"],[f=>f.kaneAlly,"케인이 같이 달렸다"]],
-  regent_heir:[[f=>!f.ringSold||f.ringBought,"반지를 끝까지 지녔다"],[f=>f.knowsLedger,"세공 장부가 어디 있는지 알아냈다"],[f=>f.scribeWitness,"오틀린을 데려왔다"],[f=>f.usurperSecret,"섭정이 마부 아들이라는 걸 알았다"]],
+  regent_heir:[[f=>!f.ringSold||f.ringBought,"반지를 끝까지 지녔다"],[f=>f.knowsLedger,"세공 장부가 어디 있는지 알아냈다"],[f=>f.scribeWitness,"오틀린을 데려왔다"],[f=>f.usurperSecret,"섭정이 출신을 숨기려 기록을 고쳤다는 걸 알았다"]],
   throne_reclaim:[[f=>f.hasRing,"반지를 지녔다"],[f=>f.document,"세공 장부를 가져왔다"],[f=>f.usurperSecret,"섭정의 출신을 아는 증인이 있었다"],[f=>f.kaneAlly,"케인을 부관으로 받았다"],[f=>f.northGate,"리엔이 배수구 길을 알려 줬다"],[f=>f.osricRefused,"섭정의 제안을 돌려보냈다"],[f=>f.truthRevealed,"광장에서 원장을 읽었다"]],
   tyrant_ending:[[f=>f.tyrantPoints>=1,"마을을 털거나 칼로 입을 막았다"],[f=>f.forgedLedger,"원장 빈 줄에 네 이름을 적었다"]],
   last_bastard:[[f=>f.clueNameless,"이름 없이 첨탑 문을 열었다"],[f=>f.spireTruth,"왕의 피가 무엇인지 물었다"],[f=>f.truthRevealed,"광장에서 원장을 처음부터 읽었다"]],
@@ -1203,6 +1203,70 @@ ENDING_TRAIL.wanderer=[[f=>f.path==="leave"||f.throneFails>=2,"왕도를 등지�
 ENDING_TRAIL.fallen_wounds=[[f=>f.injury>0||f.diedOfWounds,"상처가 아물기 전에 또 다친다"],[f=>f.diedOfWounds,"체력이 바닥난 채 한 번 더 쓰러진다"]];
 ENDING_TRAIL.spire_bones=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.diedInSpire,"첨탑 안에서 체력이 다해 쓰러진다"]];
 ENDING_TRAIL.blank_ledger=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.spireTruth,"꼭대기에서 왕의 피가 무엇인지 묻는다"],[()=>finalOpen(),"결말을 열두 개 이상 모았다"]];
+/* ---------------- 외전 ----------------
+   한 생을 어떤 모습으로 끝냈는지에 따라, 그 생에 곁에 있던 사람의 뒷이야기가 열린다. 영혼 없이, 조건만 맞으면.
+   ok(결말, 그 생의 마지막 플래그) · pages는 결말에 따라 달라질 수 있다 */
+const NOT_DEATH=e=>!/^death_|^fallen_|^spire_bones/.test(e);
+const EPILOGUES=[
+ {id:"lien",who:"리엔",title:"배급표",hint:"리엔과 한 약속을 끝까지 지킨 생",
+  ok:(e,f)=>(e==="lien_wall"&&f.wallFreed>=1)||(f.lienAccompanies&&f.promiseLien&&f.northGate&&["throne_reclaim","last_bastard"].includes(e)),
+  pages:()=>["갈대 마을에 봄이 오자 리엔은 숫돌부터 꺼냈다. 칼을 갈려는 건 아니었다. 무뎌진 낫을 든 이웃집 아낙들이 문 앞에 줄을 섰기 때문이었다.\n한 자루에 동전 한 닢. 엄마는 그 동전을 세다가 자꾸 웃었다.",
+   "공사장에서 돌아온 엄마는 밤마다 잠꼬대를 했다. 셋째 줄, 셋째 줄.\n리엔은 그때마다 엄마 손을 잡고 노래를 불렀다. 갈대 마을 노래였다. 음이 자꾸 엇나가는 건, 누군가한테서 옮은 버릇이었다.",
+   "여름이 끝날 무렵, 리엔은 공사장 명부를 베껴 둔 종이를 꺼냈다. 아직 돌아오지 못한 이름이 마흔둘이었다.\n“이번엔 내가 업고 올 차례예요.”\n엄마는 말리지 않았다. 대신 신발 밑창을 두 겹으로 꿰매 주었다."]},
+ {id:"bernan",who:"베르난",title:"남쪽 포도밭",hint:"베르난이 끝까지 너를 믿은 생",
+  ok:(e,f)=>(e==="last_knight"&&f.knightSaved)||(NOT_DEATH(e)&&f.metMaster&&!f.bernanGone&&f.bernardTrust>=3),
+  pages:()=>["베르난이 고향에 돌아온 건 서른 해 만이었다. 포도밭은 그대로였고, 그를 알아보는 사람은 아무도 없었다.",
+   "첫해에는 포도를 다 버렸다. 너무 일찍 딴 탓이었다. 칼은 그렇게 잘 다루던 손이 포도 앞에서는 서툴렀다.\n둘째 해에 담근 술은 독했다. 한 모금 마시고 사레가 들려 한참을 콜록거리다가, 그는 혼자 웃었다. 누군가 꼭 그렇게 기침하던 밤이 떠올라서.",
+   "가게 벽에 걸어 둔 에드릭의 검은 한 번도 뽑지 않았다.\n가끔 손님들이 저 검은 누구 거냐고 물었다.\n“내가 끝까지 지키지 못한 사람 거요.” 베르난은 잠시 말을 골랐다. “그리고 끝까지 나를 지켜 준 사람 거고.”"]},
+ {id:"kane",who:"케인",title:"새 수첩",hint:"케인과 규칙을 새로 쓰고, 왕도에서 끝을 본 생",
+  ok:(e,f)=>f.kaneAlly&&f.kaneRule&&["throne_reclaim","last_bastard"].includes(e),
+  pages:e=>[e==="last_bastard"?"근위대가 해산되던 날, 케인은 낡은 수첩을 막사 서랍 깊숙이 넣었다. 그리고 새 수첩을 폈다. 근위대가 없어도 규칙은 필요했다.":"근위대장이 된 첫날, 케인은 낡은 수첩을 서랍 깊숙이 넣고 새 수첩을 폈다.",
+   "첫 장에 적은 규칙은 하나뿐이었다. ‘하나. 하수구에서 났다고 무시하지 않는다.’\n둘째 장은 한 달 동안 비어 있었다. 무엇을 적어야 할지 몰라서가 아니었다. 적고 나면 자기도 지켜야 했기 때문이었다.",
+   "둘째 줄이 채워진 건, 그가 부하 하나를 매질하려다 손을 멈춘 날 밤이었다.\n‘둘. 이 규칙은 위에 선 사람에게도 똑같이 적용된다.’\n케인은 그 줄을 오래 내려다보다가 수첩을 덮었다. 잉크가 번지지 않게, 조심스럽게."]},
+ {id:"marta",who:"마르타",title:"바느질 바구니",hint:"마르타를 살리고, 곁에서 그 이야기를 들은 생",
+  ok:(e,f)=>NOT_DEATH(e)&&f.martaAlive&&(f.bondMarta||0)>=2,
+  pages:()=>["마르타는 아들 무덤 옆에 작은 의자를 하나 갖다 두었다. 바느질은 늘 거기서 했다.",
+   "바구니 안에는 언제나 터진 소매가 하나쯤 들어 있었다. 누구 것인지는 묻지 않아도 알았다. 그 애는 어릴 때부터 소매 끝을 물어뜯는 버릇이 있었으니까.",
+   "가끔은 노래를 불렀다. 엘레나가 부르던 그 자장가였다. 끝 소절에 이르면 마르타는 늘 가사를 바꿔 불렀다.\n‘별이 이름을 적지 않아도, 엄마는 안다.’\n누가 들으면 틀렸다고 했을지도 모른다. 상관없었다. 듣는 사람은 무덤 속 아들 하나뿐이었다."]},
+ {id:"elena",who:"엘레나",title:"견습생",hint:"어머니의 고향에서, 어머니의 핀을 걸어 둔 생",
+  ok:(e,f)=>e==="shepherd"&&f.hairpin,
+  pages:()=>["열네 살의 엘레나는 첨탑에서 잉크 개는 일을 했다. 손가락 끝이 늘 검었다.",
+   "어느 날 이온이 원장 한 줄을 고치라고 했다. 죽은 왕자의 이름이 있던 자리에, 다른 집안의 이름을 적으라고.\n엘레나는 펜을 쥔 채 한참을 앉아 있었다. 그리고 그날 밤, 별 일곱이 새겨진 핀 하나만 챙겨서 계단을 내려왔다.",
+   "고원에 닿았을 때 양치기 할머니가 이름을 물었다.\n엘레나는 대답하지 않았다. 할머니는 더 묻지 않고 지팡이를 쥐여 주었다.\n“이름은 나중에 적어도 돼. 양들은 그 전부터 너를 알아볼 테니까.”"]},
+ {id:"osric",who:"오스릭",title:"마구간의 장부",hint:"섭정의 비밀을 알고, 그와 마주 앉은 생",
+  ok:(e,f)=>f.usurperSecret&&(f.osricRefused||e==="regent_heir"),
+  pages:()=>["왕비 친정집 마구간에서 자란 아이는 말보다 글을 먼저 배웠다. 마구간 벽에 붙은 사료 장부로.",
+   "열두 살 때 그는 처음으로 장부를 고쳤다. 굶고 있던 말 한 마리 몫을 채워 넣으려고. 아무도 눈치채지 못했다.\n그 뒤로 그는 알게 되었다. 적힌 것이 곧 사실이 된다는 걸.",
+   "왕관을 쓰기 전날 밤, 오스릭은 원장 사본에서 자기 이름을 오래 들여다보았다. 노왕의 서자. 스스로 적어 넣은 줄이었다.\n그는 그 줄 아래 빈칸에 손가락을 대 보았다. 거기 누구의 이름을 넣을지는, 끝내 정하지 못했다."]},
+ {id:"ion",who:"이온",title:"마지막 장",hint:"첨탑 꼭대기에서 원장의 끝을 정한 생",
+  ok:e=>e==="blank_ledger"||e==="spire_keeper",
+  pages:()=>["이온이 별지기가 된 건 아홉 살 때였다. 앞선 별지기의 눈이 멀어, 대신 줄을 그어 줄 손이 필요했다.",
+   "처음 고친 줄은 전쟁을 막기 위해서였다. 두 번째도, 세 번째도 그랬다. 네 번째 줄을 고치던 밤, 이온은 더는 이유를 세지 않았다.",
+   "마지막까지 남은 일은 하나였다. 계단을 올라오는 사람에게 묻는 것. 너는 누구냐고.\n제대로 대답한 사람은 많지 않았다. 대부분은 남이 적어 준 이름을 댔다. 이온은 그게 꼭 자기 탓만 같았다."]},
+ {id:"village",who:"촌장의 아들",title:"망루",hint:"산골 마을로 돌아가 끝까지 지킨 생",
+  ok:e=>e==="village_guard",
+  pages:()=>["망루 당번은 이레에 한 번씩 돌아왔다. 촌장의 아들은 그날마다 아버지의 지팡이를 들고 올라갔다.",
+   "처음에는 그 사람이 미웠다. 약속이야 쉽다고, 아버지가 그랬었다. 그런데 그 사람은 정말로 돌아왔다. 다락에서 내려와 골짜기 입구에 돌을 굴렸다.",
+   "아이들은 아직도 그 사람을 일꾼 오빠라고 불렀다. 촌장의 아들은 한 번도 그렇게 부르지 않았다.\n대신 해마다 첫 수확한 곡식 한 자루를, 다락 사다리 밑에 말없이 두고 갔다."]}
+];
+function getEpis(){return getMeta().epis||{};}
+// 결말을 맞은 순간 새로 열린 외전을 기록한다
+function unlockEpis(ending){const m=getMeta();m.epis=m.epis||{};const got=[];
+  for(const x of EPILOGUES){if(m.epis[x.id])continue;let ok=false;try{ok=x.ok(ending,state.flags);}catch(e){}if(ok){m.epis[x.id]=ending;got.push(x.id);}}
+  setMeta(m);return got;}
+function recordEpis(){const have=getEpis();
+  return `<div class="text-[12px] text-stone-500 mb-4 leading-5">한 생을 어떤 모습으로 끝냈는지에 따라, 곁에 있던 사람의 뒷이야기가 열린다. 영혼은 들지 않는다.</div>`
+   +EPILOGUES.map(x=>have[x.id]
+     ?`<button data-epi="${x.id}" class="w-full text-left border-t border-stone-800 py-3"><div class="text-[14px] text-stone-100">${esc(x.who)} · ${esc(x.title)}</div><div class="text-[11px] text-amber-300 mt-1">읽기</div></button>`
+     :`<div class="border-t border-stone-800 py-3"><div class="text-[14px] text-stone-500">${esc(x.who)} · ???</div><div class="text-[11px] text-stone-600 mt-1">${esc(x.hint)}</div></div>`).join("");}
+function openEpilogue(id,i){const x=EPILOGUES.find(e=>e.id===id);if(!x)return;i=i||0;const pages=x.pages(getEpis()[id]),last=i===pages.length-1;
+  $("panel").innerHTML=`<div class="fixed inset-0 bg-black/85 z-[70] flex justify-center items-center p-4" id="panel-bg">
+    <div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 w-full max-w-[480px] fade">
+      <div class="text-[11px] tracking-widest text-stone-600">외전 · ${esc(x.who)}</div><h2 class="text-[22px] font-bold mt-1">${esc(x.title)}</h2>
+      <div class="h-px bg-black/20 my-4"></div><div class="story whitespace-pre-wrap min-h-[180px]">${esc(pages[i])}</div>
+      <div class="flex justify-between items-center mt-6"><span class="text-[12px] text-stone-500">${i+1} / ${pages.length}</span>
+      <button id="epi-next" class="px-5 py-2 rounded-full bg-[#1a1612] text-[#f6ecd2] text-[14px]">${last?"닫기":"다음"}</button></div></div></div>`;
+  $("epi-next").onclick=()=>last?closePeople():openEpilogue(id,i+1);}
 function endingTrail(id,st){return (ENDING_TRAIL[id]||[]).filter(([ok])=>ok(st.flags)).map(([,t])=>t);}
 function yearsText(st){const y=Math.floor(st.totalDays/365);return y<1?"한 해도 안 되어":`${y}년 만에`;}
 function martaLine(f){return f.martaAlive?"마르타가 대관식 맨 앞줄에 섰다. 손수건을 꼭 쥐고.":f.martaDead?"성 밖 일곱 무덤 옆에 하나가 더 있다. 마르타.":"";}
@@ -1338,7 +1402,7 @@ function endingDesc(id,st){
     return P.join("\n\n");
   }
   if(id==="legend_hero"){
-    add("영주가 내리겠다던 땅은 마다했다. 대신 기사단에 들어가 국경을 지켰다."+(f.swordBound?"\n왼손 손가락 둘은 끝내 펴지지 않았다. 검은 여전히 가벼웠다.":"\n룬 검은 고개의 바위에 다시 꽂아 두고 왔다."));
+    add("영주가 내리겠다던 땅은 마다했다. 대신 기사단에 들어가 국경을 지켰다."+(f.swordBound?"\n왼손 손가락 둘은 끝내 펴지지 않았다. 검은 여전히 가벼웠다.":f.swordReturned?"\n룬 검은 고개의 바위에 다시 꽂아 두고 왔다.":f.swordOffered?"\n룬 검은 첨탑의 저울 위에 두고 왔다.":f.hasLegendaryWeapon?"\n룬 검은 아직 허리에 있었다.":"\n용은 평범한 강철로 벤 것이었다. 노래 속에서는 어느새 빛나는 검이 되어 있었지만."));
     add("대관식 소식은 열흘 늦게 닿았다. 막사에서 그 얘기를 꺼내는 사람은 없었다.");
     add("북부 아이들은 용을 벤 사람의 노래를 불렀다. 노래에 이름은 나오지 않았다."+(f.puppetSaved?"\n장터 인형극에는 용 인형이 새로 생겼다.":""));
     return P.join("\n\n");
@@ -1486,7 +1550,7 @@ const card=id=>CARD_MAP[id];
 const seen=id=>state.seen.includes(id);
 const val=x=>typeof x==="function"?x(state):Array.isArray(x)?x.map(y=>typeof y==="function"?y(state):y):x;
 const choiceOf=(c,side)=>val(c[side]);
-const condOk=c=>!c.cond||c.cond(state);
+const condOk=c=>(!c.cond||c.cond(state))&&!(state.act===4&&state.flags.throneReady&&/^a3_/.test(c.id)&&c.id!=="a3_dragon_price");
 const clamp=v=>Math.max(0,Math.min(100,v));
 const pagesOf=r=>Array.isArray(r)?r:[r];
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -1552,14 +1616,22 @@ function chooseWith(ch){
   if(c.rest) hp+=1;                                           // 쉬는 장면
   if(out.set.injury===0) hp=mh;                               // 치료
   let ending=out.ending; // 서사 엔딩이 스탯 사망보다 우선
-  // 한계에 처음 닿으면 바로 죽지 않는다: 그 수치의 위기 장면이 먼저 온다 (스탯·방향마다 한 판에 한 번)
-  let crisisNext=null,graceMsg=null;
-  if(!ending&&!c.crisis&&state.act>=1&&!inSpire(state)) for(const k of STAT_KEYS){
-    const dir=ns[k]<=0?"lo":ns[k]>=100?"hi":null; if(!dir) continue;
-    const g={...(nf.graced||{})}; if(g[k+dir]) continue;
-    g[k+dir]=1; nf.graced=g; const b=ns[k]; ns[k]=dir==="lo"?4:96; delta[k]=(delta[k]||0)+ns[k]-b;
-    crisisNext=`crisis_${k==="legitimacy"?"legit":k}_${dir}`;
-    graceMsg=`${STAT_LABEL[k]}${josa(STAT_LABEL[k],"이","가")} 한계에 닿았다. 이번 한 번은 버텼다. 다음 장면이 이 생을 가른다.`; break;}
+  // 한계에 처음 닿으면 바로 죽지 않는다: 그 수치의 위기 장면이 먼저 온다.
+  // g[key]: 1 = 위기 예약(아직 못 봄, 그동안은 다시 넘쳐도 붙잡아 둔다) · 2 = 위기를 치렀다(이제부터는 넘치면 끝)
+  const crises=[]; let graceMsg=null;
+  if(!ending&&state.act>=1){
+    const g={...(nf.graced||{})}, own=c.crisis?c.id.replace(/^crisis_/,""):null;
+    for(const k of STAT_KEYS){
+      const dir=ns[k]<=0?"lo":ns[k]>=100?"hi":null; if(!dir) continue;
+      const key=`${k==="legitimacy"?"legit":k}_${dir}`;
+      if(key===own||g[key]===2) continue; // 위기 장면에서 또 넘기거나, 이미 치른 위기면 그대로 끝
+      ns[k]=dir==="lo"?4:96;
+      if(!g[key]){g[key]=1;crises.push("crisis_"+key);
+        graceMsg=`${STAT_LABEL[k]}${josa(STAT_LABEL[k],"이","가")} 한계에 닿았다. 이번 한 번은 버텼다. `+(inSpire(state)?"첨탑을 나서면 위기가 닥친다.":"곧 위기가 닥친다.");}
+    }
+    if(own&&g[own]===1) g[own]=2;
+    nf.graced=g;
+  }
   if(!ending&&hp<0){ending="fallen_wounds";nf.diedOfWounds=true;}
   if(!ending) for(const k of STAT_KEYS){if(ns[k]<=0){ending=`death_${k}_0`;break;}if(ns[k]>=100){ending=`death_${k}_100`;break;}}
   if(ending==="fallen_wounds"&&hasRelic("coin")&&!state.coinUsed){hp=1;ending=null;nf.diedOfWounds=false;
@@ -1569,7 +1641,7 @@ function chooseWith(ch){
     out.result=[...pagesOf(out.result),"품 속 별 일곱 은화가 두 동강 난다.\n한 번은 넘긴다."]; out.coin=true;
   }
   if(ending) nf.lastWords=ch.label;
-  pending={cardId:c.id,label:ch.label,out,ns,nf,delta,ending,crisisNext,hp:Math.max(0,Math.min(mh,hp))};
+  pending={cardId:c.id,label:ch.label,out,ns,nf,delta,ending,crises,hp:Math.max(0,Math.min(mh,hp))};
   resultPage=0;
   render();
   if(graceMsg) toast(graceMsg);
@@ -1581,27 +1653,29 @@ function commit(){
   const p=pending, c=card(p.cardId);
   state.stats=p.ns; state.flags=p.nf; state.hp=p.hp; if(p.out.coin) state.coinUsed=true;
   if(p.out.hasTower) state.tower=p.out.tower;
-  if(state.tower){state.tower.max=maxHp();state.tower.hp=Math.min(state.tower.hp,state.tower.max);} // 장비가 바뀌면 탑 체력 상한도 같이
+  if(state.tower){state.tower.max=maxHp();state.tower.hp=state.hp=Math.min(state.hp,state.tower.max);} // 탑 체력은 언제나 일반 체력과 같은 값
   if(p.out.hasDuel) state.duel=p.out.duel;
   // 결투·첨탑 방은 한 장면 안의 수 싸움이라 막 진행 횟수에는 세지 않는다
   const round=c.id==="duel"||c.id==="tower"||!!p.out.shopBuy;
   if(!p.out.shopBuy) state.decisions++; if(!round) state.actDecisions++;
   const actBefore=state.act;
-  if(!round) state.totalDays+=(c.dur??1);
+  if(!round){state.totalDays+=(c.dur??1);if(ACT_CAP[state.act])state.totalDays=Math.min(state.totalDays,Math.max(ACT_CAP[state.act],ACT_DAY[state.act]||0));}
   state.lastSeen[c.id]=state.decisions;
   p.out.queue.forEach(q=>state.queue.push({id:q.id,at:state.decisions+(q.delay||0)}));
   state.history.unshift({who:val(c.who),label:p.label,result:pagesOf(p.out.result)[0],round,act:state.act});
   state.history=state.history.slice(0,30);
   addClues([...(c.clue?[c.clue]:[]),...p.out.clues]);
   state.chainNext=p.out.then||null;
-  if(p.crisisNext){if(state.chainNext) state.queue.unshift({id:p.crisisNext,at:state.decisions}); else state.chainNext=p.crisisNext;}
+  if(!state.chainNext&&state.resumeChain) state.chainNext=state.resumeChain; // 위기 때문에 미뤄 둔 장면으로 돌아간다
+  state.resumeChain=null;
+  if(p.crises.length) state.crisisQ=[...new Set([...(state.crisisQ||[]),...p.crises])];
   if(c.crisis||p.out.check||(round&&p.out.hit&&p.out.hit.finish)) state.restDue=true; // 긴장된 장면 뒤엔 숨 고르기
   pending=null; sync();
   if(p.out.shopBuy) deedEvent("buy");
   if(p.out.hit&&p.out.hit.kind==="hitFeint") deedEvent("feint");
   if(c.rest) deedEvent("rest");
   firstRunWarnings();
-  if(p.ending){const before=RELICS.filter(r=>hasRelic(r.id)).map(r=>r.id);state.newEnding=!getDisc().includes(p.ending);state.ended=p.ending;addDisc(p.ending);
+  if(p.ending){const before=RELICS.filter(r=>hasRelic(r.id)).map(r=>r.id);state.newEnding=!getDisc().includes(p.ending);state.ended=p.ending;addDisc(p.ending);state.newEpis=unlockEpis(p.ending);
     deedRunEnd();
     if(p.ending==="blank_ledger"){const mm=getMeta();mm.weightMax=Math.min(5,Math.max(mm.weightMax||0,W()+1));setMeta(mm);}
     state.newRelics=RELICS.filter(r=>hasRelic(r.id)&&!before.includes(r.id)).map(r=>r.id);
@@ -1612,7 +1686,7 @@ function commit(){
   const next=pickNext();
   if(c.id==="shop"&&next.id!=="shop"){state.flags.shopDiscount=0;state.flags.shopBought=false;}
   state.currentId=next.id;
-  if(next.id==="tower"){if(!state.tower){state.tower=newTower();state.tower.light+=3*(state.flags.itemOil||0);state.flags.itemOil=0;}towerSync();}
+  if(next.id==="tower"){if(!state.tower){state.tower=newTower();state.tower.light+=3*(state.flags.itemOil||0);state.flags.itemOil=0;state.hp=state.tower.hp;}towerSync();}
   if(!inSpire(state)) state.tower=null;
   if(!seen(next.id)) state.seen.push(next.id);
   save(); render();
@@ -1620,10 +1694,10 @@ function commit(){
 }
 
 const CHAPTER={1:"a1_dawn",2:"ch_2",3:"ch_3"};
-const ACT_DAY={2:90,3:730,4:1065}; // 2막: 도망 석 달 뒤 · 3막: 대관식 1년 전 · 4막: 대관식 한 달 전 // 막이 바뀔 때 먼저 나오는 연결 장면
+const ACT_DAY={2:90,3:730,4:1065}, ACT_CAP={1:88,2:725,3:1060,4:1100}; // 막 안에서는 다음 기준점을 넘지 않는다 // 2막: 도망 석 달 뒤 · 3막: 대관식 1년 전 · 4막: 대관식 한 달 전 // 막이 바뀔 때 먼저 나오는 연결 장면
 // 첫 두 생에선 위험 신호를 한 번씩 말로 알려 준다
 function firstRunWarnings(){if(getMeta().runs>=2)return;state.warned=state.warned||{};
-  for(const k of STAT_KEYS){const v=state.stats[k];if((v<=15||v>=85)&&!state.warned[k]){state.warned[k]=1;toast(`${STAT_LABEL[k]}${josa(STAT_LABEL[k],"이","가")} 위험선에 닿았다. 바닥나거나 가득 차면 이 생은 끝난다.`);return;}}
+  for(const k of STAT_KEYS){const v=state.stats[k];if((v<=15||v>=85)&&!state.warned[k]){state.warned[k]=1;toast(`${STAT_LABEL[k]}${josa(STAT_LABEL[k],"이","가")} 위험선에 닿았다. 바닥나거나 가득 차면 위기가 닥치고, 위기를 치른 뒤에 또 넘기면 이 생은 끝난다.`);return;}}
   if(curHp()===1&&!state.warned.hp){state.warned.hp=1;toast("체력이 한 칸 남았다. 쉬는 장면이나 약초로 채워 두자.");}}
 function enterAct(n){
   // 지난 막 돌아보기 (막 전환 화면에 띄운다)
@@ -1645,6 +1719,9 @@ function pickNext(){
   const cur=card(state.currentId);
   if(cur.next) return card(cur.next);
   // 이어지는 장면(체인)은 막 전환보다 먼저
+  // 예약된 위기는 이어지는 장면보다 먼저 (결투·첨탑 한가운데는 끼어들지 않는다). 이어질 장면은 위기 뒤로 미룬다
+  if(state.act>=1&&(state.crisisQ||[]).length&&!inSpire(state)&&!/^(duel|tower|shop)$/.test(state.chainNext||"")){
+    const c=card(state.crisisQ.shift()); if(c){state.resumeChain=state.chainNext;state.chainNext=null;return c;}}
   if(state.chainNext){const c=card(state.chainNext);state.chainNext=null;if(c&&condOk(c)) return c;}
   // 첨탑 안에서는 첨탑 카드만 나온다 (두 번 틀리면 바로 봉인)
   if(inSpire(state)){const f=state.flags;
@@ -1805,6 +1882,8 @@ function updateHeader(stats){
     <div><div class="text-[11px] text-stone-500 mb-1">소지품</div><div class="text-amber-100 text-[12px]">${[tw.key?"열쇠":"",tw.potion?"물약 "+tw.potion:"",tw.charm?"부적 "+tw.charm:""].filter(Boolean).join(" · ")||"·"}</div></div>
     <div class="text-right"><div class="text-[11px] text-stone-500 mb-1">층</div><div>${tw.floor} / 3</div></div></div>`
     +(ev&&(tw.phase==="fight"||hv)?`<div class="mt-3">${foeBar(ev)}</div>`:"");
+  if(combat&&state.flags.itemHerb>0&&!pending) $("towerbar").innerHTML+=`<div class="mt-2 text-right"><button id="herb2" class="text-[11px] px-2 py-[2px] rounded-full border border-emerald-800 text-emerald-300 ${curHp()>=maxHp()?"opacity-40":""}">약초 ${state.flags.itemHerb} · 먹는다</button></div>`;
+  const hb2=$("herb2"); if(hb2) hb2.onclick=useHerb;
   // 체력이 한 칸 남으면 화면 가장자리가 붉게 맥박친다
   const myNow=dv?dv.my:tw?tw.hp:null;
   $("vign").classList.toggle("on",myNow===1);
@@ -1965,7 +2044,7 @@ const GROUP_ORDER=["가족","곁","적","그 밖"];
 const INTRO=[
   {t:"아르벤 왕국",b:"노왕이 세상을 떠났다.\n나라를 쥔 건 노왕의 서자를 자처하는 섭정 오스릭이었다.\n삼년상이 끝나는 날, 그는 왕관을 쓸 생각이었다."},
   {t:"너",b:"너는 제2왕자 에드릭의 사생아였다. 에드릭은 끝내 너를 아들로 인정하지 않았다.\n어머니 엘레나와 함께 별궁 세탁장에서 스무 해를 살았다.\n사흘 전, 섭정이 에드릭을 반역죄로 처형했다.\n그리고 오늘 밤, 별궁에 불이 붙었다."},
-  {t:"하는 법",b:"카드를 좌우로 끌어다 놓으면 고른다.\n끄는 동안 영향받는 게이지가 노랗게 켜진다.\n\n무력 · 민심 · 정통성 · 금전.\n하나라도 바닥나거나 꽉 차면, 그 생은 끝.\n\n싸움에선 상대 자세를 보고 막거나 벤다.\n\n죽어도 단서와 결말은 남는다. 결말을 처음 볼 때마다 영혼 하나, 그걸로 공략을 연다.\n막히면 위쪽 ‘기록’을 열어 보자."}
+  {t:"하는 법",b:"카드를 좌우로 끌어다 놓으면 고른다.\n끄는 동안 영향받는 게이지가 노랗게 켜진다.\n\n무력 · 민심 · 정통성 · 금전.\n하나라도 바닥나거나 꽉 차면 위기가 닥친다.\n그 위기에서 또 넘기면, 그 생은 끝.\n\n싸움에선 상대 자세를 보고 막거나 벤다.\n\n죽어도 단서와 결말은 남는다. 결말을 처음 볼 때마다 영혼 하나, 그걸로 공략을 연다.\n막히면 위쪽 ‘기록’을 열어 보자."}
 ];
 const PLACES=[
   {n:"별궁",d:"왕도 외곽. 에드릭이 귀양살이하던 곳. 불탔다.",k:()=>true},
@@ -2025,7 +2104,7 @@ function recordEndings(){
     +sec("죽음",`<div class="grid grid-cols-4 gap-2">${deaths.map(dtile).join("")}</div>`)
     +sec("유물",RELICS.map(r=>hasRelic(r.id)?`<div class="border-t border-stone-800 py-2"><div class="text-[13px] text-stone-100">${r.name}</div><div class="text-[12px] text-stone-400">${r.desc}</div></div>`:`<div class="border-t border-stone-800 py-2 text-[13px] text-stone-600">??? · 결말 ${r.need}개</div>`).join(""));
 }
-const REC_TABS=[["now","지금"],["people","인물"],["clues","단서"],["endings","결말"],["guide","공략"]];
+const REC_TABS=[["now","지금"],["people","인물"],["clues","단서"],["endings","결말"],["epis","외전"],["guide","공략"]];
 function guideChart(id,open){
   const m=getMeta(), L=ENDING_TRAIL[id]||[], past=(m.trail||{})[id]||[], now=(state.trailNow||{})[id]||[], disc=getDisc().includes(id);
   const nodes=L.map(([,t],i)=>open?`<div class="gnode ${now.includes(i)?"now":past.includes(i)?"lit":""}">${now.includes(i)?"✓ ":""}${esc(t)}</div>`:`<div class="gnode lock">잠긴 칸</div>`);
@@ -2042,16 +2121,17 @@ function recordGuide(){
        ${open||!hid?"":`<button data-buy="${id}" class="mt-3 w-full py-2 rounded-[10px] text-[13px] ${left>=cost?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=cost?"":"disabled"}>영혼 ${cost}개로 공략 열기</button>`}</details>`;}).join("");}
 function openRecord(tab){
   if(tab==="world")tab="now";
-  const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings,guide:recordGuide}[tab]();
+  const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings,epis:recordEpis,guide:recordGuide}[tab]();
   $("panel").innerHTML=`<div class="fixed inset-0 bg-black/80 z-[65] flex justify-center items-start overflow-y-auto p-4" id="panel-bg">
     <div class="bg-[#151311] border border-stone-800 rounded-[20px] w-full max-w-[480px] my-6 fade overflow-hidden">
       <div class="flex justify-between items-center px-5 pt-5"><h2 class="text-[17px] font-bold">기록</h2><button id="panel-close" class="text-stone-400 text-[13px]">닫기 ✕</button></div>
-      <div class="grid grid-cols-5 gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"}">${l}</button>`).join("")}</div>
+      <div class="grid gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]" style="grid-template-columns:repeat(${REC_TABS.length},minmax(0,1fr))">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"}">${l}</button>`).join("")}</div>
       <div class="p-5">${body}</div>
     </div></div>`;
   $("panel-close").onclick=closePeople;
   $("panel-bg").onclick=e=>{if(e.target.id==="panel-bg")closePeople();};
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openRecord(b.dataset.tab));
+  document.querySelectorAll("[data-epi]").forEach(b=>b.onclick=()=>openEpilogue(b.dataset.epi));
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{if(buyGuide(b.dataset.buy)){trackTrail(false,true);openRecord("guide");}});
   const ri=$("rec-intro"); if(ri) ri.onclick=()=>showIntro(0);
 }
@@ -2121,15 +2201,17 @@ function showEnding(){
   const newClueHTML=nc.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생에 알게 된 것</div><ul class="text-[12px] leading-6">${nc.map(k=>`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`).join("")}</ul>`:"";
   const relicHTML=`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">유물</div><ul class="text-[12px] leading-6">${RELICS.map(r=>hasRelic(r.id)?`<li class="${(state.newRelics||[]).includes(r.id)?"font-bold":""}">${(state.newRelics||[]).includes(r.id)?"새로 얻음 · ":""}${r.name} · ${r.desc}</li>`:`<li class="text-stone-400">??? · 결말 ${r.need}개</li>`).join("")}</ul>`;
   const soulHTML=state.newEnding||(state.newDeeds||[]).length?`<div class="rounded-[14px] bg-[#1a1612] text-[#fde68a] p-4 mb-4 text-[13px] leading-6">${state.newEnding?`새 결말 · 영혼 1개를 얻었다.`:""}${(state.newDeeds||[]).map(t=>`<div>회차 목표 달성 · ${esc(t)} · 영혼 +1</div>`).join("")}<div class="text-[#d6d3d1] text-[12px] mt-1">기록 → 공략에서 원하는 결말로 가는 길을 열 수 있다. 지금 영혼 ${soulsLeft()}개.</div><button id="end-guide" class="mt-2 underline text-[12px]">공략 보러 가기</button></div>`:"";
+  const epiHTML=(state.newEpis||[]).length?`<div class="rounded-[14px] border border-[#a16207] p-4 mb-4 text-[13px] leading-6"><div class="text-[11px] tracking-widest text-[#a16207] mb-1">외전이 열렸다</div>${state.newEpis.map(id=>{const x=EPILOGUES.find(e=>e.id===id);return `<button data-epi="${id}" class="block underline text-left">${esc(x.who)} · ${esc(x.title)}</button>`;}).join("")}</div>`:"";
   const trail=state.history.filter(h=>!h.round).slice(0,10).reverse();
   const links=endingTrail(id,state);
   const linkHTML=links.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-2">이 결말까지 이어진 일</div><ol class="text-[13px] leading-7">${links.map((t,i)=>`<li>${i?"<span class='text-stone-500'>↓</span> ":""}${esc(t)}</li>`).join("")}</ol>`:"";
   const recapHTML=trail.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생 · ${state.year}년 · ${state.age}세${state.history.filter(h=>!h.round).length>10?" · 마지막 열 번의 선택":""}</div><ol class="text-[12px] leading-6">${trail.map(h=>`<li><span class="text-stone-500">${esc(h.who)}</span> · ${esc(h.label)}</li>`).join("")}</ol>`:"";
   const codex=got.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">기록 ${got.length} / ${ck.length}</div><ul class="text-[12px] leading-6">${ck.map(k=>m.clues.includes(k)?`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`:`<li class="text-stone-400">???</li>`).join("")}</ul>`:"";
-  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8">${soulHTML}<div class="text-[11px] tracking-widest text-stone-600">${E.tag}${W()?` · 별의 무게 ${W()}`:""}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div class="story whitespace-pre-wrap">${esc(endingDesc(id,state))}</div>${linkHTML}${recapHTML}<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">발견한 결말 ${disc.length} / ${Object.keys(ENDINGS).length}</div><div class="leading-6">${list}</div>${newClueHTML}${relicHTML}<button id="again" class="mt-6 w-full bg-[#1a1612] text-[#f6ecd2] py-3 rounded-[12px]">다음 생</button><button id="end-rec" class="mt-2 w-full text-[12px] text-stone-600 underline py-2">기록 보기 · 못 본 결말의 실마리</button></div></div>`;
+  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8">${soulHTML}${epiHTML}<div class="text-[11px] tracking-widest text-stone-600">${E.tag}${W()?` · 별의 무게 ${W()}`:""}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div class="story whitespace-pre-wrap">${esc(endingDesc(id,state))}</div>${linkHTML}${recapHTML}<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">발견한 결말 ${disc.length} / ${Object.keys(ENDINGS).length}</div><div class="leading-6">${list}</div>${newClueHTML}${relicHTML}<button id="again" class="mt-6 w-full bg-[#1a1612] text-[#f6ecd2] py-3 rounded-[12px]">다음 생</button><button id="end-rec" class="mt-2 w-full text-[12px] text-stone-600 underline py-2">기록 보기 · 못 본 결말의 실마리</button></div></div>`;
   $("again").onclick=restart;
   $("end-rec").onclick=()=>openRecord("endings");
   const eg=$("end-guide"); if(eg) eg.onclick=()=>openRecord("guide");
+  document.querySelectorAll("#modal [data-epi]").forEach(b=>b.onclick=()=>openEpilogue(b.dataset.epi));
 }
 function render(){
   if(typeof document==="undefined"||!document.querySelector) return;

@@ -93,6 +93,13 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0}
 .tcell.near:hover{background:#2a2117}
 .tcell.cur{background:#3a2a12;border-color:#facc15;color:#fef3c7;font-weight:700}
 .tcell.t-exit{color:#fde68a}
+.shop{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.sitem{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;border:1px solid #3a3633;border-radius:10px;padding:8px 10px;background:#161412}
+.sitem:not(:disabled):hover{border-color:#facc15}
+.sitem:disabled{opacity:.4}
+.sname{font-size:13px;color:#e7e5e4}.sname i{font-style:normal;font-size:11px;color:#a8a29e}
+.sdesc{grid-column:1;font-size:11px;color:#a8a29e}
+.sprice{grid-row:1/3;grid-column:2;align-self:center;font-size:12px;color:#fcd34d}
 :root{--story-fs:15px}
 html[data-size="l"]{--story-fs:17px}html[data-size="xl"]{--story-fs:19px}
 .story{font-size:var(--story-fs);line-height:2.05}
@@ -201,7 +208,9 @@ function initialFlags(){return{
   // 4막 결말 갈래 (v5.6)
   villageReturned:false, wallFreed:null, villageWay:null, knightSaved:false, osricRefused:false, sawHighland:false,
   // v5.7 정·마르타·복선
-  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false, diedInSpire:false, diedOfWounds:false
+  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false, diedInSpire:false, diedOfWounds:false,
+  // v5.8 상점·소지품
+  shopDiscount:0, shopBought:false, itemHerb:0, itemWhet:0, itemShield:0, itemArmor:false, itemManual:0, itemOil:0
 };}
 function inSpire(s){const f=s.flags;return f.spireFloor>0&&!f.spireDone&&!f.spireSealed;}
 function newState(){return{
@@ -780,6 +789,18 @@ const CARDS=[
  left:{label:"남의 밭을 간다",fx:{gold:12,military:-6},result:"사흘 밭을 갈고 받은 게 은화 여섯 닢."},
  right:{label:"버틴다",fx:{legitimacy:2,military:-2},result:"이틀을 굶는다."}},
 
+// ===== 상점 (v5.8) =====
+// 막마다 다른 상인. 앞면에 물건 목록이 뜨고, 고르면 금전을 내고 바로 받는다. 산 뒤에는 다시 가게로 돌아온다.
+{id:"shop",acts:[1,2,3,4],repeat:true,cooldown:10,dur:1,cond:s=>!inSpire(s)&&s.stats.gold>=24,
+ who:s=>SHOP_KEEPER[Math.max(1,s.act)].who,role:s=>SHOP_KEEPER[Math.max(1,s.act)].role,
+ text:s=>SHOP_KEEPER[Math.max(1,s.act)].text+(s.flags.shopDiscount>0?"\n상인은 아까 깎아 준 값을 아직 기억하고 있었다.":s.flags.shopDiscount<0?"\n상인의 눈초리가 아직 싸늘했다.":""),
+ left:{label:"가게를 나선다",set:{shopDiscount:0,shopBought:false},result:s=>s.flags.shopBought?"짐이 조금 무거워져 있었다. 나쁘지 않은 무게였다.":"구경만 하고 가게를 나섰다. 상인은 아쉬운 기색도 없었다."},
+ right:s=>s.flags.shopDiscount===0
+   ?{label:"값을 깎아 본다",then:"shop",check:{stat:"people",base:50,
+      success:{set:{shopDiscount:1},result:"상인이 한참 너를 노려보다 혀를 찼다.\n“좋아. 이번만이야.”"},
+      failure:{set:{shopDiscount:-1},result:"“그럼 다른 데 가 보든가.”\n상인의 목소리가 싸늘해졌다. 값이 오히려 올라 있었다."}}}
+   :{label:"그냥 나선다",set:{shopDiscount:0,shopBought:false},result:"말없이 가게를 나섰다."}},
+
 // ===== 일상 =====
 {id:"safe_hunt",acts:[1,2,3,4],fallback:true,repeat:true,cooldown:3,dur:2,who:"토끼",role:"저녁",
  text:"덫에 토끼 한 마리. 옆 모닥불 나그네의 짐 보따리는 텅 비었다.",
@@ -818,6 +839,33 @@ const LEAVE_ROUTES=[
 function leaveRoutes(s){return LEAVE_ROUTES.filter(x=>x.ok(s.flags));}
 
 
+
+/* ---------------- 상점 ---------------- */
+const SHOP_KEEPER={
+  1:{who:"대장장이",role:"장터 화덕",text:"장터 끝, 화덕 앞에서 대장장이가 쇠를 두드리고 있었다. 네 얼굴은 보지도 않고 턱으로 진열대를 가리켰다.\n“보는 건 공짜야.”"},
+  2:{who:"행상",role:"산골 마을 우물가",text:"노새 한 마리에 짐을 잔뜩 실은 행상이 우물가에 판을 벌여 놓았다.\n“산 넘어오느라 값이 좀 붙었소. 그래도 여기선 나밖에 없을걸.”"},
+  3:{who:"외눈 무기상",role:"북부 변경 천막",text:"천막 구석에서 외눈 무기상이 칼을 닦고 있었다. 칼날마다 이 빠진 자국이 남아 있었다.\n“주인 잃은 물건들이야. 성능은 보장하지.”"},
+  4:{who:"뒷골목 상인",role:"왕도 뒷골목",text:"간판도 없는 가게였다. 문을 두드리고 한참이 지나서야 빗장이 풀렸다.\n“대관식 앞이라 다들 칼을 찾더군. 너도 그런 얼굴이고.”"}
+};
+// price: 금전 수치에서 그대로 빠진다(막 배율 없음). max: 들고 다닐 수 있는 수
+const SHOP_ITEMS={
+  herb:{name:"약초 꾸러미",desc:"언제든 꺼내 먹으면 체력 +1",price:6,flag:"itemHerb",max:5,say:"말린 풀 냄새가 코를 찔렀다. 상인은 꾸러미를 끈으로 두 번 묶어 건네주었다."},
+  whet:{name:"숫돌",desc:"다음 결투에서 첫 명중의 피해 +1",price:5,flag:"itemWhet",max:3,say:"손바닥만 한 숫돌이었다. 칼날에 대 보니 서걱, 하고 소리가 좋았다."},
+  shield:{name:"나무 방패",desc:"결투에서 맞을 때 한 번 대신 막는다",price:9,flag:"itemShield",max:3,say:"가벼운 나무 방패였다. 몇 대 맞으면 쪼개지겠지만, 그 몇 대가 목숨을 살릴 터였다."},
+  armor:{name:"누빔 갑옷",desc:"최대 체력 +1",price:14,flag:"itemArmor",max:1,say:"생각보다 무거웠다. 그래도 걸쳐 보니 어깨가 한결 든든했다."},
+  sword:{name:"강철 검",desc:"무기. 최대 체력 +1, 무력 판정이 유리해진다",price:18,flag:"hasNormalWeapon",max:1,acts:[2,3,4],say:"강철 검을 쥐어 보았다. 손에 착 감기는 무게였다."},
+  manual:{name:"검술 교본",desc:"무력 +5",price:10,flag:"itemManual",max:2,say:"낡은 검술 교본이었다. 밤새 넘기다 보니 몇 가지 동작이 몸에 붙는 듯했다."},
+  oil:{name:"등잔 기름",desc:"첨탑에 들어갈 때 등불 +3",price:4,flag:"itemOil",max:3,acts:[3,4],say:"기름병 마개를 단단히 막아 짐 깊숙이 넣었다."}
+};
+function shopPrice(id){const d=state.flags.shopDiscount||0;return Math.round(SHOP_ITEMS[id].price*(d>0?.7:d<0?1.3:1));}
+function shopOwned(id){const it=SHOP_ITEMS[id],v=state.flags[it.flag];return it.flag==="hasNormalWeapon"?((v||state.flags.hasLegendaryWeapon)?1:0):(v===true?1:(v||0));}
+// 살 수 있는지: 금전이 바닥(사망)나지 않게 20은 남긴다
+function shopCan(id){const it=SHOP_ITEMS[id];return (!it.acts||it.acts.includes(state.act))&&shopOwned(id)<it.max&&state.stats.gold-shopPrice(id)>=20;}
+function shopHTML(){
+  return `<div class="shop">${Object.keys(SHOP_ITEMS).filter(id=>!SHOP_ITEMS[id].acts||SHOP_ITEMS[id].acts.includes(state.act)).map(id=>{const it=SHOP_ITEMS[id],own=shopOwned(id),can=shopCan(id);
+    return `<button class="sitem" data-buy-item="${id}" ${can?"":"disabled"}><span class="sname">${esc(it.name)}${own?` <i>${it.max>1?own+"/"+it.max:"보유"}</i>`:""}</span><span class="sdesc">${esc(it.desc)}</span><span class="sprice">금전 ${shopPrice(id)}</span></button>`;}).join("")}</div>`;}
+function shopBuy(id){if(busy||pending||state.ended||!shopCan(id))return;chooseWith({label:SHOP_ITEMS[id].name+" 구입",shopBuy:id});}
+function useHerb(){if(busy||pending||state.ended||!(state.flags.itemHerb>0)||curHp()>=maxHp())return;state.flags.itemHerb--;state.hp=curHp()+1;save();render();toast("약초를 씹어 삼켰다. 쓴맛 끝에 상처가 조금 가라앉았다.");}
 
 /* ---------------- 첨탑 던전 ----------------
    첨탑 안에서는 왕국 스탯 대신 체력·등불·부적·물약·열쇠로 진행한다. 아래 '첨탑 약도' 참고.
@@ -957,20 +1005,23 @@ function towerGo(i){if(busy||pending||state.ended)return;chooseWith({label:"방�
    네 체력은 무력에서 나온다. 무력 30마다 ♥ 1, 검이 있으면 +1, 부상이면 -1. */
 /* 체력(♥)은 한 판 내내 이어진다. 최대치는 무력과 검에서 나온다.
    싸움·함정·부상에서 깎이고, 쉬는 장면·치료·막이 바뀔 때 회복한다. 0인 채로 또 다치면 쓰러진다(결말). */
-function maxHp(s){s=s||state;const f=s.flags;return Math.max(2,Math.min(6,2+Math.floor(s.stats.military/30)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)));}
+function maxHp(s){s=s||state;const f=s.flags;return Math.max(2,Math.min(7,2+Math.floor(s.stats.military/30)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)+(f.itemArmor?1:0)));}
 function curHp(){return Math.max(0,Math.min(maxHp(),state.hp==null?maxHp():state.hp));}
 function myHearts(){return Math.max(1,curHp());}
 function startDuel(spec){const my=myHearts(),style=spec.style||styleOf(spec.n),tell=wpick(spec.w);
-  return {n:spec.n,style,hp:spec.hp,max:spec.hp,w:spec.w,tells:spec.tells||null,darkp:spec.dark||0,my,mymax:maxHp(),dying:curHp()<=0,tell,tellText:tellLine(style,tell,spec.tells),dark:false,win:spec.win,lose:spec.lose};}
+  return {n:spec.n,style,hp:spec.hp,max:spec.hp,w:spec.w,tells:spec.tells||null,darkp:spec.dark||0,my,mymax:maxHp(),dying:curHp()<=0,whet:(state.flags.itemWhet||0)>0,shield:state.flags.itemShield||0,tell,tellText:tellLine(style,tell,spec.tells),dark:false,win:spec.win,lose:spec.lose};}
 function duelText(){const d=state.duel;if(!d)return"";return d.dark?"상대의 움직임이 잘 보이지 않는다.":(d.tellText||tellLine(d.style||styleOf(d.n),d.tell,d.tells));}
 function learnTell(tell,act){const m=getMeta();m.tells=m.tells||{};if(!m.tells[tell]){m.tells[tell]=act;setMeta(m);}}
 function duelResolve(act){
   const d=JSON.parse(JSON.stringify(state.duel)),dmg=1+(state.flags.hasLegendaryWeapon?1:0),style=d.style||styleOf(d.n);
   const c=clash(d.tell,act); if(c.learn) learnTell(d.tell,act);
-  const dealt=c.dealt?dmg:0; d.hp-=dealt; d.my-=c.taken;
-  let r=linePick(HITS[c.kind],style);
+  const whet=c.dealt&&d.whet; if(whet) d.whet=false;
+  const dealt=c.dealt?dmg+(whet?1:0):0; d.hp-=dealt;
+  let r=linePick(HITS[c.kind],style), shieldUsed=false;
+  if(c.taken&&d.shield>0){d.shield--;shieldUsed=true;r+="\n나무 방패가 대신 쪼개지며 막아냈다.";} else d.my-=c.taken;
+  if(whet) r+="\n숫돌로 세운 날이 살을 깊게 갈랐다.";
   if(dealt>1) r+="\n룬 검이 번쩍. 상처가 두 배로 벌어진다.";
-  const hit={kind:c.kind,dealt,taken:c.taken,style,finish:d.hp<=0?"win":d.my<=0?"lose":null,
+  const hit={kind:shieldUsed&&!dealt?"charm":c.kind,dealt,taken:shieldUsed?0:c.taken,shieldUsed,style,finish:d.hp<=0?"win":d.my<=0?"lose":null,
     view:{n:d.n,hp:Math.max(0,d.hp),max:d.max,my:Math.max(0,d.my),mymax:d.mymax,prevHp:state.duel.hp,prevMy:state.duel.my}};
   if(!hit.finish){ if(d.my===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝."; else if(d.hp===1) r+="\n상대 무릎이 휘청인다. 한 번이면 된다."; }
   const fin=br=>({result:[r,...pagesOf(br.result||"")].filter(Boolean),fx:br.fx||{},set:br.set||{},add:br.add||{},queue:br.queue||[],then:br.then||null,ending:br.ending||null,duel:null,hit});
@@ -1415,10 +1466,15 @@ function checkChance(chk){const need=chk.base-effective(chk);return Math.max(0,M
 function resolve(ch){
   const out={fx:{...(ch.fx||{})},set:{...(ch.set||{})},add:{...(ch.add||{})},queue:[...(ch.queue||[])],ending:ch.ending||null,result:val(ch.result)||"",check:null,clues:ch.clue?[ch.clue]:[],then:ch.then||null};
   if(ch.duel){out.duel=startDuel(ch.duel);out.hasDuel=true;out.then="duel";out.result=ch.duel.intro||out.result;
+    if(out.duel.whet) out.add.itemWhet=(out.add.itemWhet||0)-1;
     const d=out.duel;out.hit={kind:"start",dealt:0,taken:0,style:d.style,view:{n:d.n,hp:d.hp,max:d.max,my:d.my,mymax:d.mymax}};}
   if(ch.duelAct){const r=duelResolve(ch.duelAct);out.result=r.result;out.then=r.then;Object.assign(out.set,r.set);
     for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];for(const k in r.add) out.add[k]=(out.add[k]||0)+r.add[k];
     out.queue.push(...r.queue);if(r.ending)out.ending=r.ending;out.duel=r.duel;out.hasDuel=true;out.hit=r.hit;}
+  if(ch.shopBuy){const id=ch.shopBuy,it=SHOP_ITEMS[id];out.rawFx={gold:-shopPrice(id)};out.shopBuy=true;out.then="shop";out.set.shopBought=true;
+    if(it.flag==="hasNormalWeapon"||it.flag==="itemArmor") out.set[it.flag]=true; else out.add[it.flag]=(out.add[it.flag]||0)+1;
+    if(id==="manual") out.fx.military=(out.fx.military||0)+5;
+    out.result=it.say;}
   if(ch.towerAct){const r=towerResolve(ch.towerAct);out.result=r.result;out.then=r.then;Object.assign(out.set,r.set);
     for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];out.tower=r.tower;out.hasTower=true;out.hit=r.hit||null;if(r.ending)out.ending=r.ending;
     out.hpAfter=r.tower?r.tower.hp:r.hpAfter;}
@@ -1447,7 +1503,9 @@ function chooseWith(ch){
   const ns={...state.stats}, delta={};
   const mult=fxMult();
   for(const k in out.fx){const b=ns[k];ns[k]=clamp(ns[k]+Math.round(out.fx[k]*mult));delta[k]=ns[k]-b;}
+  for(const k in (out.rawFx||{})){const b=ns[k];ns[k]=clamp(ns[k]+out.rawFx[k]);delta[k]=(delta[k]||0)+ns[k]-b;} // 값은 배율 없이
   const nf={...state.flags};
+  if(out.hit&&out.hit.shieldUsed) nf.itemShield=Math.max(0,(nf.itemShield||0)-1);
   if(nf.injury>0&&!("injury" in out.set)) nf.injury-=1;
   Object.assign(nf,out.set);
   for(const k in out.add) nf[k]=(nf[k]||0)+out.add[k];
@@ -1480,7 +1538,7 @@ function commit(){
   if(p.out.hasTower) state.tower=p.out.tower;
   if(p.out.hasDuel) state.duel=p.out.duel;
   // 결투·첨탑 방은 한 장면 안의 수 싸움이라 막 진행 횟수에는 세지 않는다
-  const round=c.id==="duel"||c.id==="tower";
+  const round=c.id==="duel"||c.id==="tower"||!!p.out.shopBuy;
   state.decisions++; if(!round) state.actDecisions++;
   const actBefore=state.act;
   state.totalDays+=c.dur||1;
@@ -1500,7 +1558,7 @@ function commit(){
   trackTrail(false);
   const next=pickNext();
   state.currentId=next.id;
-  if(next.id==="tower"){if(!state.tower)state.tower=newTower();towerSync();}
+  if(next.id==="tower"){if(!state.tower){state.tower=newTower();state.tower.light+=3*(state.flags.itemOil||0);state.flags.itemOil=0;}towerSync();}
   if(!inSpire(state)) state.tower=null;
   if(!seen(next.id)) state.seen.push(next.id);
   save(); render();
@@ -1508,7 +1566,7 @@ function commit(){
 }
 
 const CHAPTER={1:"a1_dawn",2:"ch_2",3:"ch_3"}; // 막이 바뀔 때 먼저 나오는 연결 장면
-function enterAct(n){state.hp=Math.min(maxHp(),curHp()+2);state.act=n;state.actDecisions=0;state.flags.regionOverride=state.flags.throneReady?"왕도":null;state.chapter=CHAPTER[n]||null;}
+function enterAct(n){state.hp=Math.min(maxHp(),curHp()+2);if(n>=1&&n<=4)state.queue.push({id:"shop",at:state.decisions+3});state.act=n;state.actDecisions=0;state.flags.regionOverride=state.flags.throneReady?"왕도":null;state.chapter=CHAPTER[n]||null;}
 function maybeAdvance(){
   if(state.act<1||state.act>=4) return;
   const A=ACTS[state.act], left=A.required.filter(id=>!seen(id)&&condOk(card(id)));
@@ -1564,6 +1622,7 @@ function chips(){const f=state.flags,a=[];
   if(f.lienAccompanies)a.push("리엔");
   if(f.mercJoined)a.push("검은 까마귀");
   if(f.hasOriginalLedger)a.push(f.forgedLedger?"고쳐 쓴 원장":"왕실 원장");
+  if(f.itemArmor)a.push("누빔 갑옷");if(f.itemShield)a.push("방패 "+f.itemShield);if(f.itemWhet)a.push("숫돌 "+f.itemWhet);if(f.itemOil)a.push("기름 "+f.itemOil);
   return a;}
 function hint(ch){
   if(ch.check){
@@ -1668,7 +1727,8 @@ function updateHeader(stats){
   }
   $("where").textContent=`${A.name} · ${state.flags.regionOverride||A.region} · ${state.year}년 · ${state.age}세`;
   $("goal").textContent="목표: "+val(A.goal);
-  const hpNow=pending?pending.hp:curHp();$("hprow").innerHTML=heartsHTML(hpNow,maxHp(),shownHp!=null&&hpNow<shownHp?shownHp:null);shownHp=hpNow;
+  const hpNow=pending?pending.hp:curHp();$("hprow").innerHTML=`<div class="flex items-center gap-2">${state.flags.itemHerb>0?`<button id="herb" class="text-[11px] px-2 py-[2px] rounded-full border border-emerald-800 text-emerald-300 ${curHp()>=maxHp()||pending?"opacity-40":""}">약초 ${state.flags.itemHerb}</button>`:""}${heartsHTML(hpNow,maxHp(),shownHp!=null&&hpNow<shownHp?shownHp:null)}</div>`;shownHp=hpNow;
+  const hb=$("herb"); if(hb) hb.onclick=useHerb;
   $("chips").innerHTML=chips().map(t=>`<span class="px-2 py-[2px] rounded-full border border-stone-700 text-[11px] text-stone-300">${t}</span>`).join("");
 }
 
@@ -1717,7 +1777,7 @@ function pressSide(side){
 }
 function bindDrag(el){
   const TH=()=>Math.min(110,(el.offsetWidth||400)*0.28);
-  el.addEventListener("pointerdown",e=>{ if(state.ended||busy||(e.target.closest&&e.target.closest("[data-go]"))) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
+  el.addEventListener("pointerdown",e=>{ if(state.ended||busy||(e.target.closest&&e.target.closest("[data-go],[data-buy-item]"))) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
   el.addEventListener("pointermove",e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; tilt(drag.dx,TH()); });
   const end=()=>{ if(!drag) return; const dx=drag.dx; drag=null; el.style.transition="";
     if(pending){ if(Math.abs(dx)>TH()||Math.abs(dx)<6) nextResult(dx>=0?"right":"left"); else tilt(0); return; }
@@ -1734,8 +1794,10 @@ function showFront(){
     <div class="mt-5 story whitespace-pre-line">${esc(val(c.text))}</div>
     ${foe?`<div class="cue">자세 · <b>${foe.dark?"?":TELL_NAME[foe.tell]}</b></div>`:""}
     ${state.currentId==="tower"&&state.tower&&state.tower.phase==="map"?towerMapHTML():""}
+    ${state.currentId==="shop"?shopHTML():""}
     <div id="veil" class="veil"></div><div id="swipe-label" class="pick" aria-hidden="true"></div>`;
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{e.stopPropagation();towerGo(+b.dataset.go);});
+  el.querySelectorAll("[data-buy-item]").forEach(b=>b.onclick=e=>{e.stopPropagation();shopBuy(b.dataset.buyItem);});
   const ch={left:choiceOf(c,"left"),right:choiceOf(c,"right")};
   $("choices").innerHTML=["left","right"].map(sd=>`<button data-side="${sd}" class="choice ${sd==="right"?"text-right":""}"><div>${sd==="left"?"← ":""}${esc(ch[sd].label)}${sd==="right"?" →":""}</div><div class="text-[11px] mt-1 text-stone-500">${hint(ch[sd])}</div></button>`).join("");
   document.querySelectorAll("#choices [data-side]").forEach(b=>{

@@ -100,6 +100,14 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 @keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}30%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px)}}
 #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;background:#1f1a14;border:1px solid #a16207;color:#fde68a;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+.pz{cursor:zoom-in;box-shadow:0 0 0 1px rgba(214,199,161,.25)}.pz:hover{box-shadow:0 0 0 1px rgba(250,204,21,.6)}
+#pzoom{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,5,4,.88);cursor:zoom-out;animation:pzin .22s ease}
+#pzoom.out{opacity:0;transition:opacity .2s}
+#pzoom figure{margin:0;width:min(100%,480px);animation:pzpop .28s cubic-bezier(.2,.8,.2,1)}
+#pzoom img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;border:1px solid #3a3633;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+#pzoom figcaption{margin-top:12px;text-align:center;color:#f6ecd2}#pzoom figcaption b{display:block;font-size:17px}#pzoom figcaption span{display:block;margin-top:2px;font-size:12px;color:#a8a29e}
+@keyframes pzin{from{opacity:0}}@keyframes pzpop{from{transform:scale(.6);opacity:0}}
+html.calm #pzoom,html.calm #pzoom figure{animation:none}
 #title{background-image:var(--art-title,none),radial-gradient(ellipse at 50% 35%,#231a10 0%,#0e0c0a 60%,#060504 100%);background-size:cover;background-position:center}
 .t-logo{width:min(80vw,440px);height:auto;display:block;margin:0 auto;animation:tfade 1.6s .9s ease both}
 .card.result{background-image:var(--art-paper,none)}
@@ -214,7 +222,7 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 .tip button{font-size:12px;padding:3px 12px;border-radius:3px;background:#fcd34d;color:#1a1612;font-weight:700}
 .choice.cont{text-align:center;color:#fef3c7;border-color:#a16207;font-size:14px;padding:12px}
 body.twotap .choice.sel::after{content:"한 번 더 누르면 선택";display:block;margin-top:4px;font-size:11px;color:#fcd34d}
-.brt{display:inline-block;margin-right:7px;padding:0 4px;border:1.5px solid #b91c1c;border-radius:2px;color:#ef4444;font-size:10px;font-weight:700;line-height:15px;letter-spacing:.12em;transform:rotate(-4deg);box-shadow:inset 0 0 0 1px rgba(185,28,28,.35);opacity:.92}
+.brt{display:inline;margin-right:6px;color:#facc15;font-size:11px;font-weight:700;letter-spacing:.06em}
 .gnode{border:1px solid #44403c;border-radius:10px;padding:8px 12px;font-size:13px;color:#a8a29e}
 .gnode.lit{border-color:#a16207;color:#fde68a}
 .gnode.now{border-color:#facc15;color:#fef3c7;box-shadow:0 0 0 1px #facc15 inset}
@@ -2084,9 +2092,15 @@ const PORTRAIT={ // 파일 이름은 docs/이미지-에셋-요청서.md의 4장�
   "리엔의 할머니":"","브란":"","서기관 오틀린":"","섭정의 징수관":"","세공사":"","대장장이":"","사냥꾼":"","점성술사":"",
   "외눈 무기상":"","장터 상인":"","뒷골목 상인":"","행상":"","행상인":"","고원의 노파":"","우물가의 아이":"","칼잡이들":"",
   "붉은 가면":"","순찰병":"","징수관 호위병":"","그림자 병사":"","해골 병사":""};
+// 초상을 누르면 크게 본다. 큰 그림은 portraits/full/ 에 같은 이름으로 두고, 없으면 작은 그림을 늘려 쓴다
+function zoomPortrait(who,role){const img=PORTRAIT[who];if(!img||$("pzoom"))return;sfx("page");
+  const full=img.replace(/^portraits\//,"portraits/full/"),d=document.createElement("div");d.id="pzoom";
+  d.innerHTML=`<figure><img src="${ASSET_DIR+full}" alt="${esc(who)}" onerror="this.onerror=null;this.src='${ASSET_DIR+img}'"><figcaption><b>${esc(who)}</b>${role?`<span>${esc(role)}</span>`:""}</figcaption></figure>`;
+  const close=()=>{d.classList.add("out");setTimeout(()=>d.remove(),calm()?0:220);document.removeEventListener("keydown",esc_);},esc_=e=>{if(e.key==="Escape")close();};
+  d.onclick=close;document.addEventListener("keydown",esc_);document.body.appendChild(d);}
 function sigil(c){const h=[...c.who].reduce((a,ch)=>a+ch.charCodeAt(0),0)%360, img=PORTRAIT[c.who], g=SCENE_GLYPH[c.who];
   if(g&&!img) return `<div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 scene" style="background:hsl(${h} 18% 17%);color:hsl(${h} 45% 72%)"><svg viewBox="0 0 24 24">${GLYPH[g]}</svg></div>`;
-  return `<div class="w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 relative overflow-hidden" style="background:hsl(${h} 22% 20%);color:hsl(${h} 55% 78%)">${esc(c.who[0]||"")}${img?`<img src="${ASSET_DIR+img}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">`:""}</div>`;}
+  return `<div class="w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold shrink-0 relative overflow-hidden${img?" pz":""}" style="background:hsl(${h} 22% 20%);color:hsl(${h} 55% 78%)"${img?` data-zoom="${esc(c.who)}" data-role="${esc(c.role||"")}" role="button" aria-label="${esc(c.who)} 초상 크게 보기"`:""}>${esc(c.who[0]||"")}${img?`<img src="${ASSET_DIR+img}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">`:""}</div>`;}
 
 function fxPreview(ch){ // {stat: "s"|"b"|"q"}  q=판정에 따라 달라짐
   const out={}; if(!ch) return out;
@@ -2219,14 +2233,14 @@ function pressSide(side){
 }
 function bindDrag(el){
   const TH=()=>Math.min(110,(el.offsetWidth||400)*0.28);
-  el.addEventListener("pointerdown",e=>{ if(state.ended||busy||(e.target.closest&&e.target.closest("[data-go],[data-buy-item],[data-tact],[data-mapt],[data-art],[data-route],.tip"))) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
-  el.addEventListener("pointermove",e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; if(Math.abs(drag.dx-(drag.ls||0))>=22){drag.ls=drag.dx;sfx("slide",Math.min(1,Math.abs(drag.dx)/120));} tilt(drag.dx,TH()); });
-  const end=()=>{ if(!drag) return; const dx=drag.dx; drag=null; el.style.transition="";
+  el.addEventListener("pointerdown",e=>{ if(state.ended||busy||(e.target.closest&&e.target.closest("[data-go],[data-buy-item],[data-tact],[data-mapt],[data-art],[data-route],[data-zoom],.tip"))) return; drag={x0:e.clientX,dx:0,lx:e.clientX,lt:e.timeStamp}; rustle(0); try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
+  el.addEventListener("pointermove",e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; const dt=Math.max(8,e.timeStamp-drag.lt); rustle(Math.abs(e.clientX-drag.lx)/dt); drag.lx=e.clientX; drag.lt=e.timeStamp; tilt(drag.dx,TH()); });
+  const end=()=>{ if(!drag) return; const dx=drag.dx; drag=null; rustle(-1); el.style.transition="";
     if(pending){ if(Math.abs(dx)>TH()||Math.abs(dx)<6) nextResult(dx>=0?"right":"left"); else tilt(0); return; }
     if(Math.abs(dx)>TH()) commitSwipe(dx<0?"left":"right"); else { tilt(0); preview(null); } };
   el.addEventListener("pointerup",end);
   // 브라우저가 세로 스크롤로 가져가면 pointercancel이 온다. 이건 탭이 아니니 넘기지 않는다.
-  el.addEventListener("pointercancel",()=>{ if(!drag) return; drag=null; el.style.transition=""; tilt(0); if(!pending) preview(null); });
+  el.addEventListener("pointercancel",()=>{ if(!drag) return; drag=null; rustle(-1); el.style.transition=""; tilt(0); if(!pending) preview(null); });
 }
 
 /* 처음 마주치는 것은 한 번씩만 짧게 알려 준다 (기록 → 설정에서 다시 켤 수 있다) */
@@ -2236,7 +2250,7 @@ const TIPS={
   duel:"결투입니다. 상대의 자세를 보고 ‘막는다’나 ‘벤다’를 고르세요. 한 번 겪은 자세는 기록에 남으니 틀려도 괜찮습니다.",
   tower:"첨탑입니다. 두 문 중 하나를 골라 나아가세요. 열쇠를 찾아 계단에 닿으면 위층으로 올라갑니다. 문을 지날 때마다 등불이 줄어들고, 방 배치는 ‘약도 펼치기’로 볼 수 있습니다.",
   shop:"상점입니다. 물건을 누르면 바로 삽니다. 금전은 15 아래로 내려가지 않는 만큼만 쓸 수 있고, 다 샀으면 ‘가게를 나선다’를 고르세요.",
-  branch:"‘갈림길’ 도장이 찍힌 선택은 이번 생이 어떤 결말로 갈지를 바꿉니다.",
+  branch:"노란 ‘갈림길’이 붙은 선택은 이번 생이 어떤 결말로 갈지를 바꿉니다.",
   items:"위쪽의 작은 칸은 지금 가진 물건입니다. 누르면 설명이 나옵니다."
 };
 function tipNow(c,ch){const seenT=getMeta().tips||{},want=[];
@@ -2252,7 +2266,7 @@ function tipDone(k){const m=getMeta();m.tips=m.tips||{};m.tips[k]=1;setMeta(m);}
 function showFront(){
   const c=card(state.currentId), el=$("card"), foe=currentFoe();
   el.className="card fade"+(foe?" foe":""); snapCard(el);
-  el.innerHTML=`<div class="flex items-center gap-3">${sigil({who:val(c.who)})}<div><div class="text-[15px] font-bold">${esc(val(c.who))}</div><div class="text-[11px] text-stone-500">${esc(val(c.role))}</div></div></div>
+  el.innerHTML=`<div class="flex items-center gap-3">${sigil({who:val(c.who),role:val(c.role)})}<div><div class="text-[15px] font-bold">${esc(val(c.who))}</div><div class="text-[11px] text-stone-500">${esc(val(c.role))}</div></div></div>
     <div class="mt-5 story whitespace-pre-line">${esc(val(c.text))}</div>
     ${foe?`<div class="cue">자세 · <b>${foe.dark?"?":TELL_NAME[foe.tell]}</b></div>`:""}
     ${state.currentId==="tower"&&state.tower&&state.tower.phase==="map"?towerActsHTML():""}
@@ -2626,11 +2640,19 @@ function nz({f=3000,f2=null,q=1,type="bandpass",a=.004,dec=.08,vol=.2,delay=0}){
   const g=c.createGain();env(g,t,a,vol,dec);s.connect(fl);fl.connect(g);g.connect(AU.master);s.start(t,Math.random()*.6);s.stop(t+a+dec+.05);}
 function tn({f=440,f2=null,type="sine",a=.005,dec=.3,vol=.15,delay=0}){const c=AU.ctx,t=c.currentTime+delay,o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+a+dec);
   const g=c.createGain();env(g,t,a,vol,dec);o.connect(g);g.connect(AU.master);o.start(t);o.stop(t+a+dec+.05);}
+// 끄는 동안 이어지는 종이 바스락 소리. v=끄는 속도(px/ms), 0=시작, -1=끝
+function rustle(v){if(!sfxOn()||AU.buf.slide&&v>=0)return;const c=AU.ctx,t=c.currentTime;
+  if(v<0){const r=AU.rus;if(r){r.g.gain.cancelScheduledValues(t);r.g.gain.setTargetAtTime(0,t,.05);r.s.stop(t+.4);AU.rus=null;}return;}
+  if(!AU.rus){const s=c.createBufferSource();s.buffer=AU.noise;s.loop=true;const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=350;
+    const lp=c.createBiquadFilter();lp.type="lowpass";lp.frequency.value=1300;lp.Q.value=.3;const g=c.createGain();g.gain.value=0;
+    s.connect(hp);hp.connect(lp);lp.connect(g);g.connect(AU.master);s.start(t,Math.random());AU.rus={s,g,lp};}
+  const r=AU.rus,sp=Math.min(v,2.5);r.g.gain.setTargetAtTime(Math.min(.06,sp*.035),t,.04);r.lp.frequency.setTargetAtTime(1100+sp*700,t,.06);
+  if(sp>.4&&Math.random()<sp*.25)nz({f:1400+Math.random()*900,q:.5,a:.004,dec:.03,vol:.008+sp*.006});}
 function sfx(name,amt){if(!sfxOn())return;
   if(AU.buf[name]){const s=AU.ctx.createBufferSource();s.buffer=AU.buf[name];s.connect(AU.master);s.start();return;}
   try{switch(name){
-    case "slide":nz({f:2400+Math.random()*1600,q:.8,a:.003,dec:.04+Math.random()*.03,vol:.05+(amt||0)*.05});break;   // 손끝으로 종이를 쓰는 사각 소리
-    case "fly":nz({f:1600,f2:5000,q:.6,a:.02,dec:.2,vol:.14});nz({f:700,q:.5,dec:.14,vol:.05,delay:.02});break;          // 카드가 날아가는 바람 소리
+    case "slide":nz({type:"lowpass",f:1500,q:.4,a:.03,dec:.13,vol:.035*(amt||1)});nz({f:1100,q:.6,a:.02,dec:.09,vol:.015*(amt||1),delay:.03});break;   // 종이를 살짝 들추는 소리
+    case "fly":nz({f:650,f2:2400,q:.7,a:.05,dec:.2,vol:.075});nz({type:"lowpass",f:420,a:.006,dec:.09,vol:.05,delay:.21});break;          // 책장이 넘어가며 착 내려앉는 소리
     case "tap":tn({f:820,type:"triangle",dec:.05,vol:.06});nz({f:4200,dec:.02,vol:.03});break;
     case "page":nz({f:1100,f2:3200,q:.6,a:.01,dec:.16,vol:.1});break;
     case "slash":nz({f:6500,f2:1400,type:"highpass",q:.5,a:.004,dec:.17,vol:.2});tn({f:170,f2:55,dec:.16,vol:.22,delay:.03});break;
@@ -2669,6 +2691,7 @@ if(typeof document!=="undefined"&&document.addEventListener){
   const wake=()=>{auInit();};document.addEventListener("pointerdown",wake,{passive:true});document.addEventListener("keydown",wake);
   // 버튼을 누를 때 아주 작은 딸깍 (선택지는 카드가 날아가는 소리로 대신한다)
   document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("button");if(b&&!b.closest("#choices"))sfx("tap");},true);
+  document.addEventListener("click",e=>{const z=e.target.closest&&e.target.closest("[data-zoom]");if(z)zoomPortrait(z.dataset.zoom,z.dataset.role);});
 }
 
 /* ---------------- 제목 화면과 윤회의 수레바퀴 ---------------- */

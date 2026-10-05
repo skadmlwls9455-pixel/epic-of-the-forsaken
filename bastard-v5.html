@@ -200,7 +200,8 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 .sitem .sname,.sitem .sdesc{display:block}
 .slot{position:relative;width:30px;height:30px;border:1px solid #3a3633;border-radius:8px;background:#1a1714;display:inline-flex;align-items:center;justify-content:center;color:#d6c7a1;flex:none;cursor:pointer}
 .slot svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px}
+.slot img{position:absolute;inset:2px;width:calc(100% - 4px);height:calc(100% - 4px);object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.slot.off img{filter:grayscale(1)}
 .slot i{position:absolute;right:-5px;bottom:-5px;font-style:normal;font-size:10px;font-weight:700;background:#a16207;color:#1a1612;border-radius:999px;padding:0 4px;line-height:14px}
 .slot.lg{width:44px;height:44px;border-radius:10px}.slot.lg svg{width:24px;height:24px}
 .slot.rare{border-color:#a16207;color:#fcd34d;box-shadow:inset 0 0 8px rgba(250,204,21,.15)}
@@ -1993,7 +1994,7 @@ const ART={
   coin:{n:"별 일곱 은화",g:"coin",img:"items/item_coin.png",rare:1},staff:{n:"이온의 지팡이",g:"staff",img:"items/item_staff.png",rare:1}
 };
 function slotHTML(id,o){o=o||{};const a=ART[id]||{g:"scroll"};
-  return `<span class="slot ${o.lg?"lg":""} ${o.off?"off":""} ${a.rare?"rare":""}" ${o.tap!==false?`data-art="${id}"`:""} title="${esc(a.n||"")}"><svg viewBox="0 0 24 24">${GLYPH[a.g]||GLYPH.scroll}</svg>${a.img&&!o.off?`<img src="${ASSET_DIR+a.img}" alt="" onerror="this.remove()">`:""}${o.count>1?`<i>${o.count}</i>`:""}</span>`;}
+  return `<span class="slot ${o.lg?"lg":""} ${o.off?"off":""} ${a.rare?"rare":""}" ${o.tap!==false?`data-art="${id}"`:""} title="${esc(a.n||"")}"><svg viewBox="0 0 24 24"${a.img?' style="display:none"':""}>${GLYPH[a.g]||GLYPH.scroll}</svg>${a.img?`<img src="${ASSET_DIR+a.img}" alt="" onerror="this.previousElementSibling.style.display='';this.remove()">`:""}${o.count>1?`<i>${o.count}</i>`:""}</span>`;}
 function invItems(){const f=state.flags,a=[];
   if(f.hasRing)a.push(["ring"]);if(f.document)a.push(["document"]);if(f.hasOriginalLedger)a.push(["ledger"]);
   if(f.hasLegendaryWeapon)a.push(["legend"]);else if(f.hasNormalWeapon)a.push(["sword"]);

@@ -129,6 +129,15 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 .t-btns{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:38px;opacity:0;animation:tfade 1.2s 3s ease forwards}
 .t-go{min-width:200px;padding:13px 28px;border-radius:3px;letter-spacing:.2em;background:#f6ecd2;color:#1a1612;font-size:16px;font-weight:700;box-shadow:0 0 30px rgba(250,204,21,.2)}
 .t-sub{min-width:200px;padding:11px 28px;border-radius:3px;letter-spacing:.2em;border:1px solid #57534e;color:#d6d3d1;font-size:14px}
+.t-art{position:absolute;inset:0;left:50%;width:min(100%,56.25vh);transform:translateX(-50%);background:#060504 center/cover no-repeat;opacity:0;animation:tfade 2.2s .1s ease forwards}
+.t-art video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.t-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,5,4,.25) 0%,transparent 22%,transparent 50%,rgba(6,5,4,.7) 66%,rgba(6,5,4,.94) 82%,#060504 100%),linear-gradient(to right,#060504 0%,transparent 12%,transparent 88%,#060504 100%)}
+#title.has-art{align-items:flex-end;background:#060504}
+#title.has-art::before,#title.has-art .t-stars{display:none}
+#title.has-art .t-box{padding-bottom:max(26px,env(safe-area-inset-bottom))}
+#title.has-art .t-main{margin:10px 0 8px;text-shadow:0 2px 18px #000,0 0 28px rgba(250,204,21,.22)}
+#title.has-art .t-btns{margin-top:22px}
+#title.has-art .t-snd{margin-top:14px}
 .t-snd{margin-top:22px;font-size:11px;color:#78716c;opacity:0;animation:tfade 1s 3.4s ease forwards}.t-snd button{color:#d6c7a1;text-decoration:underline}
 @keyframes tfade{to{opacity:1}}
 #wheelscr{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#0a0807;transition:opacity .45s ease}
@@ -1930,7 +1939,7 @@ function pickNext(){
    이미지가 없거나 못 불러오면 아래 기본 그림(선 아이콘)이 대신 보인다. 권장 크기: 정사각형 128×128 이상. */
 const ASSET_DIR="assets/";
 // 화면 전체에 쓰는 그림. 파일 이름만 적으면 바뀐다 (목록과 규격은 docs/이미지-에셋-요청서.md)
-const UI_ART={titleBg:"",logo:"",cardTexture:"",resultPaper:"",wheel:"",endingBg:""};
+const UI_ART={titleBg:"title_bg.jpg",titleVideo:"title_bg.mp4",logo:"",cardTexture:"",resultPaper:"",wheel:"",endingBg:""};
 function applyUiArt(){if(typeof document==="undefined"||!document.documentElement)return;const r=document.documentElement.style,u=k=>UI_ART[k]?`url("${ASSET_DIR+UI_ART[k]}")`:"";
   if(UI_ART.titleBg)r.setProperty("--art-title",u("titleBg"));if(UI_ART.cardTexture)r.setProperty("--art-card",u("cardTexture"));
   if(UI_ART.resultPaper)r.setProperty("--art-paper",u("resultPaper"));if(UI_ART.endingBg)r.setProperty("--art-ending",u("endingBg"));}
@@ -1968,20 +1977,20 @@ const SCENE_GLYPH={"갈림길":"sign","국경 갈림길":"sign","금화":"coin",
   "왕실 원장":"scroll","현상금 벽보":"scroll","타버린 별궁":"flame","인형극":"note","장대비":"rain","주막":"cup","토끼":"herb",
   "모여든 사람들":"people","무릎 꿇는 사람들":"people","칼잡이들":"people"};
 const ART={
-  ring:{n:"에드릭의 반지",d:"안쪽에 제2왕자 에드릭의 이름이 새겨져 있습니다. 어머니가 남긴 것.",g:"ring",img:""},
-  document:{n:"세공 장부",d:"반지가 진품이라는 왕실 세공 기록.",g:"book",img:""},
-  ledger:{n:"왕실 원장",d:"왕가의 이름이 적혀 온 책. 몇 줄에 고쳐 쓴 흔적이 있습니다.",g:"scroll",img:""},
-  legend:{n:"서리 검",d:"북부 영주 브란 가문의 검. 칼자루에 별 일곱. 빌린 힘에는 대가가 따릅니다.",g:"sword",img:"",rare:1},
-  sword:{n:"검",d:"무기. 최대 체력 +1, 무력 판정이 유리해집니다.",g:"sword",img:""},
-  armor:{n:"누빔 갑옷",d:"최대 체력 +1.",g:"armor",img:""},
-  shield:{n:"나무 방패",d:"결투에서 맞을 때 한 번 대신 막아 줍니다.",g:"shield",img:""},
-  whet:{n:"숫돌",d:"다음 결투에서 첫 명중의 피해 +1.",g:"stone",img:""},
-  herb:{n:"약초 꾸러미",d:"꺼내 먹으면 체력 +1.",g:"herb",img:""},
-  oil:{n:"등잔 기름",d:"첨탑에 들어갈 때 등불 +3.",g:"flame",img:""},
-  manual:{n:"검술 교본",d:"무력 +5.",g:"book",img:""},
-  hairpin:{n:"엘레나의 머리핀",d:"별 일곱이 새겨진 핀. 별궁에서 이런 걸 쓰는 사람은 없었습니다.",g:"pin",img:"",rare:1},
-  bread:{n:"마르타의 빵",g:"bread",img:"",rare:1},lullaby:{n:"엘레나의 자장가",g:"note",img:"",rare:1},
-  coin:{n:"별 일곱 은화",g:"coin",img:"",rare:1},staff:{n:"이온의 지팡이",g:"staff",img:"",rare:1}
+  ring:{n:"에드릭의 반지",d:"안쪽에 제2왕자 에드릭의 이름이 새겨져 있습니다. 어머니가 남긴 것.",g:"ring",img:"items/item_ring.png"},
+  document:{n:"세공 장부",d:"반지가 진품이라는 왕실 세공 기록.",g:"book",img:"items/item_document.png"},
+  ledger:{n:"왕실 원장",d:"왕가의 이름이 적혀 온 책. 몇 줄에 고쳐 쓴 흔적이 있습니다.",g:"scroll",img:"items/item_ledger.png"},
+  legend:{n:"서리 검",d:"북부 영주 브란 가문의 검. 칼자루에 별 일곱. 빌린 힘에는 대가가 따릅니다.",g:"sword",img:"items/item_legend.png",rare:1},
+  sword:{n:"검",d:"무기. 최대 체력 +1, 무력 판정이 유리해집니다.",g:"sword",img:"items/item_sword.png"},
+  armor:{n:"누빔 갑옷",d:"최대 체력 +1.",g:"armor",img:"items/item_armor.png"},
+  shield:{n:"나무 방패",d:"결투에서 맞을 때 한 번 대신 막아 줍니다.",g:"shield",img:"items/item_shield.png"},
+  whet:{n:"숫돌",d:"다음 결투에서 첫 명중의 피해 +1.",g:"stone",img:"items/item_whet.png"},
+  herb:{n:"약초 꾸러미",d:"꺼내 먹으면 체력 +1.",g:"herb",img:"items/item_herb.png"},
+  oil:{n:"등잔 기름",d:"첨탑에 들어갈 때 등불 +3.",g:"flame",img:"items/item_oil.png"},
+  manual:{n:"검술 교본",d:"무력 +5.",g:"book",img:"items/item_manual.png"},
+  hairpin:{n:"엘레나의 머리핀",d:"별 일곱이 새겨진 핀. 별궁에서 이런 걸 쓰는 사람은 없었습니다.",g:"pin",img:"items/item_hairpin.png",rare:1},
+  bread:{n:"마르타의 빵",g:"bread",img:"items/item_bread.png",rare:1},lullaby:{n:"엘레나의 자장가",g:"note",img:"items/item_lullaby.png",rare:1},
+  coin:{n:"별 일곱 은화",g:"coin",img:"items/item_coin.png",rare:1},staff:{n:"이온의 지팡이",g:"staff",img:"items/item_staff.png",rare:1}
 };
 function slotHTML(id,o){o=o||{};const a=ART[id]||{g:"scroll"};
   return `<span class="slot ${o.lg?"lg":""} ${o.off?"off":""} ${a.rare?"rare":""}" ${o.tap!==false?`data-art="${id}"`:""} title="${esc(a.n||"")}"><svg viewBox="0 0 24 24">${GLYPH[a.g]||GLYPH.scroll}</svg>${a.img&&!o.off?`<img src="${ASSET_DIR+a.img}" alt="" onerror="this.remove()">`:""}${o.count>1?`<i>${o.count}</i>`:""}</span>`;}
@@ -2069,7 +2078,7 @@ let shownHp=null, previewSide=null, built=false, shown=null, drag=null, resultPa
 const $=id=>document.getElementById(id);
 // 인물 초상: PORTRAIT[이름]에 파일 이름을 적으면 ASSET_DIR의 이미지가 원 안에 들어간다 (없으면 첫 글자)
 const PORTRAIT={ // 파일 이름은 docs/이미지-에셋-요청서.md의 4장과 같다
-  "어머니":"","엘레나":"","유모 마르타":"","마르타":"","리엔":"","길가의 여자":"","케인":"","근위대장 케인":"","베르난":"",
+  "어머니":"portraits/portrait_elena.jpg","엘레나":"portraits/portrait_elena.jpg","유모 마르타":"","마르타":"","리엔":"","길가의 여자":"","케인":"","근위대장 케인":"","베르난":"",
   "오스릭":"","회색 망토":"","이온":"","이온과 그림자":"","수도원장 테오":"","촌장":"","촌장의 아들":"","용병대장 하그":"",
   "리엔의 할머니":"","브란":"","서기관 오틀린":"","섭정의 징수관":"","세공사":"","대장장이":"","사냥꾼":"","점성술사":"",
   "외눈 무기상":"","장터 상인":"","뒷골목 상인":"","행상":"","행상인":"","고원의 노파":"","우물가의 아이":"","칼잡이들":"",
@@ -2676,6 +2685,9 @@ function showTitle(hold){if(typeof document==="undefined"||!document.body)return
     ${lives?`<div class="t-life">지금까지 ${lives}번의 생 · 결말 ${getDisc().length} / ${Object.keys(ENDINGS).length}</div>`:""}
     <div class="t-btns">${hasSave?`<button id="t-cont" class="t-go">이어서</button>`:""}<button id="t-new" class="${hasSave?"t-sub":"t-go"}">${lives?"새로운 생":"시작"}</button></div>
     <div class="t-snd"><button id="t-sound">${opts.music===false&&opts.sfx===false?"소리 꺼짐":"소리 켜짐"}</button> · 이어폰을 끼고 하시면 더 좋습니다</div></div>`;
+  if(UI_ART.titleBg){t.classList.add("has-art");const a=document.createElement("div");a.className="t-art";a.style.backgroundImage=`url("${ASSET_DIR+UI_ART.titleBg}")`;
+    if(UI_ART.titleVideo&&!calm()){const v=document.createElement("video"),webm=UI_ART.titleVideo.replace(/\.mp4$/,".webm"),src=v.canPlayType('video/mp4; codecs="avc1.42E01E"')?UI_ART.titleVideo:v.canPlayType("video/webm")?webm:"";if(src)a.innerHTML=`<video src="${ASSET_DIR+src}" poster="${ASSET_DIR+UI_ART.titleBg}" autoplay muted loop playsinline preload="auto" onerror="this.remove()"></video>`;}
+    t.prepend(a);}
   if(UI_ART.logo){const h1=t.querySelector(".t-main");h1.innerHTML=`<img src="${ASSET_DIR+UI_ART.logo}" alt="${name}" class="t-logo">`;}
   document.body.appendChild(t);
   const close=fresh=>{auInit();sfx("fly");t.classList.add("out");setTimeout(()=>{t.remove();if(fresh&&hasSave){restart();return;}sceneBgm();},calm()?0:700);};

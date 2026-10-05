@@ -199,7 +199,7 @@ html.calm *,html.calm *::before,html.calm *::after{animation:none!important;tran
    - 쉬는 장면(rest): 판정 없는 짧은 장면으로 리엔·베르난·케인·마르타와 정이 든다. 긴장된 장면 뒤에 끼어든다.
      정(bondLien 등)은 인물 탭에 낯섦→가족 단계로 보이고 일부 판정에 더해진다. 2·3막 최소 결정 수 +3.
    - 복선 회수: 마르타 생사(시신을 거두면 재회, 아니면 교수대 구출 판정), 이름 없는 은화, 빵 훔친 아이,
-     용 검의 대가, 별 일곱 = 별지기 인장, 아버지 거부.
+     빌린 검의 대가(붉은 가면 사건: 진실을 내걸지, 용 이야기로 덮을지), 별 일곱 = 별지기 인장, 아버지 거부.
    - 회차 반응: 어머니(데자뷔)는 앞 생 결말에, 이온(전부 기억)은 앞 생 결말 이름에, 갈림길은 앞 생 길에 반응.
    - 공략집: 결말을 처음 볼 때마다 영혼 1개, 일반 공략 1개·숨겨진/최종 공략 2개. 지난 생에 밟은 칸 표시, 칸을 채우면 알림.
    - 최종 결말 "빈 원장": 결말 12개 이후 첨탑 꼭대기에서 왕의 피를 물으면 원장 맨 뒷장이 열린다.
@@ -535,19 +535,20 @@ const CARDS=[
  left:{label:"지휘를 맡는다",fx:{military:4,people:-3,gold:4},set:{mercRank:2},result:["고참 하나는 그날 밤 떠났다. 다른 하나는 네 천막 앞에서 잠들었다.","석 달 만에 까마귀는 마흔에서 백으로 불어나 있었다."]},
  right:{label:"부하로 남는다",fx:{people:2,military:-2},set:{mercRank:1},result:"고참 하나가 대장 자리를 차지했다. 너는 그 밑에서 고개를 숙였다."}},
 {id:"a3_dragon_rumour",acts:[3],dur:10,who:"사냥꾼",role:"북부 주막",
- text:"“북쪽 고개에 용이 내려앉았다니까. 영주가 그 머리에 금화 삼백 닢을 걸었고.”\n“양 떼가 통째로 사라져. 허풍 아니라고.”",
- left:{label:"고개로 간다",fx:{military:3,gold:-2},set:{dragonRumour:true,regionOverride:"북부 고개"},queue:[{id:"a3_dragon_track",delay:2}],result:"사냥꾼이 빈 술잔을 밀어 주었다.\n“살아서 돌아오면 채워.”"},
+ // 북쪽 고개의 '용'은 섭정이 꾸민 것이다. 마을을 태우고 용 짓으로 돌린 뒤 '용 토벌세'를 걷는다
+ text:"“북쪽 고개에 용이 내려앉았다니까. 마을이 벌써 셋이나 탔어.”\n사냥꾼이 잔을 내려놓았다. “근데 이상하지. 불탄 다음 날이면 꼭 섭정 징수관이 와. ‘용 토벌세’를 걷으러.”",
+ left:{label:"고개로 가 본다",fx:{military:3,gold:-2},set:{dragonRumour:true,regionOverride:"북부 고개"},queue:[{id:"a3_dragon_track",delay:2}],result:"사냥꾼이 빈 술잔을 밀어 주었다.\n“살아서 돌아오면 채워.”"},
  right:{label:"웃어넘긴다",fx:{gold:2,people:-2},result:"사냥꾼도 따라 웃었다."}},
-{id:"a3_dragon_track",acts:[3,4],queueOnly:true,dur:10,who:"용의 흔적",role:"고개 꼭대기",cond:s=>s.flags.dragonRumour&&!s.flags.dragonSlain,
- text:"눈밭에 수레만 한 발자국이 찍혀 있었다.\n바위틈에는 검 한 자루가 꽂혀 있었다. 칼날에는 ‘힘은 대가를 원한다’, 칼자루에는 별 일곱.\n고원 너머로 검은 첨탑이 보였다.",
- left:{label:"검을 뽑는다",fx:{military:6,people:-6},set:{hasLegendaryWeapon:true,heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"뽑아 든 검은 깃털처럼 가벼웠다.\n별 문양은 첨탑 쪽을 향할 때만 희미하게 빛났다."},
- right:{label:"두고 간다",fx:{people:3,military:-2},set:{heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"첨탑 꼭대기에 불빛 하나."}},
-{id:"a3_dragon_fight",acts:[3,4],queueOnly:true,repeat:true,dur:5,who:"용",role:"동굴",cond:s=>!s.flags.dragonSlain&&s.flags.dragonFails<2,
- text:s=>(s.flags.dragonFails>0?"다시 동굴 앞이다.\n":"")+"용은 잠들어 있었다. 숨을 쉴 때마다 동굴 천장에서 돌가루가 떨어졌다.\n목덜미 비늘 틈으로 맨살이 드러나 있었다.",
- left:{label:"목덜미를 노린다",duel:{n:"용",hp:4,w:{raise:3,breath:3,retreat:2,feint:2},dark:.15,
-   tells:{raise:"꼬리를 높이 치켜든다.",breath:"목덜미가 들썩인다. 숨을 들이켜는 중.",retreat:"머리를 뒤로 뺀다.",feint:"날개가 펼쳐진다. 그림자가 둘."},intro:"용이 눈을 뜬다.",
-   win:{fx:{military:4,legitimacy:10,people:3},set:{dragonSlain:true},then:"a3_dragon_price",result:"칼이 비늘 사이를 파고들었다.\n그 뒤로 사흘 동안, 고갯길의 눈은 붉은빛이었다."},
-   lose:{fx:{military:-8},set:{injury:4},add:{dragonFails:1},queue:[{id:"a3_dragon_fight",delay:4}],result:"꼬리에 맞아 눈밭까지 날아갔다. 갈비뼈가 나가는 소리가 들렸다.\n용은 다시 눈을 감았다. 너 따위는 관심도 없다는 듯."}}},
+{id:"a3_dragon_track",acts:[3,4],queueOnly:true,dur:10,who:"불탄 마을",role:"고개 아래",cond:s=>s.flags.dragonRumour&&!s.flags.dragonSlain,
+ text:"마을은 아직 연기를 피우고 있었다. 눈밭에 수레만 한 발톱 자국이 나 있었지만, 자국마다 쇠 갈퀴로 긁은 듯 간격이 똑같았다.\n잿더미 속에서 반쯤 녹은 투구가 나왔다. 섭정 근위대의 문장이었다.\n말발굽 소리가 났다. 북부 영주 브란이 기사 몇을 데리고 다가왔다. “너도 봤구나. 내 검을 빌려주마. 대신 내 깃발 아래서 싸워라.”",
+ left:{label:"브란의 검을 받는다",fx:{military:6,people:-6},set:{hasLegendaryWeapon:true,heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"‘서리 검’이라 불리는 브란 가문의 검이었다. 생각보다 가벼웠다.\n칼자루에 별 일곱이 새겨져 있었다. “첫 왕이 북부에 두고 간 거다.” 브란은 그렇게만 말했다.\n고원 너머로 검은 첨탑이 보였다."},
+ right:{label:"맹세는 하지 않는다",fx:{people:3,military:-2},set:{heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"브란은 어깨를 으쓱하고 말머리를 돌렸다.\n“혼자 해 보든가. 놈들은 오늘 밤 다음 마을로 간다.”\n고원 너머 첨탑 꼭대기에 불빛 하나가 보였다."}},
+{id:"a3_dragon_fight",acts:[3,4],queueOnly:true,repeat:true,dur:5,who:"붉은 가면",role:"야습",cond:s=>!s.flags.dragonSlain&&s.flags.dragonFails<2,
+ text:s=>(s.flags.dragonFails>0?"다시 그 골짜기였다.\n":"")+"자정이 넘자 횃불 열두 개가 골짜기를 올라왔다. 맨 앞의 사내는 쇠 갈퀴를 단 장갑을 끼고, 비늘을 꿰매 붙인 붉은 가면을 쓰고 있었다.\n저 사내만 쓰러뜨리면 나머지는 흩어질 터였다.",
+ left:{label:"가면 쓴 대장에게 달려든다",duel:{n:"붉은 가면",hp:4,w:{raise:3,breath:3,retreat:2,feint:2},dark:.15,
+   tells:{raise:"쇠 갈퀴를 높이 치켜든다.",breath:"가면 아래로 숨을 몰아쉰다. 어깨가 들썩인다.",retreat:"횃불 뒤로 한 걸음 물러선다.",feint:"가면 둘이 겹쳐 보인다. 하나는 그림자다."},intro:"붉은 가면이 갈퀴를 쳐들었다.",
+   win:{fx:{military:4,legitimacy:10,people:3},set:{dragonSlain:true},then:"a3_dragon_price",result:"갈퀴 장갑이 눈밭에 떨어졌다. 가면을 벗기자 섭정 근위대의 낙인이 찍힌 얼굴이 나왔다.\n횃불 든 자들은 흩어졌다. 그날 밤 탄 마을은 없었다."},
+   lose:{fx:{military:-8},set:{injury:4},add:{dragonFails:1},queue:[{id:"a3_dragon_fight",delay:4}],result:"갈퀴가 옆구리를 긁고 지나갔다. 눈밭에 쓰러져 있는 사이 횃불들이 골짜기를 넘어갔다.\n다음 날 아침, 마을이 하나 더 타 있었다."}}},
  right:{label:"물러난다",fx:{people:2,military:-2},set:{dragonFails:2},result:"뒷걸음질로 나왔다."}},
 {id:"a3_kane",acts:[3],dur:5,who:"케인",role:"협곡 길",cond:s=>!s.flags.kaneAlly&&s.flags.kaneEscaped<3,
  text:"협곡 길을 케인이 혼자 말을 타고 막아섰다. 근위대 휘장은 떼어 낸 뒤였다.\n“이번이 마지막이다.”",
@@ -792,10 +793,11 @@ const CARDS=[
  text:"마르타가 네 터진 소매를 꿰매 주었다. 바늘 끝이 조금 떨렸다.\n“엘레나는 바느질은 영 꽝이었어. 노래는 잘했지만.”",
  left:{label:"그 노래를 불러 달라고 한다",add:{bondMarta:1},set:{motherNorth:true},clue:"lullaby",result:"‘별이 이름을 적으면, 양치기도 왕.’\n쉰 목소리였지만 박자는 정확했다."},
  right:{label:"아들 얘기를 묻는다",add:{bondMarta:1},result:s=>s.flags.buriedSeven?"“네가 묻어 줬잖니. 그럼 됐다.”\n마르타는 실을 이로 끊었다.":"“착한 애였어. 너보다 두 살 많았지.”\n마르타는 실을 이로 끊었다."}},
-{id:"a3_dragon_price",acts:[3,4],queueOnly:true,dur:2,who:"룬 검",role:"용이 쓰러진 자리",cond:s=>s.flags.hasLegendaryWeapon&&s.flags.dragonSlain,
- text:"용의 피가 식어 가는 사이, 칼자루의 별 문양이 하나씩 꺼져 갔다.\n왼손 손가락 둘이 굳어서 펴지지 않았다.\n칼날의 글귀가 떠올랐다. ‘힘은 대가를 원한다.’",
- left:{label:"검을 바위에 다시 꽂는다",fx:{military:-4},set:{hasLegendaryWeapon:false,swordReturned:true},result:"검을 바위에 꽂자 손가락이 조금씩 풀렸다.\n바위에 박힌 검은 다시 무거워 보였다."},
- right:{label:"검을 계속 쥔다",fx:{military:4,people:-4},set:{swordBound:true},result:"손가락은 끝내 펴지지 않았다.\n검만은 여전히 깃털처럼 가벼웠다."}},
+{id:"a3_dragon_price",acts:[3,4],queueOnly:true,dur:2,who:"브란",role:"골짜기의 아침",cond:s=>s.flags.hasLegendaryWeapon&&s.flags.dragonSlain,
+ // 빌린 힘의 대가: 진실을 내걸지, 브란이 원하는 '용 이야기'를 지킬지
+ text:"날이 밝자 브란이 기사들을 데리고 왔다. 묶인 가면 쓴 자들을 내려다보더니 낮게 웃었다.\n“용을 벤 걸로 하자. 사람들은 그쪽을 더 좋아해. 섭정이 꾸민 짓이라고 떠들면 북부는 내일 당장 전쟁이다.”\n그가 서리 검을 턱으로 가리켰다. “그 검은 용을 벤 검으로 남는 거다.”",
+ left:{label:"가면을 사람들 앞에 내건다",fx:{military:-4,people:4},set:{hasLegendaryWeapon:false,swordReturned:true,maskExposed:true},result:"가면과 갈퀴 장갑을 마을 우물가에 내걸었다. 사람들이 몰려와 섭정의 낙인을 손가락으로 짚었다.\n브란은 말없이 검을 거둬 갔다. 용 토벌세는 그 달로 끊겼다."},
+ right:{label:"용을 벤 걸로 한다",fx:{military:4,people:-4},set:{swordBound:true},result:"그날부터 너는 용을 벤 사람이 되었다.\n가면 쓴 자들은 조용히 사라졌다. 어디로 갔는지는 아무도 묻지 않았다. 서리 검은 여전히 가벼웠다."}},
 {id:"spire_last",acts:[3,4],queueOnly:true,dur:2,who:"이온",role:"원장 맨 뒷장",cond:s=>finalOpen(),
  text:s=>`이온이 원장 맨 뒷장을 편다. 네 이름이 ${s.pastLives}번. 줄마다 끝이 다르다.\n“다 기억한다. 왕관 쓴 너도, 숲에 들어간 너도, 길에서 죽은 너도.”\n이온이 펜을 내민다. “이번엔 네가 쥐어라.”`,
  left:{label:"원장을 불에 넣는다",ending:"blank_ledger",result:["원장이 불길 속에서 말려 들어갔다. 네 이름이 적힌 줄부터 먼저 탔다.","이온의 그림자가 바닥에서 떨어져 나오더니, 연기처럼 창밖으로 빠져나갔다."]},
@@ -877,7 +879,7 @@ const LEAVE_ROUTES=[
   {ok:f=>f.metMaster&&!f.bernanGone&&f.bernardTrust>=1,why:"베르난은 혼자 남쪽으로 갔다. 대관식 날 성문 앞에 서겠다는 말을 남기고.",go:{label:"베르난을 쫓아 남쪽으로",then:"a4_bernan_chase",result:"말을 갈아타며 사흘을 내리 달렸다."}},
   {ok:f=>(f.promiseVillage||f.villageTrust||f.militia)&&(f.militia||f.villageReturned),why:"산골 마을에서 사람이 찾아왔다. 징수관이 대관식 기념세를 걷으러 온다고 했다.",go:{label:"산골 마을로 돌아간다",then:"a4_village",result:"외양간 다락은 떠날 때 그대로였다."}},
   {ok:f=>f.motherNorth&&(f.hairpin||f.heardSpire),why:"어머니가 흥얼거리던 자장가 속 고원이 북쪽에 있었다.",go:{label:"어머니의 고원으로 간다",then:"a4_highland",result:"북쪽으로 열흘을 걸었다. 바람에 양 떼 냄새가 실려 왔다."}},
-  {ok:f=>f.dragonSlain,why:"용을 벤 자에게 땅을 내리겠다고, 북부 영주가 포고를 붙였다.",go:{label:"북부 영주에게 간다",ending:"legend_hero",result:"성문 위에 용의 머리가 걸려 있었다."}},
+  {ok:f=>f.dragonSlain,why:"북부 영주 브란은 골짜기의 일을 잊지 않았다. 북쪽에 네 자리가 있다는 전갈이 와 있었다.",go:{label:"북부 영주에게 간다",ending:"legend_hero",result:"브란이 성문 앞까지 나와 있었다."}},
   {ok:f=>f.mercRank>=2,why:"까마귀들은 아직 북부 진영에서 너를 기다리고 있었다.",go:{label:"까마귀 진영으로 간다",ending:"mercenary_king",result:"드러누운 하그가 깃발을 네 쪽으로 밀어 주었다."}},
   {ok:f=>f.monkBond,why:"산중 수도원까지는 이틀이면 닿았다.",go:{label:"수도원으로 간다",ending:"monk_ending",result:"테오는 아무것도 묻지 않고 국을 데웠다."}},
   {ok:()=>true,why:"북쪽은 숲이었다. 아무도 너를 모르는 곳.",go:{label:"북쪽 숲으로 들어간다",ending:"hermit",result:"마지막 마을에서 도끼와 소금을 샀다."}}
@@ -897,7 +899,7 @@ function leaveHTML(){const r=leaveOpts(state),i=(state.leaveIdx||0)%r.length;
 const DEEDS=[
   {id:"lien3",t:"리엔을 세 번 업어 주기",n:3,run:f=>f.childSaved},
   {id:"kane3",t:"케인을 결투로 세 번 꺾기",n:3,run:f=>f.kaneBeaten},
-  {id:"dragon",t:"북쪽 고개의 용 베기",n:1,run:f=>f.dragonSlain},
+  {id:"dragon",t:"붉은 가면 쓰러뜨리기",n:1,run:f=>f.dragonSlain},
   {id:"spire2",t:"첨탑 꼭대기에 두 번 오르기",n:2,run:f=>f.spireDone},
   {id:"marta2",t:"마르타를 두 번 살리기",n:2,run:f=>f.martaAlive},
   {id:"sword3",t:"베르난에게 에드릭의 검을 세 번 받기",n:3,run:f=>f.masterTrialPassed},
@@ -952,7 +954,7 @@ const T_ENEMY={1:[{n:"해골 병사",hp:2,w:{raise:3,breath:3,retreat:2,feint:2}
    규칙(막기/베기)은 그대로 두고, 상대 종류(style)마다 자세·결과 묘사를 여러 개 두어 무작위로 고른다.
    자세 이름(TELL_NAME)은 언제나 같아서, 묘사가 달라도 배운 수를 알아볼 수 있다. */
 const TELL_NAME={raise:"크게 치켜든다",breath:"숨을 고른다",retreat:"물러선다",feint:"허상이 생긴다"};
-const STYLE_OF={"케인":"blade","근위대장 케인":"blade","순찰병":"club","징수관 호위병":"spear","용":"beast","그림자 병사":"shade","석상 기사":"stone","그림자":"shade","해골 병사":"bone","해골 기사":"bone"};
+const STYLE_OF={"케인":"blade","근위대장 케인":"blade","순찰병":"club","징수관 호위병":"spear","붉은 가면":"blade","그림자 병사":"shade","석상 기사":"stone","그림자":"shade","해골 병사":"bone","해골 기사":"bone"};
 const TELLS={
  blade:{raise:["칼을 머리 위로 번쩍. 내려칠 기세.","두 손으로 칼자루를 움켜쥐고 높이 든다."],breath:["어깨가 처진다. 숨이 거칠다.","칼끝이 내려간다. 가슴이 들썩들썩."],retreat:["한 발 물러선다. 발끝으로 거리를 재면서.","칼을 거두며 뒤로 빠진다."],feint:["몸을 비튼다. 칼끝이 둘로 보이고.","왼쪽으로 들어오는 척, 어깨는 반대로."]},
  club:{raise:["몽둥이가 머리 위에서 붕붕 돈다.","몽둥이를 어깨 뒤로 한껏 젖힌다."],breath:["몽둥이를 짚고 헐떡인다.","땀 훔치느라 손이 내려갔다."],retreat:["뒷걸음질 친다.","동료 쪽으로 슬금슬금."],feint:["발을 구르며 어느 쪽으로 올지 숨긴다.","몽둥이를 이 손 저 손으로 바꿔 쥔다."]},
@@ -1068,7 +1070,7 @@ function towerResolve(act){
     const dealt=c.dealt?dmg:0; e.hp-=dealt;
     let r=linePick(HITS[c.kind],style), kind=c.kind, taken=0;
     if(c.taken){const m=hurt(); if(m){r+="\n"+m; if(!dealt) kind="charm";} else taken=1;}
-    if(dealt>1&&state.flags.hasLegendaryWeapon) r+="\n룬 검이 번뜩였다. 상처가 두 배로 벌어졌다.";
+    if(dealt>1&&state.flags.hasLegendaryWeapon) r+="\n서리 검이 번뜩였다. 상처가 두 배로 벌어졌다.";
     out.hit={kind,dealt,taken,style,finish:t.hp<=0?"lose":e.hp<=0?"win":null,view:{n:e.n,hp:Math.max(0,e.hp),max:e.max,my:Math.max(0,t.hp),mymax:t.max,prevHp,prevMy}};
     if(e.hp<=0){r+=`\n\n${e.n}${josa(e.n,"이","가")} 무너져 내렸다.`;t.phase="map";t.enemy=null;t.cells[t.pos].done=true;}
     else{e.tell=wpick(e.w);e.dark=darkRoll(t);e.tellText=tellLine(style,e.tell);
@@ -1108,7 +1110,7 @@ function duelResolve(act){
   let r=linePick(HITS[c.kind],style), shieldUsed=false;
   if(c.taken&&d.shield>0){d.shield--;shieldUsed=true;r+="\n나무 방패가 대신 쪼개지며 막아냈다.";} else d.my-=c.taken;
   if(whet) r+="\n숫돌로 세운 날이 살을 깊게 갈랐다.";
-  if(state.flags.hasLegendaryWeapon&&dealt>1) r+="\n룬 검이 번쩍. 상처가 두 배로 벌어진다.";
+  if(state.flags.hasLegendaryWeapon&&dealt>1) r+="\n서리 검이 번쩍. 상처가 두 배로 벌어진다.";
   const hit={kind:shieldUsed&&!dealt?"charm":c.kind,dealt,taken:shieldUsed?0:c.taken,shieldUsed,style,finish:d.hp<=0?"win":d.my<=0?"lose":null,
     view:{n:d.n,hp:Math.max(0,d.hp),max:d.max,my:Math.max(0,d.my),mymax:d.mymax,prevHp:state.duel.hp,prevMy:state.duel.my}};
   if(!hit.finish){ if(d.my===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝."; else if(d.hp===1) r+="\n상대 무릎이 휘청인다. 한 번이면 된다."; }
@@ -1135,7 +1137,7 @@ const ENDINGS={
   village_ash:{title:"잿더미 골짜기",tag:"산골 마을"},
   shepherd:{title:"양치기",tag:"엘레나"},
   tyrant_ending:{title:"새로운 섭정",tag:"왕도"},
-  legend_hero:{title:"용을 벤 자",tag:"북부"},
+  legend_hero:{title:"북부의 노래",tag:"북부"},
   mercenary_king:{title:"까마귀의 왕",tag:"북부"},
   monk_ending:{title:"이름 없는 수도사",tag:"수도원"},
   hermit:{title:"숲의 오두막",tag:"숲"},
@@ -1166,7 +1168,7 @@ const ENDING_HINT={
   village_guard:"산골 마을에 약속을 남기고, 젊은이들에게 칼을 가르치고, 다시 그 골짜기로 돌아간다.",
   village_ash:"산골 마을로 돌아가지만 지키지 못한다.",
   shepherd:"어머니의 자장가가 어디서 왔는지 알고, 북쪽 고원으로 간다.",
-  legend_hero:"북쪽 고개의 그것을 베고, 왕도로 가지 않는다.",
+  legend_hero:"북쪽 고개의 ‘용’ 뒤에 있는 것을 쓰러뜨리고, 왕도로 가지 않는다.",
   mercenary_king:"까마귀 깃발 아래에서 자리를 맡는다. 그리고 왕도로 가지 않는다.",
   monk_ending:"이름 없이 머물 수 있는 곳을 기억해 두고, 왕도로 가지 않는다.",
   hermit:"아무와도 이어지지 않은 채 왕도를 등진다.",
@@ -1247,7 +1249,7 @@ const ENDING_TRAIL={
   tyrant_ending:[[f=>f.tyrantPoints>=1,"마을을 털거나 칼로 입을 막았다"],[f=>f.forgedLedger,"원장 빈 줄에 네 이름을 적었다"]],
   last_bastard:[[f=>f.clueNameless,"이름 없이 첨탑 문을 열었다"],[f=>f.spireTruth,"왕의 피가 무엇인지 물었다"],[f=>f.truthRevealed,"광장에서 원장을 처음부터 읽었다"]],
   spire_keeper:[[f=>f.clueNameless,"이름 없이 첨탑 문을 열었다"],[f=>f.spireTruth,"왕의 피가 무엇인지 물었다"],[f=>f.path==="leave","왕도를 등졌다"]],
-  legend_hero:[[f=>f.dragonRumour,"북쪽 고개의 소문을 쫓았다"],[f=>f.hasLegendaryWeapon,"바위틈의 검을 뽑았다"],[f=>f.dragonSlain,"용을 베었다"]],
+  legend_hero:[[f=>f.dragonRumour,"북쪽 고개의 소문을 쫓았다"],[f=>f.hasLegendaryWeapon||f.swordBound||f.swordReturned,"브란의 검을 받았다"],[f=>f.dragonSlain,"붉은 가면을 쓰러뜨렸다"]],
   mercenary_king:[[f=>f.mercJoined,"까마귀 깃발을 받았다"],[f=>f.mercRespect,"마을 대신 보급대를 쳤다"],[f=>f.mercRank>=2,"하그의 자리를 물려받았다"]],
   monk_ending:[[f=>f.monkBond,"수도원에서 이름 없이 며칠을 지냈다"]],
   throne_door:[[f=>!f.kaneAlly,"케인을 끝내 곁에 두지 않았다"],[f=>f.kaneScar,"강가에서 케인의 뺨을 그었다"]],
@@ -1461,9 +1463,14 @@ function endingDesc(id,st){
     return P.join("\n\n");
   }
   if(id==="legend_hero"){
-    add("영주가 내리겠다던 땅은 마다했다. 대신 기사단에 들어가 국경을 지켰다."+(f.swordBound?"\n왼손 손가락 둘은 끝내 펴지지 않았다. 검은 여전히 가벼웠다.":f.swordReturned?"\n룬 검은 고개의 바위에 다시 꽂아 두고 왔다.":f.swordOffered?"\n룬 검은 첨탑의 저울 위에 두고 왔다.":f.hasLegendaryWeapon?"\n룬 검은 아직 허리에 있었다.":"\n용은 평범한 강철로 벤 것이었다. 노래 속에서는 어느새 빛나는 검이 되어 있었지만."));
+    add((f.swordBound?"브란이 내린 땅을 받았다. 용을 벤 사람에게 주는 땅이었다.\n서리 검은 여전히 가벼웠다. 가끔은 그 가벼움이 무서웠다."
+      :f.maskExposed?"브란이 내리겠다던 땅은 마다했다. 대신 골짜기 마을들을 돌며 망루 세우는 일을 거들었다."
+      :"브란이 내리겠다던 땅은 마다했다. 대신 북부 기사단에 들어가 국경을 지켰다.")
+      +(f.swordOffered?"\n서리 검은 첨탑의 저울 위에 두고 왔다.":!f.hasLegendaryWeapon&&!f.swordBound&&!f.swordReturned?"\n가면은 평범한 강철로 벗긴 것이었다.":""));
     add("대관식 소식은 열흘 늦게 닿았다. 막사에서 그 얘기를 꺼내는 사람은 없었다.");
-    add("북부 아이들은 용을 벤 사람의 노래를 불렀다. 노래에 이름은 나오지 않았다."+(f.puppetSaved?"\n장터 인형극에는 용 인형이 새로 생겼다.":""));
+    add((f.maskExposed?"우물가에 가면이 걸렸던 걸 본 사람들도, 아이들에게는 용을 벤 사람의 노래를 불러 주었다. 그쪽이 더 듣기 좋다고 했다."
+      :"북부 아이들은 용을 벤 사람의 노래를 불렀다. 노래 속의 용은 해마다 조금씩 커졌다.\n가면 쓴 자들 얘기는 어디에도 나오지 않았다.")
+      +(f.puppetSaved?"\n장터 인형극에는 붉은 가면 인형이 새로 생겼다.":""));
     return P.join("\n\n");
   }
   if(id==="mercenary_king"){
@@ -1552,6 +1559,11 @@ const CHARS={
     if(s.flags.clueLedgerName)a.push("장부엔 피가 아니라 이름이 적힌다고 했다.");if(s.flags.scribeWitness)a.push("증언하겠다고 따라왔다.");return a;}},
   haag:{name:"하그",group:"곁",rel:s=>"검은 까마귀 대장",facts:s=>{const f=s.flags,a=["한쪽 귀가 없다."];
     if(f.mercRank>=2)a.push("지휘를 네게 넘겼다.");return a;}},
+  bran:{name:"브란",group:"그 밖",rel:s=>s.flags.swordBound?"맹세한 영주":s.flags.maskExposed?"검을 거둬 간 영주":"북부 영주",facts:s=>{const f=s.flags,a=["북부 영주. 섭정을 싫어하지만 전쟁은 더 싫어한다."];
+    if(f.hasLegendaryWeapon||f.swordBound||f.swordReturned)a.push("가문의 검 ‘서리 검’을 빌려주었다. 칼자루에 별 일곱.");
+    if(f.dragonSlain)a.push("‘용’의 정체가 섭정 근위대라는 걸 안다.");
+    if(f.swordBound)a.push("그 일을 용을 벤 이야기로 덮자고 했고, 너는 따랐다.");
+    if(f.maskExposed)a.push("가면을 내건 날, 말없이 검을 거둬 갔다.");return a;}},
   ion:{name:"이온",group:"그 밖",rel:s=>"별지기",facts:s=>{const f=s.flags,a=["첨탑 안에서는 거짓을 말 못 한다. 거짓은 그림자가 한다.","섭정의 부름을 거절했다."];
     if(f.spireTruth)a.push("별지기가 원장을 네 번 고쳐 썼다고 했다.");return a;}},
   osric:{name:"오스릭",group:"적",rel:s=>"섭정",facts:s=>{const a=["노왕 서자라고 주장한다.","삼년상이 끝나는 날 왕관을 쓴다."];
@@ -1559,7 +1571,7 @@ const CHARS={
 };
 const KNOWN={elena:()=>true,edric:()=>true,marta:()=>seen("pro_nurse"),osric:()=>seen("pro_nurse"),kane:()=>seen("pro_corridor"),
   lien:()=>seen("a1_child"),granny:()=>seen("a1_reed_village")||state.flags.usurperSecret,bernan:()=>seen("a2_bernan_meet"),
-  chief:()=>seen("a2_tax"),teo:()=>seen("a2_monastery"),otlin:()=>seen("a2_library"),haag:()=>seen("a3_merc"),ion:()=>state.flags.spireFloor>0};
+  chief:()=>seen("a2_tax"),teo:()=>seen("a2_monastery"),otlin:()=>seen("a2_library"),haag:()=>seen("a3_merc"),bran:()=>seen("a3_dragon_track"),ion:()=>state.flags.spireFloor>0};
 
 /* ---------------- 저장 ---------------- */
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
@@ -1853,14 +1865,14 @@ Object.assign(GLYPH,{
   people:'<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M3 20c0-3 2-5 5-5s5 2 5 5M11 20c0-3 2-5 5-5s5 2 5 5"/>'
 });
 const SCENE_GLYPH={"갈림길":"sign","국경 갈림길":"sign","금화":"coin","빈 주머니":"coin","나루터":"wave","늑대":"moon","야습":"moon","닫힌 문":"gate","닫힌 성문":"gate","왕도 성문":"gate",
-  "룬 검":"sword","방앗간":"bread","허기":"bread","별지기 첨탑":"tower","빈 왕좌":"crown","빈민가 우물":"drop","열병":"drop","석 달 뒤":"hourglass","이듬해 가을":"hourglass",
-  "왕실 원장":"scroll","현상금 벽보":"scroll","용":"flame","용의 흔적":"flame","타버린 별궁":"flame","인형극":"note","장대비":"rain","주막":"cup","토끼":"herb",
+  "불탄 마을":"flame","붉은 가면":"flame","방앗간":"bread","허기":"bread","별지기 첨탑":"tower","빈 왕좌":"crown","빈민가 우물":"drop","열병":"drop","석 달 뒤":"hourglass","이듬해 가을":"hourglass",
+  "왕실 원장":"scroll","현상금 벽보":"scroll","타버린 별궁":"flame","인형극":"note","장대비":"rain","주막":"cup","토끼":"herb",
   "모여든 사람들":"people","무릎 꿇는 사람들":"people","칼잡이들":"people"};
 const ART={
   ring:{n:"에드릭의 반지",d:"안쪽에 제2왕자 에드릭의 이름이 새겨져 있다. 어머니가 남긴 것.",g:"ring",img:""},
   document:{n:"세공 장부",d:"반지가 진품이라는 왕실 세공 기록.",g:"book",img:""},
   ledger:{n:"왕실 원장",d:"왕가의 이름이 적혀 온 책. 몇 줄은 고쳐 쓴 흔적이 있다.",g:"scroll",img:""},
-  legend:{n:"룬 검",d:"바위틈에서 뽑은 검. 깃털처럼 가볍고, 대가를 원한다.",g:"sword",img:"",rare:1},
+  legend:{n:"서리 검",d:"북부 영주 브란 가문의 검. 칼자루에 별 일곱. 빌린 힘에는 대가가 따른다.",g:"sword",img:"",rare:1},
   sword:{n:"검",d:"무기. 최대 체력 +1, 무력 판정이 유리해진다.",g:"sword",img:""},
   armor:{n:"누빔 갑옷",d:"최대 체력 +1.",g:"armor",img:""},
   shield:{n:"나무 방패",d:"결투에서 맞을 때 한 번 대신 막는다.",g:"shield",img:""},
@@ -1886,7 +1898,7 @@ function chips(){const f=state.flags,a=[];
   if(f.injury>0)a.push("부상");
   a.push(f.hasRing?"반지":"반지 없음");
   if(f.document)a.push("세공 장부");
-  if(f.hasLegendaryWeapon)a.push("룬 검");else if(f.hasNormalWeapon)a.push("에드릭의 검");
+  if(f.hasLegendaryWeapon)a.push("서리 검");else if(f.hasNormalWeapon)a.push("에드릭의 검");
   if(f.metMaster&&!f.bernanGone)a.push("베르난");
   if(f.kaneAlly)a.push("케인");
   if(f.lienAccompanies)a.push("리엔");
@@ -1906,7 +1918,7 @@ const BRANCH={
   metMaster:"베르난과 같은 길을 걷게 되었다.",bernanGone:"베르난이 떠났다.",masterTrialPassed:"에드릭의 검을 물려받았다.",
   kaneAlly:"케인이 네 편이 되었다.",kaneScar:"케인은 이 상처를 기억할 것이다.",kaneKnown:"케인의 속마음을 들었다.",
   mercJoined:"까마귀 깃발을 받았다.",mercRespect:"까마귀들이 네 방식을 기억할 것이다.",
-  dragonRumour:"북쪽 고개의 소문을 쫓기로 했다.",dragonSlain:"용을 벤 이름이 북부에 퍼질 것이다.",
+  dragonRumour:"북쪽 고개의 소문을 쫓기로 했다.",dragonSlain:"붉은 가면의 일이 북부에 퍼질 것이다.",
   monkBond:"수도원의 문은 언제든 네게 열려 있을 것이다.",spireTruth:"왕의 피가 무엇인지 알았다.",
   scribeWitness:"오틀린이 증인이 되었다.",document:"세공 장부를 손에 넣었다.",
   ringSold:"반지를 손에서 놓았다.",osricRefused:"섭정의 제안을 돌려보냈다.",northGate:"성 안으로 들어갈 길을 알았다.",

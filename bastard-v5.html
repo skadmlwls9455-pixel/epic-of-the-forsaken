@@ -201,13 +201,13 @@ function initialFlags(){return{
   // 4막 결말 갈래 (v5.6)
   villageReturned:false, wallFreed:null, villageWay:null, knightSaved:false, osricRefused:false, sawHighland:false,
   // v5.7 정·마르타·복선
-  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false, diedInSpire:false
+  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false, diedInSpire:false, diedOfWounds:false
 };}
 function inSpire(s){const f=s.flags;return f.spireFloor>0&&!f.spireDone&&!f.spireSealed;}
 function newState(){return{
   act:0, actDecisions:0, decisions:0, totalDays:0, year:START_YEAR, age:START_AGE,
   pastLives:getMeta().runs, tower:null, duel:null, chainNext:null, chapter:null, currentId:"pro_fire", stats:{military:50,people:50,legitimacy:50,gold:50},
-  flags:initialFlags(), queue:[], seen:["pro_fire"], lastSeen:{}, history:[], ended:null, coinUsed:false, newRelics:[], newClues:[]
+  hp:3, flags:initialFlags(), queue:[], seen:["pro_fire"], lastSeen:{}, history:[], ended:null, coinUsed:false, newRelics:[], newClues:[]
 };}
 
 const wpn=s=>s.flags.hasLegendaryWeapon?14:s.flags.hasNormalWeapon?8:0;
@@ -879,8 +879,7 @@ function genFloor(t){
   t.cells=[...Array(GW*GH)].map((_,i)=>({t:i===exit?"exit":i===key?"key":i===map?"map":i===T_START?"empty":wpick(w),seen:i===T_START,done:i===T_START,hide:darkRoll(t)}));
   t.pos=T_START;t.known=false;t.key=false;t.phase="map";t.enemy=null;
 }
-function newTower(){const f=state.flags;let hp=3+(state.stats.military>=60?1:0)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)-(f.injury>0?1:0);
-  hp=Math.max(2,hp);const t={floor:1,hp,max:hp,light:9,charm:0,potion:0};genFloor(t);return t;}
+function newTower(){const hp=Math.max(1,curHp());const t={floor:1,hp,max:maxHp(),light:9,charm:0,potion:0};genFloor(t);return t;}
 const towerMode=()=>inSpire(state)&&!!state.tower;
 function towerSync(){const t=state.tower;if(!t)return;const fl=state.flags.spireFloor;if(fl!==t.floor&&fl<=3){t.floor=fl;t.light+=4;t.hp=Math.min(t.max,t.hp+1);genFloor(t);}} // 층계참: 기름 한 병, 숨 돌리기
 function pips(n,m,on,off){return on.repeat(Math.max(0,n))+off.repeat(Math.max(0,m-n));}
@@ -904,7 +903,7 @@ function towerChoice(side){const t=state.tower;
 function towerResolve(act){
   const t=JSON.parse(JSON.stringify(state.tower)),out={result:"",then:"tower",set:{},fx:{},hit:null};
   const hurt=()=>{if(t.charm>0){t.charm--;return "별 부적이 갈라지며 대신 받아냈다.";}t.hp--;return "";};
-  const expel=why=>({result:[out.result,why].filter(Boolean),tower:null,then:null,set:{spireSealed:true,regionOverride:null},fx:{},hit:out.hit});
+  const expel=why=>({result:[out.result,why].filter(Boolean),tower:null,then:null,set:{spireSealed:true,regionOverride:null},fx:{},hit:out.hit,hpAfter:t.hp});
   if(act.startsWith("go:")){
     const i=+act.slice(3); if(!tAdj(t.pos).includes(i)){out.tower=t;return out;}
     t.light--; t.pos=i; const c=t.cells[i]; c.seen=true;
@@ -956,9 +955,13 @@ function towerGo(i){if(busy||pending||state.ended)return;chooseWith({label:"방�
 /* ---------------- 결투 (첨탑 밖에서도 쓰는 공용 싸움) ----------------
    규칙은 첨탑과 같다. 칼을 든다·물러선다 → 막는다 / 숨을 몰아쉰다·갈라진다 → 벤다.
    네 체력은 무력에서 나온다. 무력 30마다 ♥ 1, 검이 있으면 +1, 부상이면 -1. */
-function myHearts(){const f=state.flags;let h=2+Math.floor(state.stats.military/30)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)-(f.injury>0?1:0);return Math.max(1,Math.min(6,h));}
+/* 체력(♥)은 한 판 내내 이어진다. 최대치는 무력과 검에서 나온다.
+   싸움·함정·부상에서 깎이고, 쉬는 장면·치료·막이 바뀔 때 회복한다. 0인 채로 또 다치면 쓰러진다(결말). */
+function maxHp(s){s=s||state;const f=s.flags;return Math.max(2,Math.min(6,2+Math.floor(s.stats.military/30)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)));}
+function curHp(){return Math.max(0,Math.min(maxHp(),state.hp==null?maxHp():state.hp));}
+function myHearts(){return Math.max(1,curHp());}
 function startDuel(spec){const my=myHearts(),style=spec.style||styleOf(spec.n),tell=wpick(spec.w);
-  return {n:spec.n,style,hp:spec.hp,max:spec.hp,w:spec.w,tells:spec.tells||null,darkp:spec.dark||0,my,mymax:my,tell,tellText:tellLine(style,tell,spec.tells),dark:false,win:spec.win,lose:spec.lose};}
+  return {n:spec.n,style,hp:spec.hp,max:spec.hp,w:spec.w,tells:spec.tells||null,darkp:spec.dark||0,my,mymax:maxHp(),dying:curHp()<=0,tell,tellText:tellLine(style,tell,spec.tells),dark:false,win:spec.win,lose:spec.lose};}
 function duelText(){const d=state.duel;if(!d)return"";return d.dark?"상대의 움직임이 잘 보이지 않는다.":(d.tellText||tellLine(d.style||styleOf(d.n),d.tell,d.tells));}
 function learnTell(tell,act){const m=getMeta();m.tells=m.tells||{};if(!m.tells[tell]){m.tells[tell]=act;setMeta(m);}}
 function duelResolve(act){
@@ -972,7 +975,8 @@ function duelResolve(act){
   if(!hit.finish){ if(d.my===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝."; else if(d.hp===1) r+="\n상대 무릎이 휘청인다. 한 번이면 된다."; }
   const fin=br=>({result:[r,...pagesOf(br.result||"")].filter(Boolean),fx:br.fx||{},set:br.set||{},add:br.add||{},queue:br.queue||[],then:br.then||null,ending:br.ending||null,duel:null,hit});
   if(d.hp<=0) return fin(d.win);
-  if(d.my<=0) return fin(d.lose);
+  // 이미 빈사인 채로 시작한 싸움에서 지면, 더는 일어나지 못한다
+  if(d.my<=0) return d.dying?{...fin({result:"무릎이 꺾였다. 이번에는 다시 일어설 힘이 남아 있지 않았다."}),ending:"fallen_wounds"}:fin(d.lose);
   d.tell=wpick(d.w);d.dark=Math.random()<d.darkp;d.tellText=tellLine(style,d.tell,d.tells);
   return {result:r,fx:{},set:{},add:{},queue:[],then:"duel",ending:null,duel:d,hit};
 }
@@ -983,6 +987,7 @@ const ENDINGS={
   spire_keeper:{title:"별지기",tag:"숨겨진 결말"},
   blank_ledger:{title:"빈 원장",tag:"최종 결말"},
   spire_bones:{title:"첨탑의 해골",tag:"첨탑"},
+  fallen_wounds:{title:"아물지 않은 상처",tag:"체력 고갈"},
   throne_reclaim:{title:"왕좌",tag:"왕도"},
   regent_heir:{title:"섭정의 양자",tag:"왕도"},
   last_knight:{title:"마지막 근위기사",tag:"베르난"},
@@ -1012,6 +1017,7 @@ const ENDING_HINT={
   last_bastard:"북쪽의 노란 별에서 들은 것을, 왕도 사람들 앞에서.",
   spire_keeper:"북쪽의 노란 별에서 들은 것을 안고, 왕도를 등진다.",
   spire_bones:"별지기 첨탑의 어둠 속에서 쓰러진다.",
+  fallen_wounds:"상처를 돌보지 않고 싸움을 이어 가다, 끝내 버티지 못한다.",
   blank_ledger:"결말을 열둘 모은 뒤, 첨탑 꼭대기에서 왕의 피를 묻는다.",
   throne_reclaim:"증거와 사람을 모아 대관식 날 성문 앞에 선다.",
   tyrant_ending:"왕좌에 앉은 첫날, 자비 대신 본보기를.",
@@ -1078,16 +1084,18 @@ function motherDream(){return {crown:"\n어머니가 희미하게 웃었다. “
 const FINAL_NEED=12;
 function finalOpen(){return getDisc().length>=FINAL_NEED;}
 const isHiddenEnd=id=>/숨겨진|최종/.test((ENDINGS[id]||{}).tag||"");
-const guideCost=id=>isHiddenEnd(id)?2:1;
-function soulsLeft(){const m=getMeta();return getDisc().length-(m.guides||[]).reduce((a,id)=>a+guideCost(id),0);}
-function buyGuide(id){const m=getMeta();m.guides=m.guides||[];if(m.guides.includes(id)||soulsLeft()<guideCost(id))return false;m.guides.push(id);setMeta(m);return true;}
+// 일반 결말 공략은 영혼 1개("_normal")로 한꺼번에, 숨겨진·최종 결말은 하나씩 영혼 2개
+const guideCost=id=>id==="_normal"?1:isHiddenEnd(id)?2:1;
+function guideOpen(id){const g=getMeta().guides||[];return g.includes(id)||(!isHiddenEnd(id)&&g.includes("_normal"));}
+function soulsLeft(){const g=getMeta().guides||[],pack=g.includes("_normal");return getDisc().length-g.reduce((a,id)=>a+(id==="_normal"?1:isHiddenEnd(id)?2:pack?0:1),0);}
+function buyGuide(id){const m=getMeta();m.guides=m.guides||[];if(guideOpen(id)||soulsLeft()<guideCost(id))return false;m.guides.push(id);setMeta(m);return true;}
 // 공략을 연 결말의 고리를 채우면 알림, 그리고 지난 생들에 밟은 고리는 영구 기록
-function trackTrail(ending){
-  const m=getMeta();m.trail=m.trail||{};const g=m.guides||[];state.trailNow=state.trailNow||{};const news=[];
+function trackTrail(ending,silent){
+  const m=getMeta();m.trail=m.trail||{};state.trailNow=state.trailNow||{};const news=[];const g={includes:guideOpen};
   for(const id in ENDING_TRAIL){const L=ENDING_TRAIL[id];const now=L.map(([ok],i)=>{try{return ok(state.flags)?i:-1;}catch(e){return -1;}}).filter(i=>i>=0);
     const had=state.trailNow[id]||[];if(g.includes(id))now.filter(i=>!had.includes(i)).forEach(i=>news.push(L[i][1]));
     state.trailNow[id]=now;if(ending||g.includes(id)){m.trail[id]=[...new Set([...(m.trail[id]||[]),...now])];}}
-  setMeta(m);if(news.length&&!ending)toast("원장 한 줄이 채워졌다 · "+news[0]);}
+  setMeta(m);if(news.length&&!ending&&!silent)toast("원장 한 줄이 채워졌다 · "+news[0]);}
 function toast(t){if(typeof document==="undefined"||!document.querySelector)return;const el=$("toast");if(!el)return;el.textContent=t;el.classList.remove("on");void el.offsetWidth;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2600);}
 /* 결말 화면의 "이 결말까지 이어진 일": 이번 생에 실제로 켜진 연결 고리만 보여 준다 */
 const ENDING_TRAIL={
@@ -1109,6 +1117,7 @@ const ENDING_TRAIL={
 ENDING_TRAIL.village_ash=ENDING_TRAIL.village_guard;
 ENDING_TRAIL.hermit=[[f=>f.path==="leave","대관식 한 달 전, 왕도로 가지 않는다"],[f=>leaveRoutes({flags:f}).length===1,"아무 인연도 끝까지 이어 가지 않는다"]];
 ENDING_TRAIL.wanderer=[[f=>f.path==="leave"||f.throneFails>=2,"왕도를 등지거나, 성문에서 두 번 밀려난다"],[f=>f.sawHighland||leaveRoutes({flags:f}).length===1||f.throneFails>=2,"마음 둘 곳 없이 길에 선다"]];
+ENDING_TRAIL.fallen_wounds=[[f=>f.injury>0||f.diedOfWounds,"상처가 아물기 전에 또 다친다"],[f=>f.diedOfWounds,"체력이 바닥난 채 한 번 더 쓰러진다"]];
 ENDING_TRAIL.spire_bones=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.diedInSpire,"첨탑 안에서 체력이 다해 쓰러진다"]];
 ENDING_TRAIL.blank_ledger=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.spireTruth,"꼭대기에서 왕의 피가 무엇인지 묻는다"],[()=>finalOpen(),"결말을 열두 개 이상 모았다"]];
 function endingTrail(id,st){return (ENDING_TRAIL[id]||[]).filter(([ok])=>ok(st.flags)).map(([,t])=>t);}
@@ -1126,6 +1135,14 @@ function endingDesc(id,st){
   const where=f.regionOverride||ACTS[st.act].region;
   if(DEATH_TEXT[id]){const t=DEATH_TEXT[id][Math.max(1,Math.min(4,st.act))-1];return `${t}\n\n${st.year}년, ${where}. ${st.age}세.`+(st.flags.lastWords?`\n마지막 선택: ${st.flags.lastWords}`:"");}
   const P=[], add=x=>{if(x)P.push(x);};
+  if(id==="fallen_wounds"){
+    add(["강가 갈대밭에서 너는 끝내 일어나지 못했다. 아물지 않은 상처들이 한꺼번에 벌어진 밤이었다.",
+      "산골 마을 다락에서였다. 열은 사흘째 내리지 않았고, 붕대 밑에서는 고름 냄새가 났다. 네 번째 아침은 오지 않았다.",
+      "북부의 어느 협곡에서, 너는 마지막 칼을 막지 못했다. 이미 너무 많이 베인 몸이었다.",
+      "왕도가 보이는 언덕까지는 왔다. 거기서 더는 걸을 수 없었다. 성문 불빛이 흐려지는 걸, 너는 끝까지 보고 있었다."][Math.max(1,Math.min(4,st.act))-1]);
+    add((bern?"베르난이 너를 업고 의원을 찾아 밤새 달렸다고 했다. 늦었다.\n":"")+(f.lienAccompanies?"리엔은 네 손을 놓지 않았다. 식어 가는 걸 알면서도.\n":"")+`${st.year}년, ${st.age}세.`);
+    return P.join("\n\n");
+  }
   if(id==="spire_bones"){
     add("계단 아래로 쓰러진 뒤의 일은 흐릿했다. 차가운 돌바닥, 꺼져 가던 등잔, 그리고 점점 가까워지던 덜그럭거리는 소리.");
     add("얼마나 지났을까. 너는 다시 일어섰다. 손을 내려다보니 살이 없었다.\n벽에 기대앉은 해골들 사이에 네 자리가 하나 비어 있었다. 오래전부터 그 자리였던 것처럼.");
@@ -1403,7 +1420,8 @@ function resolve(ch){
     for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];for(const k in r.add) out.add[k]=(out.add[k]||0)+r.add[k];
     out.queue.push(...r.queue);if(r.ending)out.ending=r.ending;out.duel=r.duel;out.hasDuel=true;out.hit=r.hit;}
   if(ch.towerAct){const r=towerResolve(ch.towerAct);out.result=r.result;out.then=r.then;Object.assign(out.set,r.set);
-    for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];out.tower=r.tower;out.hasTower=true;out.hit=r.hit||null;if(r.ending)out.ending=r.ending;}
+    for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];out.tower=r.tower;out.hasTower=true;out.hit=r.hit||null;if(r.ending)out.ending=r.ending;
+    out.hpAfter=r.tower?r.tower.hp:r.hpAfter;}
   if(ch.check){
     const c=ch.check, ok=effective(c)+(Math.floor(Math.random()*21)-10)>=c.base, b=ok?c.success:c.failure;
     for(const k in (b.fx||{})) out.fx[k]=(out.fx[k]||0)+b.fx[k];
@@ -1433,14 +1451,24 @@ function chooseWith(ch){
   if(nf.injury>0&&!("injury" in out.set)) nf.injury-=1;
   Object.assign(nf,out.set);
   for(const k in out.add) nf[k]=(nf[k]||0)+out.add[k];
+  // 이번 선택 뒤의 체력
+  let hp=curHp(); const mh=maxHp({stats:ns,flags:nf});
+  if(out.hasDuel&&out.hit&&out.hit.view) hp=out.hit.view.my;
+  else if(out.hasTower&&out.hpAfter!=null) hp=out.hpAfter;
+  else if(out.set.injury>0) hp-=1;                           // 다치는 사건
+  if(c.rest) hp+=1;                                           // 쉬는 장면
+  if(out.set.injury===0) hp=mh;                               // 치료
   let ending=out.ending; // 서사 엔딩이 스탯 사망보다 우선
+  if(!ending&&hp<0){ending="fallen_wounds";nf.diedOfWounds=true;}
   if(!ending) for(const k of STAT_KEYS){if(ns[k]<=0){ending=`death_${k}_0`;break;}if(ns[k]>=100){ending=`death_${k}_100`;break;}}
+  if(ending==="fallen_wounds"&&hasRelic("coin")&&!state.coinUsed){hp=1;ending=null;nf.diedOfWounds=false;
+    out.result=[...pagesOf(out.result),"품 속 별 일곱 은화가 두 동강 난다.\n한 번은 넘긴다."]; out.coin=true;}
   if(ending&&ending.startsWith("death_")&&hasRelic("coin")&&!state.coinUsed){
     const k=ending.split("_")[1]; ns[k]=ns[k]<=0?10:90; delta[k]=ns[k]-state.stats[k]; ending=null;
     out.result=[...pagesOf(out.result),"품 속 별 일곱 은화가 두 동강 난다.\n한 번은 넘긴다."]; out.coin=true;
   }
   if(ending) nf.lastWords=ch.label;
-  pending={cardId:c.id,label:ch.label,out,ns,nf,delta,ending};
+  pending={cardId:c.id,label:ch.label,out,ns,nf,delta,ending,hp:Math.max(0,Math.min(mh,hp))};
   resultPage=0;
   render();
 }
@@ -1448,7 +1476,7 @@ function chooseWith(ch){
 function commit(){
   if(!pending) return;
   const p=pending, c=card(p.cardId);
-  state.stats=p.ns; state.flags=p.nf; if(p.out.coin) state.coinUsed=true;
+  state.stats=p.ns; state.flags=p.nf; state.hp=p.hp; if(p.out.coin) state.coinUsed=true;
   if(p.out.hasTower) state.tower=p.out.tower;
   if(p.out.hasDuel) state.duel=p.out.duel;
   // 결투·첨탑 방은 한 장면 안의 수 싸움이라 막 진행 횟수에는 세지 않는다
@@ -1480,7 +1508,7 @@ function commit(){
 }
 
 const CHAPTER={1:"a1_dawn",2:"ch_2",3:"ch_3"}; // 막이 바뀔 때 먼저 나오는 연결 장면
-function enterAct(n){state.act=n;state.actDecisions=0;state.flags.regionOverride=state.flags.throneReady?"왕도":null;state.chapter=CHAPTER[n]||null;}
+function enterAct(n){state.hp=Math.min(maxHp(),curHp()+2);state.act=n;state.actDecisions=0;state.flags.regionOverride=state.flags.throneReady?"왕도":null;state.chapter=CHAPTER[n]||null;}
 function maybeAdvance(){
   if(state.act<1||state.act>=4) return;
   const A=ACTS[state.act], left=A.required.filter(id=>!seen(id)&&condOk(card(id)));
@@ -1560,7 +1588,7 @@ const ICON={
   gold:'<circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-.9-1.4-1.3-2.5-1.3-1.5 0-2.6.8-2.6 1.9 0 2.6 5.3 1.4 5.3 4 0 1.1-1.2 1.9-2.7 1.9-1.2 0-2.2-.5-2.7-1.4M12 6.5v1.7M12 15.8v1.7"/>'
 };
 const TOUCH=typeof window!=="undefined"&&!!window.matchMedia&&window.matchMedia("(hover: none)").matches;
-let previewSide=null, built=false, shown=null, drag=null, resultPage=0;
+let shownHp=null, previewSide=null, built=false, shown=null, drag=null, resultPage=0;
 
 const $=id=>document.getElementById(id);
 function sigil(c){const h=[...c.who].reduce((a,ch)=>a+ch.charCodeAt(0),0)%360;
@@ -1585,7 +1613,7 @@ function build(){
       <div id="ind-${k}" class="ind h-[12px] mt-1 flex justify-center items-center"></div></div>`).join("")}</div>
     <div class="flex justify-between items-center mt-1 text-[11px] text-stone-400"><span id="where"></span><span class="flex gap-3"><button id="people" class="underline text-stone-300 hover:text-white">기록</button><button id="opts" class="underline text-stone-400 hover:text-white">설정</button><button id="restart" class="underline text-stone-500 hover:text-stone-300">새로 시작</button></span></div>
     <div id="goal" class="mt-1 text-[12px] text-stone-300"></div>
-    <div id="chips" class="flex flex-wrap gap-1 mt-2"></div>
+    <div class="flex justify-between items-center mt-2 gap-2"><div id="chips" class="flex flex-wrap gap-1"></div><div id="hprow" class="shrink-0" title="체력"></div></div>
   </header>
   <main class="flex-1 flex flex-col items-center px-5 pt-6 pb-10">
     <div id="stage" class="relative w-full max-w-[400px] select-none">
@@ -1640,6 +1668,7 @@ function updateHeader(stats){
   }
   $("where").textContent=`${A.name} · ${state.flags.regionOverride||A.region} · ${state.year}년 · ${state.age}세`;
   $("goal").textContent="목표: "+val(A.goal);
+  const hpNow=pending?pending.hp:curHp();$("hprow").innerHTML=heartsHTML(hpNow,maxHp(),shownHp!=null&&hpNow<shownHp?shownHp:null);shownHp=hpNow;
   $("chips").innerHTML=chips().map(t=>`<span class="px-2 py-[2px] rounded-full border border-stone-700 text-[11px] text-stone-300">${t}</span>`).join("");
 }
 
@@ -1801,7 +1830,7 @@ function recordNow(){
   return sec("목표",`<div class="text-[15px] text-stone-100">${esc(val(A.goal))}</div><div class="text-[12px] text-stone-500 mt-1">${A.name} · ${state.flags.regionOverride||A.region} · ${state.age}세</div>`)
    +sec("곁에 있는 사람",mates.length?mates.map(x=>chip(x)).join(""):`<span class="text-[13px] text-stone-500">아직 혼자다.</span>`)
    +sec("왕좌를 증명할 것",ev.length?ev.map(x=>chip(x)).join(""):`<span class="text-[13px] text-stone-500">아직 없다.</span>`)
-   +((m.guides||[]).length?sec("따라가는 공략",(m.guides||[]).map(id=>{const L=ENDING_TRAIL[id]||[],now=(state.trailNow||{})[id]||[];
+   +((()=>{const fol=Object.keys(ENDING_TRAIL).filter(id=>guideOpen(id)&&((state.trailNow||{})[id]||[]).length).sort((a,b)=>(state.trailNow[b].length/ENDING_TRAIL[b].length)-(state.trailNow[a].length/ENDING_TRAIL[a].length)).slice(0,4);return fol;})().length?sec("따라가는 공략",Object.keys(ENDING_TRAIL).filter(id=>guideOpen(id)&&((state.trailNow||{})[id]||[]).length).sort((a,b)=>(state.trailNow[b].length/ENDING_TRAIL[b].length)-(state.trailNow[a].length/ENDING_TRAIL[a].length)).slice(0,4).map(id=>{const L=ENDING_TRAIL[id]||[],now=(state.trailNow||{})[id]||[];
       return `<div class="mb-3"><div class="text-[13px] text-amber-200 mb-1">${getDisc().includes(id)?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</div>${L.map(([,t],i)=>`<div class="text-[12px] ${now.includes(i)?"text-stone-200":"text-stone-500"}">${now.includes(i)?"☑":"☐"} ${esc(t)}</div>`).join("")}</div>`;}).join("")):"")
    +sec("싸움 요령",`<div class="text-[12px] text-stone-500 mb-2">싸우면서 알게 된 것만 적힌다.</div>`+Object.keys(TELL_NAME).map(k=>`<div class="flex justify-between text-[13px] py-1 border-t border-stone-800"><span class="text-stone-300">상대가 ${TELL_NAME[k]}</span><span class="${tells[k]?"text-amber-200":"text-stone-600"}">${tells[k]?ACT_NAME[tells[k]]:"?"}</span></div>`).join(""))
    +sec("이 세계",`<div class="text-[13px] leading-7 text-stone-400">노왕이 죽었다. 섭정 오스릭이 삼년상이 끝나는 날 왕관을 쓴다.<br>너는 제2왕자 에드릭의 사생아다.</div><button id="rec-intro" class="mt-2 underline text-[12px] text-stone-500">처음 소개 다시 보기</button>`)
@@ -1842,11 +1871,12 @@ function guideChart(id,open){
 function recordGuide(){
   const m=getMeta(), g=m.guides||[], ids=Object.keys(ENDINGS).filter(k=>ENDING_TRAIL[k]), left=soulsLeft();
   return `<div class="flex justify-between items-baseline mb-1"><div class="text-[15px] text-stone-100">영혼 ${left}개</div><div class="text-[12px] text-stone-500">결말을 처음 볼 때마다 1개</div></div>
-    <div class="text-[12px] text-stone-500 mb-4 leading-5">공략을 열면 그 결말까지 이어지는 일이 칸으로 드러난다. 노란 칸은 지난 생에 밟아 본 길, ✓는 이번 생에 채운 칸.<br>숨겨진 결말과 최종 결말은 영혼 2개.${finalOpen()?"":` 최종 결말은 결말 ${FINAL_NEED}개를 모으면 길이 생긴다.`}</div>`
-   +ids.map(id=>{const open=g.includes(id), cost=guideCost(id), disc=getDisc().includes(id);
-     return `<details class="border-t border-stone-800 py-3" ${open?"open":""}><summary class="cursor-pointer flex justify-between items-center"><span class="text-[14px] ${disc?"text-stone-100":"text-stone-400"}">${disc?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</span><span class="text-[11px] ${open?"text-amber-300":"text-stone-500"} shrink-0 ml-2">${open?"열림":"영혼 "+cost}</span></summary>
+    <div class="text-[12px] text-stone-500 mb-4 leading-5">공략을 열면 그 결말까지 이어지는 일이 칸으로 드러난다. 노란 칸은 지난 생에 밟아 본 길, ✓는 이번 생에 채운 칸.<br>일반 결말은 영혼 1개로 전부, 숨겨진 결말과 최종 결말은 하나에 영혼 2개.${finalOpen()?"":` 최종 결말은 결말 ${FINAL_NEED}개를 모으면 길이 생긴다.`}</div>`
+   +(guideOpen("_normal")?"":`<button data-buy="_normal" class="w-full mb-4 py-3 rounded-[12px] text-[14px] ${left>=1?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=1?"":"disabled"}>영혼 1개로 일반 결말 공략 전부 열기</button>`)
+   +ids.map(id=>{const open=guideOpen(id), cost=guideCost(id), disc=getDisc().includes(id), hid=isHiddenEnd(id);
+     return `<details class="border-t border-stone-800 py-3"><summary class="cursor-pointer flex justify-between items-center"><span class="text-[14px] ${disc?"text-stone-100":"text-stone-400"}">${disc?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</span><span class="text-[11px] ${open?"text-amber-300":"text-stone-500"} shrink-0 ml-2">${open?"열림":hid?"영혼 2":"묶음"}</span></summary>
        <div class="mt-3">${guideChart(id,open)}</div>
-       ${open?"":`<button data-buy="${id}" class="mt-3 w-full py-2 rounded-[10px] text-[13px] ${left>=cost?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=cost?"":"disabled"}>영혼 ${cost}개로 공략 열기</button>`}</details>`;}).join("");}
+       ${open||!hid?"":`<button data-buy="${id}" class="mt-3 w-full py-2 rounded-[10px] text-[13px] ${left>=cost?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=cost?"":"disabled"}>영혼 ${cost}개로 공략 열기</button>`}</details>`;}).join("");}
 function openRecord(tab){
   if(tab==="world")tab="now";
   const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings,guide:recordGuide}[tab]();
@@ -1859,7 +1889,7 @@ function openRecord(tab){
   $("panel-close").onclick=closePeople;
   $("panel-bg").onclick=e=>{if(e.target.id==="panel-bg")closePeople();};
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openRecord(b.dataset.tab));
-  document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{if(buyGuide(b.dataset.buy)){trackTrail(false);openRecord("guide");}});
+  document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{if(buyGuide(b.dataset.buy)){trackTrail(false,true);openRecord("guide");}});
   const ri=$("rec-intro"); if(ri) ri.onclick=()=>showIntro(0);
 }
 function openPeople(){openRecord("people");}

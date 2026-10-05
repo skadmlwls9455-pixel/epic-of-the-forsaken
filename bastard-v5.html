@@ -87,6 +87,15 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 @keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}30%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px)}}
 #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;background:#1f1a14;border:1px solid #a16207;color:#fde68a;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+.ecode{display:inline-block;min-width:26px;margin-right:6px;font-size:11px;font-weight:700;color:#fcd34d;letter-spacing:.02em}
+.gend{display:block;width:100%;text-align:left;cursor:pointer}
+.gjump{display:block;font-size:11px;color:#fcd34d;margin-top:4px}
+.gmap{margin-top:8px;font-size:11px;line-height:1.6;color:#a8a29e;border-left:2px solid #a16207;padding-left:8px}
+.flashpick{animation:flashpick 1.6s ease}
+@keyframes flashpick{0%,40%{box-shadow:0 0 0 2px #facc15;background:#2a2117}100%{box-shadow:0 0 0 0 transparent}}
+.hbtn.badge,.tdot{position:relative}
+.hbtn.badge::after,.tdot::after{content:"";position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:999px;background:#facc15;box-shadow:0 0 0 2px #0c0a09}
+.newtag{font-size:10px;color:#1a1612;background:#fcd34d;border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:middle}
 .scene svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .routes{display:flex;flex-direction:column;gap:6px;margin-top:14px}
 .routes button{display:flex;justify-content:space-between;align-items:center;text-align:left;font-size:13px;padding:9px 12px;border:1px solid #3a3633;border-radius:10px;color:#d6d3d1;background:#161412}
@@ -1297,6 +1306,9 @@ const EPILOGUES=[
    "아이들은 아직도 그 사람을 일꾼 오빠라고 불렀다. 촌장의 아들은 한 번도 그렇게 부르지 않았다.\n대신 해마다 첫 수확한 곡식 한 자루를, 다락 사다리 밑에 말없이 두고 갔다."]}
 ];
 function getEpis(){return getMeta().epis||{};}
+function newEpis(){const m=getMeta(),seen=m.episSeen||[];return Object.keys(m.epis||{}).filter(id=>!seen.includes(id));}
+function guideBuyable(){if(soulsLeft()<1)return false;if(!guideOpen("_normal"))return true;return Object.keys(ENDINGS).some(id=>ENDING_TRAIL[id]&&!guideOpen(id)&&soulsLeft()>=guideCost(id));}
+function updateBadges(){if(typeof document==="undefined"||!document.querySelector)return;const b=$("people");if(b)b.classList.toggle("badge",newEpis().length>0||guideBuyable());}
 // 결말을 맞은 순간 새로 열린 외전을 기록한다
 function unlockEpis(ending){const m=getMeta();m.epis=m.epis||{};const got=[];
   for(const x of EPILOGUES){if(m.epis[x.id])continue;let ok=false;try{ok=x.ok(ending,state.flags);}catch(e){}if(ok){m.epis[x.id]=ending;got.push(x.id);}}
@@ -1304,9 +1316,9 @@ function unlockEpis(ending){const m=getMeta();m.epis=m.epis||{};const got=[];
 function recordEpis(){const have=getEpis();
   return `<div class="text-[12px] text-stone-500 mb-4 leading-5">한 생을 어떤 모습으로 끝냈는지에 따라, 곁에 있던 사람의 뒷이야기가 열린다. 영혼은 들지 않는다.</div>`
    +EPILOGUES.map(x=>have[x.id]
-     ?`<button data-epi="${x.id}" class="w-full text-left border-t border-stone-800 py-3"><div class="text-[14px] text-stone-100">${esc(x.who)} · ${esc(x.title)}</div><div class="text-[11px] text-amber-300 mt-1">읽기</div></button>`
+     ?`<button data-epi="${x.id}" class="w-full text-left border-t border-stone-800 py-3"><div class="text-[14px] text-stone-100">${esc(x.who)} · ${esc(x.title)}${(state.newEpis||[]).includes(x.id)?` <span class="newtag">새로 열림</span>`:""}</div><div class="text-[11px] text-amber-300 mt-1">읽기</div></button>`
      :`<div class="border-t border-stone-800 py-3"><div class="text-[14px] text-stone-500">${esc(x.who)} · ???</div><div class="text-[11px] text-stone-600 mt-1">${esc(x.hint)}</div></div>`).join("");}
-function openEpilogue(id,i){const x=EPILOGUES.find(e=>e.id===id);if(!x)return;i=i||0;const pages=x.pages(getEpis()[id]),last=i===pages.length-1;
+function openEpilogue(id,i){{const m=getMeta();m.episSeen=[...new Set([...(m.episSeen||[]),id])];setMeta(m);updateBadges();}const x=EPILOGUES.find(e=>e.id===id);if(!x)return;i=i||0;const pages=x.pages(getEpis()[id]),last=i===pages.length-1;
   $("panel").innerHTML=`<div class="fixed inset-0 bg-black/85 z-[70] flex justify-center items-center p-4" id="panel-bg">
     <div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 w-full max-w-[480px] fade">
       <div class="text-[11px] tracking-widest text-stone-600">외전 · ${esc(x.who)}</div><h2 class="text-[22px] font-bold mt-1">${esc(x.title)}</h2>
@@ -2026,6 +2038,7 @@ function updateHeader(stats){
   $("goal").textContent="목표: "+val(A.goal);
   const hpNow=pending?pending.hp:curHp();$("hprow").innerHTML=`<div class="flex items-center gap-2">${state.flags.itemHerb>0?`<button id="herb" class="text-[11px] px-2 py-[2px] rounded-full border border-emerald-800 text-emerald-300 ${curHp()>=maxHp()||pending?"opacity-40":""}">약초 ${state.flags.itemHerb}</button>`:""}${heartsHTML(hpNow,maxHp(),shownHp!=null&&hpNow<shownHp?shownHp:null)}</div>`;shownHp=hpNow;
   const hb=$("herb"); if(hb) hb.onclick=useHerb;
+  updateBadges();
   { const f=state.flags, ppl=[];if(f.injury>0)ppl.push("부상");if(f.metMaster&&!f.bernanGone)ppl.push("베르난");if(f.kaneAlly)ppl.push("케인");if(f.lienAccompanies)ppl.push("리엔");if(f.mercJoined)ppl.push("까마귀");
     $("chips").innerHTML=invItems().map(([id,n])=>slotHTML(id,{count:n})).join("")+ppl.map(t=>`<span class="px-2 py-[2px] rounded-full border border-stone-700 text-[11px] text-stone-300 whitespace-nowrap">${t}</span>`).join("");
     bindArt($("chips")); }
@@ -2255,44 +2268,50 @@ function recordEndings(){
   const d=getDisc(), ids=Object.keys(ENDINGS), story=ids.filter(k=>!k.startsWith("death_")), deaths=ids.filter(k=>k.startsWith("death_"));
   const nextR=RELICS.find(r=>!hasRelic(r.id));
   const tile=k=>d.includes(k)
-    ?`<div class="rounded-[12px] border border-stone-600 p-3"><div class="text-[13px] text-stone-100">${ENDINGS[k].title}</div><div class="text-[11px] text-stone-500 mt-1">${ENDINGS[k].tag}</div></div>`
-    :`<details class="rounded-[12px] border border-stone-800 p-3"><summary class="text-[13px] text-stone-500 cursor-pointer">? 실마리</summary><div class="text-[12px] text-stone-400 mt-2 leading-5">${esc(ENDING_HINT[k]||"")}</div></details>`;
-  const dtile=k=>{const [,st,lv]=k.split("_");return `<div class="rounded-[10px] border ${d.includes(k)?"border-stone-500 text-stone-200":"border-stone-800 text-stone-600"} py-2 text-center text-[12px]">${STAT_LABEL[st]} ${lv==="0"?"▼":"▲"}</div>`;};
+    ?`<div id="end-${k}" class="etile rounded-[12px] border border-stone-600 p-3"><div class="text-[13px] text-stone-100"><span class="ecode">${ecode(k)}</span>${ENDINGS[k].title}</div><div class="text-[11px] text-stone-500 mt-1">${ENDINGS[k].tag}</div>${ENDING_TRAIL[k]?`<button data-jump-guide="${k}" class="text-[11px] text-amber-300 mt-2">공략 보기 →</button>`:""}</div>`
+    :`<details id="end-${k}" class="etile rounded-[12px] border border-stone-800 p-3"><summary class="text-[13px] text-stone-500 cursor-pointer"><span class="ecode">${ecode(k)}</span>? 실마리</summary><div class="text-[12px] text-stone-400 mt-2 leading-5">${esc(ENDING_HINT[k]||"")}</div>${ENDING_TRAIL[k]?`<button data-jump-guide="${k}" class="text-[11px] text-amber-300 mt-2">공략 보기 →</button>`:""}</details>`;
+  const dtile=k=>{const [,st,lv]=k.split("_");return `<div id="end-${k}" class="rounded-[10px] border ${d.includes(k)?"border-stone-500 text-stone-200":"border-stone-800 text-stone-600"} py-2 text-center text-[12px]">${STAT_LABEL[st]} ${lv==="0"?"▼":"▲"}</div>`;};
   return `<div class="flex justify-between items-baseline mb-1"><div class="text-[15px] text-stone-100">${d.length} / ${ids.length}</div><div class="text-[12px] text-stone-500">${nextR?`다음 유물까지 결말 ${nextR.need-d.length}개`:"유물을 모두 얻었다"}</div></div>
     <div class="h-[5px] bg-stone-800 rounded mb-5 overflow-hidden"><div class="h-full bg-amber-300" style="width:${d.length/ids.length*100}%"></div></div>`
     +recordDeeds()
-    +sec("이야기",`<div class="text-[12px] text-stone-500 mb-2">못 본 결말은 눌러서 실마리를 볼 수 있다.</div><div class="grid grid-cols-2 gap-2">${story.map(tile).join("")}</div>`)
+    +sec("이야기",`<div class="text-[12px] text-stone-500 mb-2">못 본 결말은 눌러서 실마리를 볼 수 있다. 번호(E1, E2…)는 공략의 번호와 같다.</div><div class="grid grid-cols-2 gap-2 items-start">${story.map(tile).join("")}</div>`)
     +sec("죽음",`<div class="grid grid-cols-4 gap-2">${deaths.map(dtile).join("")}</div>`)
     +sec("유물",RELICS.map(r=>hasRelic(r.id)?`<div class="border-t border-stone-800 py-2"><div class="text-[13px] text-stone-100">${r.name}</div><div class="text-[12px] text-stone-400">${r.desc}</div></div>`:`<div class="border-t border-stone-800 py-2 text-[13px] text-stone-600">??? · 결말 ${r.need}개</div>`).join(""));
 }
 const REC_TABS=[["now","지금"],["people","인물"],["clues","단서"],["endings","결말"],["epis","외전"],["guide","공략"]];
+const ECODE=(()=>{const m={};let e=0,d=0;for(const k of Object.keys(ENDINGS))m[k]=k.startsWith("death_")?"D"+(++d):"E"+(++e);return m;})();
+const ecode=id=>ECODE[id]||"";
 function guideChart(id,open){
   const m=getMeta(), L=ENDING_TRAIL[id]||[], past=(m.trail||{})[id]||[], now=(state.trailNow||{})[id]||[], disc=getDisc().includes(id);
   const nodes=L.map(([,t],i)=>open?`<div class="gnode ${now.includes(i)?"now":past.includes(i)?"lit":""}">${now.includes(i)?"✓ ":""}${esc(t)}</div>`:`<div class="gnode lock">잠긴 칸</div>`);
-  nodes.push(`<div class="gnode ${disc?"lit":"lock"}"><b>${disc?esc(ENDINGS[id].title):"?"}</b> <span class="text-[11px] text-stone-500">${esc(ENDINGS[id].tag)}</span></div>`);
-  return nodes.join(`<div class="garrow">↓</div>`);}
+  nodes.push(`<button data-jump-end="${id}" class="gnode gend ${disc?"lit":"lock"}"><b>${ecode(id)} · ${disc?esc(ENDINGS[id].title):"아직 못 본 결말"}</b> <span class="text-[11px] text-stone-500">${esc(ENDINGS[id].tag)}</span><span class="gjump">결말 탭에서 보기 →</span></button>`);
+  return nodes.join(`<div class="garrow">↓</div>`)+`<div class="gmap">${ecode(id)}의 실마리 · ${esc(ENDING_HINT[id]||"")}</div>`;}
 function recordGuide(){
   const m=getMeta(), g=m.guides||[], ids=Object.keys(ENDINGS).filter(k=>ENDING_TRAIL[k]), left=soulsLeft();
   return `<div class="flex justify-between items-baseline mb-1"><div class="text-[15px] text-stone-100">영혼 ${left}개</div><div class="text-[12px] text-stone-500">결말을 처음 볼 때마다 1개</div></div>
     <div class="text-[12px] text-stone-500 mb-4 leading-5">공략을 열면 그 결말까지 이어지는 일이 칸으로 드러난다. 노란 칸은 지난 생에 밟아 본 길, ✓는 이번 생에 채운 칸.<br>일반 결말은 영혼 1개로 전부, 숨겨진 결말과 최종 결말은 하나에 영혼 2개.${finalOpen()?"":` 최종 결말은 결말 ${FINAL_NEED}개를 모으면 길이 생긴다.`}</div>`
    +(guideOpen("_normal")?"":`<button data-buy="_normal" class="w-full mb-4 py-3 rounded-[12px] text-[14px] ${left>=1?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=1?"":"disabled"}>영혼 1개로 일반 결말 공략 전부 열기</button>`)
    +ids.map(id=>{const open=guideOpen(id), cost=guideCost(id), disc=getDisc().includes(id), hid=isHiddenEnd(id);
-     return `<details class="border-t border-stone-800 py-3"><summary class="cursor-pointer flex justify-between items-center"><span class="text-[14px] ${disc?"text-stone-100":"text-stone-400"}">${disc?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</span><span class="text-[11px] ${open?"text-amber-300":"text-stone-500"} shrink-0 ml-2">${open?"열림":hid?"영혼 2":"묶음"}</span></summary>
+     return `<details id="guide-${id}" class="border-t border-stone-800 py-3"><summary class="cursor-pointer flex justify-between items-center"><span class="text-[14px] ${disc?"text-stone-100":"text-stone-400"}"><span class="ecode">${ecode(id)}</span>${disc?esc(ENDINGS[id].title):esc(ENDING_HINT[id]||"")}</span><span class="text-[11px] ${open?"text-amber-300":"text-stone-500"} shrink-0 ml-2">${open?"열림":hid?"영혼 2":"묶음"}</span></summary>
        <div class="mt-3">${guideChart(id,open)}</div>
        ${open||!hid?"":`<button data-buy="${id}" class="mt-3 w-full py-2 rounded-[10px] text-[13px] ${left>=cost?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=cost?"":"disabled"}>영혼 ${cost}개로 공략 열기</button>`}</details>`;}).join("");}
-function openRecord(tab){
+function openRecord(tab,focus){
   if(tab==="world")tab="now";
   const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings,epis:recordEpis,guide:recordGuide}[tab]();
   $("panel").innerHTML=`<div class="fixed inset-0 bg-black/80 z-[65] flex justify-center items-start overflow-y-auto p-4" id="panel-bg">
     <div class="bg-[#151311] border border-stone-800 rounded-[20px] w-full max-w-[480px] my-6 fade overflow-hidden">
       <div class="flex justify-between items-center px-5 pt-5"><h2 class="text-[17px] font-bold">기록</h2><button id="panel-close" class="text-stone-400 text-[13px]">닫기 ✕</button></div>
-      <div class="grid gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]" style="grid-template-columns:repeat(${REC_TABS.length},minmax(0,1fr))">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"}">${l}</button>`).join("")}</div>
+      <div class="grid gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]" style="grid-template-columns:repeat(${REC_TABS.length},minmax(0,1fr))">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="relative py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"} ${(k==="epis"&&newEpis().length)||(k==="guide"&&guideBuyable())?"tdot":""}">${l}</button>`).join("")}</div>
       <div class="p-5">${body}</div>
     </div></div>`;
   $("panel-close").onclick=closePeople;
   $("panel-bg").onclick=e=>{if(e.target.id==="panel-bg")closePeople();};
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openRecord(b.dataset.tab));
   document.querySelectorAll("[data-epi]").forEach(b=>b.onclick=()=>openEpilogue(b.dataset.epi));
+  document.querySelectorAll("[data-jump-end]").forEach(b=>b.onclick=e=>{e.preventDefault();openRecord("endings",b.dataset.jumpEnd);});
+  document.querySelectorAll("[data-jump-guide]").forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();openRecord("guide",b.dataset.jumpGuide);});
+  if(tab==="epis"){const m=getMeta();m.episSeen=Object.keys(m.epis||{});setMeta(m);updateBadges();}
+  if(focus){const el=$((tab==="guide"?"guide-":"end-")+focus);if(el){if(el.tagName==="DETAILS")el.open=true;el.classList.add("flashpick");setTimeout(()=>el.scrollIntoView({block:"center",behavior:calm()?"auto":"smooth"}),30);}}
   document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{if(buyGuide(b.dataset.buy)){trackTrail(false,true);openRecord("guide");}});
   const ri=$("rec-intro"); if(ri) ri.onclick=()=>showIntro(0);
 }
@@ -2375,13 +2394,13 @@ function showEnding(){
   const newClueHTML=nc.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생에 알게 된 것</div><ul class="text-[12px] leading-6">${nc.map(k=>`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`).join("")}</ul>`:"";
   const relicHTML=`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-2">유물</div><div class="grid grid-cols-2 gap-2">${RELICS.map(r=>{const on=hasRelic(r.id),nw=(state.newRelics||[]).includes(r.id);return `<div class="flex items-center gap-2">${slotHTML(r.id,{lg:1,off:!on,tap:false})}<div class="min-w-0 text-[12px] leading-5"><b>${nw?"새로 얻음 · ":""}${on?r.name:"???"}</b><div class="text-stone-600 text-[11px]">${on?r.desc:`결말 ${r.need}개`}</div></div></div>`;}).join("")}</div>`;
   const soulHTML=state.newEnding||(state.newDeeds||[]).length?`<div class="rounded-[14px] bg-[#1a1612] text-[#fde68a] p-4 mb-4 text-[13px] leading-6">${state.newEnding?`새 결말 · 영혼 1개를 얻었다.`:""}${(state.newDeeds||[]).map(t=>`<div>회차 목표 달성 · ${esc(t)} · 영혼 +1</div>`).join("")}<div class="text-[#d6d3d1] text-[12px] mt-1">기록 → 공략에서 원하는 결말로 가는 길을 열 수 있다. 지금 영혼 ${soulsLeft()}개.</div><button id="end-guide" class="mt-2 underline text-[12px]">공략 보러 가기</button></div>`:"";
-  const epiHTML=(state.newEpis||[]).length?`<div class="rounded-[14px] border border-[#a16207] p-4 mb-4 text-[13px] leading-6"><div class="text-[11px] tracking-widest text-[#a16207] mb-1">외전이 열렸다</div>${state.newEpis.map(id=>{const x=EPILOGUES.find(e=>e.id===id);return `<button data-epi="${id}" class="block underline text-left">${esc(x.who)} · ${esc(x.title)}</button>`;}).join("")}</div>`:"";
+  const epiHTML=(state.newEpis||[]).length?`<div class="rounded-[14px] border border-[#a16207] p-4 mb-4 text-[13px] leading-6"><div class="text-[11px] tracking-widest text-[#a16207] mb-1">이번 결말로 외전이 열렸다</div>${state.newEpis.map(id=>{const x=EPILOGUES.find(e=>e.id===id);return `<button data-epi="${id}" class="block underline text-left">‘${esc(x.who)} · ${esc(x.title)}’ 읽기</button>`;}).join("")}<div class="text-[11px] text-stone-600 mt-1">나중에 기록 → 외전에서도 다시 읽을 수 있다.</div></div>`:"";
   const trail=state.history.filter(h=>!h.round).slice(0,10).reverse();
   const links=endingTrail(id,state);
   const linkHTML=links.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-2">이 결말까지 이어진 일</div><ol class="text-[13px] leading-7">${links.map((t,i)=>`<li>${i?"<span class='text-stone-500'>↓</span> ":""}${esc(t)}</li>`).join("")}</ol>`:"";
   const recapHTML=trail.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">이번 생 · ${state.year}년 · ${state.age}세${state.history.filter(h=>!h.round).length>10?" · 마지막 열 번의 선택":""}</div><ol class="text-[12px] leading-6">${trail.map(h=>`<li><span class="text-stone-500">${esc(h.who)}</span> · ${esc(h.label)}</li>`).join("")}</ol>`:"";
   const codex=got.length?`<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">기록 ${got.length} / ${ck.length}</div><ul class="text-[12px] leading-6">${ck.map(k=>m.clues.includes(k)?`<li><b>${CLUES[k].t}</b> · ${CLUES[k].d}</li>`:`<li class="text-stone-400">???</li>`).join("")}</ul>`:"";
-  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8">${soulHTML}${epiHTML}<div class="text-[11px] tracking-widest text-stone-600">${E.tag}${W()?` · 별의 무게 ${W()}`:""}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div id="endp1"><div class="story whitespace-pre-wrap">${esc(endingDesc(id,state))}</div>${linkHTML}</div>
+  $("modal").innerHTML=`<div class="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] overflow-y-auto"><div class="bg-[#f6ecd2] text-[#1a1612] rounded-[24px] p-7 max-w-[520px] w-full fade my-8">${soulHTML}${epiHTML}<div class="text-[11px] tracking-widest text-stone-600">${ecode(id)} · ${E.tag}${W()?` · 별의 무게 ${W()}`:""}</div><h2 class="text-[24px] font-bold mt-1">${E.title}</h2><div class="h-px bg-black/20 my-4"></div><div id="endp1"><div class="story whitespace-pre-wrap">${esc(endingDesc(id,state))}</div>${linkHTML}</div>
 <div id="endp2" class="hidden">${recapHTML}<div class="h-px bg-black/10 my-4"></div><div class="text-[11px] text-stone-600 mb-1">발견한 결말 ${disc.length} / ${Object.keys(ENDINGS).length}${finalOpen()?" · 최종 결말의 길이 열렸다":` · 최종 결말까지 ${FINAL_NEED-disc.length}개`}</div><div class="leading-6">${list}</div>${newClueHTML}${relicHTML}<button id="end-rec" class="mt-4 w-full text-[12px] text-stone-600 underline py-2">기록 보기 · 못 본 결말의 실마리</button></div>
 <div class="endbar"><button id="end-flip" class="flex-1 py-3 rounded-[12px] border border-black/20 text-[14px]">이번 생 돌아보기</button><button id="again" class="flex-1 bg-[#1a1612] text-[#f6ecd2] py-3 rounded-[12px] text-[14px]">다음 생</button></div></div></div>`;
   $("end-flip").onclick=()=>{const a=$("endp1"),b=$("endp2"),two=a.classList.contains("hidden");a.classList.toggle("hidden",!two);b.classList.toggle("hidden",two);$("end-flip").textContent=two?"이번 생 돌아보기":"결말로 돌아가기";};

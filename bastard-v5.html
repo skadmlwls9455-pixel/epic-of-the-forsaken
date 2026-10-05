@@ -2301,7 +2301,11 @@ function openOpts(){
   document.querySelectorAll("[data-weight]").forEach(b=>b.onclick=()=>{const m=getMeta();m.weightSel=+b.dataset.weight;setMeta(m);openOpts();});
   $("opt-tips").onclick=()=>{const m=getMeta();m.tips={};setMeta(m);closePeople();if(!pending&&!state.ended)showFront();toast("처음 안내를 다시 보여 준다.");};
   $("opt-export").onclick=()=>{const data={v:1,at:new Date().toISOString()};for(const k of [META_KEY,DISC_KEY,SAVE_KEY,OPTS_KEY]){try{data[k]=localStorage.getItem(k);}catch(e){}}
-    const url=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download="버림받은왕조-저장.json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);};
+    const json=JSON.stringify(data),name="bastard-dynasty-save.json";
+    // claude.ai 안에서는 downloads 기능으로, 그 밖(웹 배포·로컬 파일)에서는 일반 내려받기로
+    const plain=()=>{const url=URL.createObjectURL(new Blob([json],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);};
+    if(window.claude&&window.claude.use){window.claude.use("downloads").then(dl=>{if(!dl)return plain();dl.save({filename:name,data:json}).then(()=>toast("저장 파일을 내보냈다.")).catch(e=>{if(e&&e.code!=="declined")toast("내보내기를 할 수 없다.");});});}
+    else plain();};
   $("opt-import").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!(META_KEY in d))throw 0;
       if(!confirm("지금 기기의 기록을 이 파일로 덮어쓸까?"))return;for(const k of [META_KEY,DISC_KEY,SAVE_KEY,OPTS_KEY]){if(d[k]==null)localStorage.removeItem(k);else localStorage.setItem(k,d[k]);}location.reload();}catch(err){alert("저장 파일을 읽지 못했다.");}};r.readAsText(f);};
   $("opt-restart").onclick=()=>{if(confirm("처음부터 다시 시작할까?")){closePeople();restart();}};

@@ -87,6 +87,7 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0;word-brea
 @keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}30%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px)}}
 #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;background:#1f1a14;border:1px solid #a16207;color:#fde68a;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80}
 #toast.on{opacity:1;transform:translate(-50%,0)}
+.brt{display:inline-block;margin-right:6px;padding:0 6px;border:1px solid #a16207;border-radius:999px;color:#fcd34d;font-size:10px;line-height:16px;letter-spacing:.05em}
 .gnode{border:1px solid #44403c;border-radius:10px;padding:8px 12px;font-size:13px;color:#a8a29e}
 .gnode.lit{border-color:#a16207;color:#fde68a}
 .gnode.now{border-color:#facc15;color:#fef3c7;box-shadow:0 0 0 1px #facc15 inset}
@@ -189,8 +190,8 @@ const CRISIS_HI=84, CRISIS_LO=16; // 스탯이 이 선을 넘으면 위기 카�
 const ACTS=[
   {name:"프롤로그",region:"별궁",goal:"불타는 별궁을 빠져나가라",required:[],min:0,max:99},
   {name:"1막 · 도망",region:"남부 숲길",goal:"추적을 피해 강을 건너라",required:["a1_hunger","a1_child","a1_kane"],min:10,max:16},
-  {name:"2막 · 은신",region:"산골 마을",goal:"숨어서 힘을 길러라 · 대관식까지 약 3년",required:["a2_bernan_meet","a2_tax"],min:14,max:21},
-  {name:"3막 · 세력",region:"북부 변경",goal:s=>inSpire(s)?"첨탑 꼭대기까지 올라라":"왕도로 갈 사람과 증거를 모아라 · 대관식까지 약 1년",required:["a3_merc","a3_dragon_rumour","a3_execution"],min:13,max:s=>inSpire(s)?29:20},
+  {name:"2막 · 은신",region:"산골 마을",goal:"숨어서 힘을 길러라 · 대관식까지 약 3년",required:["a2_bernan_meet","a2_tax","a2_monastery"],min:14,max:21},
+  {name:"3막 · 세력",region:"북부 변경",goal:s=>inSpire(s)?"첨탑 꼭대기까지 올라라":"왕도로 갈 사람과 증거를 모아라 · 대관식까지 약 1년",required:["a3_merc","a3_dragon_rumour","a3_execution","a3_lien_watch","a3_village_call","a3_kane_ally"],min:13,max:s=>inSpire(s)?29:20},
   {name:"4막 · 결단",region:"왕도 외곽",goal:s=>s.flags.throneReady?"대관식 날, 왕도 성문을 넘어라":s.flags.path==="leave"?"어디로 갈지 정하라":"왕좌로 갈지 정하라",required:[],min:0,max:999}
 ];
 
@@ -265,7 +266,7 @@ const CARDS=[
  right:{label:"아버지 이야기를 묻는다",then:"a1_dawn_father",fx:{legitimacy:2},result:"마르타가 콧방귀를 뀌었다."}},
 {id:"a1_dawn_mother",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"엘레나",
  text:"“엘레나는 북쪽 고원 사람이야. 고향 얘기는 끝까지 안 하더라.”\n“에드릭 전하가 귀양 와서 한 계절 머물다 갔어. 그 뒤로 노왕이 엘레나를 별궁에 가뒀지. 스무 해를……”",
- left:{label:"어머니를 구하러 돌아가자고 한다",then:"a1_dawn_back",fx:{legitimacy:2,military:-2},result:"마르타의 손이 멈췄다."},
+ left:{label:"어머니를 구하러 돌아가자고 한다",then:"a1_dawn_back",fx:{legitimacy:2,military:-2},set:{motherNorth:true},result:"마르타의 손이 멈췄다."},
  right:{label:"자장가 가사를 묻는다",fx:{people:2},set:{motherNorth:true},clue:"lullaby",
    result:"“별궁에선 다들 ‘기사도 왕’이라고 불러.”\n“양치기라고 부른 건 엘레나뿐이었어. 북쪽에선 그렇게 부른다면서.”"}},
 {id:"a1_dawn_back",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"새벽 개울가",
@@ -750,7 +751,7 @@ const CARDS=[
  right:{label:"갈 수 없다",fx:{people:-3},set:{martaDead:true},result:"그날 밤에는 아무도 입을 열지 않았다."}},
 {id:"rest_marta",acts:[3,4],queueOnly:true,rest:true,dur:1,who:"마르타",role:"바느질",cond:s=>s.flags.martaAlive,
  text:"마르타가 네 터진 소매를 꿰매 주었다. 바늘 끝이 조금 떨렸다.\n“엘레나는 바느질은 영 꽝이었어. 노래는 잘했지만.”",
- left:{label:"그 노래를 불러 달라고 한다",add:{bondMarta:1},clue:"lullaby",result:"‘별이 이름을 적으면, 양치기도 왕.’\n쉰 목소리였지만 박자는 정확했다."},
+ left:{label:"그 노래를 불러 달라고 한다",add:{bondMarta:1},set:{motherNorth:true},clue:"lullaby",result:"‘별이 이름을 적으면, 양치기도 왕.’\n쉰 목소리였지만 박자는 정확했다."},
  right:{label:"아들 얘기를 묻는다",add:{bondMarta:1},result:s=>s.flags.buriedSeven?"“네가 묻어 줬잖니. 그럼 됐다.”\n마르타는 실을 이로 끊었다.":"“착한 애였어. 너보다 두 살 많았지.”\n마르타는 실을 이로 끊었다."}},
 {id:"a3_dragon_price",acts:[3,4],queueOnly:true,dur:2,who:"룬 검",role:"용이 쓰러진 자리",cond:s=>s.flags.hasLegendaryWeapon&&s.flags.dragonSlain,
  text:"용의 피가 식어 가는 사이, 칼자루의 별 문양이 하나씩 꺼져 갔다.\n왼손 손가락 둘이 굳어서 펴지지 않았다.\n칼날의 글귀가 떠올랐다. ‘힘은 대가를 원한다.’",
@@ -1469,7 +1470,8 @@ function fxMult(){const early=state.act<=1;return hasRelic("lullaby")?(early?1.1
 function addDisc(id){const d=getDisc();if(!d.includes(id)){d.push(id);try{localStorage.setItem(DISC_KEY,JSON.stringify(d));}catch(e){}}}
 
 /* ---------------- 설정 (기기마다 따로 저장) ---------------- */
-const OPTS_KEY="bastard_v5_opts", OPTS_DEFAULT={size:"m",calm:false,oneTap:false};
+const OPTS_KEY="bastard_v5_opts", OPTS_DEFAULT={size:"m",calm:false,oneTap:false,branch:true};
+const OPTS_BRANCH=()=>opts.branch!==false;
 let opts=(()=>{try{return Object.assign({},OPTS_DEFAULT,JSON.parse(localStorage.getItem(OPTS_KEY)||"{}"));}catch(e){return{...OPTS_DEFAULT};}})();
 function saveOpts(){try{localStorage.setItem(OPTS_KEY,JSON.stringify(opts));}catch(e){}}
 function applyOpts(){if(typeof document==="undefined"||!document.documentElement)return;const r=document.documentElement;r.dataset.size=opts.size;r.classList.toggle("calm",!!opts.calm);}
@@ -1558,6 +1560,7 @@ function chooseWith(ch){
   pending={cardId:c.id,label:ch.label,out,ns,nf,delta,ending,hp:Math.max(0,Math.min(mh,hp))};
   resultPage=0;
   render();
+  if(!ending){const b=branchHits(state.flags,nf);if(b.length&&OPTS_BRANCH())toast("갈림길 · "+b.join(" "));}
 }
 
 function commit(){
@@ -1668,6 +1671,37 @@ function chips(){const f=state.flags,a=[];
   if(f.hasOriginalLedger)a.push(f.forgedLedger?"고쳐 쓴 원장":"왕실 원장");
   if(f.itemArmor)a.push("누빔 갑옷");if(f.itemShield)a.push("방패 "+f.itemShield);if(f.itemWhet)a.push("숫돌 "+f.itemWhet);if(f.itemOil)a.push("기름 "+f.itemOil);
   return a;}
+/* ---------------- 갈림길 알림 ----------------
+   결말 갈래를 바꾸는 플래그. 고르기 전엔 "갈림길" 표시, 고른 뒤엔 무엇이 남았는지 한 줄로 알린다 (텔테일의 "기억할 것이다" 방식). */
+const BRANCH={
+  childSaved:"리엔은 이 일을 기억할 것이다.",childAbandoned:"그 아이는 이 일을 기억할 것이다.",
+  lienAccompanies:"리엔이 길동무가 되었다.",promiseLien:"리엔은 이 약속을 잊지 않을 것이다.",
+  motherNorth:"어머니의 고향이 마음에 남았다.",hairpin:"어머니의 머리핀을 품었다.",
+  usurperSecret:"섭정의 출신을 알게 되었다.",knowsLedger:"반지를 증명할 장부가 있다는 걸 알았다.",
+  promiseVillage:"산골 마을은 이 약속을 기억할 것이다.",villageTrust:"촌장이 너를 믿기 시작했다.",
+  militia:"마을 젊은이들이 칼을 배웠다.",villageReturned:"마을은 네가 돌아온 걸 잊지 않을 것이다.",
+  metMaster:"베르난과 같은 길을 걷게 되었다.",bernanGone:"베르난이 떠났다.",masterTrialPassed:"에드릭의 검을 물려받았다.",
+  kaneAlly:"케인이 네 편이 되었다.",kaneScar:"케인은 이 상처를 기억할 것이다.",kaneKnown:"케인의 속마음을 들었다.",
+  mercJoined:"까마귀 깃발을 받았다.",mercRespect:"까마귀들이 네 방식을 기억할 것이다.",
+  dragonRumour:"북쪽 고개의 소문을 쫓기로 했다.",dragonSlain:"용을 벤 이름이 북부에 퍼질 것이다.",
+  monkBond:"수도원의 문은 언제든 네게 열려 있을 것이다.",spireTruth:"왕의 피가 무엇인지 알았다.",
+  scribeWitness:"오틀린이 증인이 되었다.",document:"세공 장부를 손에 넣었다.",
+  ringSold:"반지를 손에서 놓았다.",osricRefused:"섭정의 제안을 돌려보냈다.",northGate:"성 안으로 들어갈 길을 알았다.",
+  martaAlive:"마르타가 살았다.",martaDead:"마르타를 잃었다."
+};
+// 누적 수치는 갈래가 열리는 문턱을 넘을 때만
+const BRANCH_ADD={bernardTrust:[[1,"베르난이 너를 믿기 시작했다."],[3,"베르난은 끝까지 네 곁에 설 것이다."]],
+  kaneEscaped:[[3,"케인이 너를 다시 보기 시작했다."]],mercRank:[[2,"까마귀들이 너를 우두머리로 본다."]],
+  tyrantPoints:[[1,"사람들은 이 일을 두고두고 말할 것이다."]]};
+function branchHits(before,after){const out=[];
+  for(const k in BRANCH) if(!before[k]&&after[k]) out.push(BRANCH[k]);
+  for(const k in BRANCH_ADD) for(const [t,msg] of BRANCH_ADD[k]) if((before[k]||0)<t&&(after[k]||0)>=t) out.push(msg);
+  return out;}
+// 이 선택이 (판정·싸움 결과까지 포함해) 갈래를 바꿀 수 있는가
+function isBranch(ch){if(!ch||ch.ending||!OPTS_BRANCH())return false;const f=state.flags;
+  const outs=[ch,ch.check&&ch.check.success,ch.check&&ch.check.failure,ch.duel&&ch.duel.win,ch.duel&&ch.duel.lose].filter(Boolean);
+  return outs.some(o=>{if(typeof o!=="object")return false;const a={...f,...(o.set||{})};for(const k in (o.add||{}))a[k]=(f[k]||0)+o.add[k];return branchHits(f,a).length>0;});}
+const BRANCH_TAG=`<span class="brt">갈림길</span>`;
 function hint(ch){
   if(ch.check){
     if(!SHOW_CHECK_HINT) return "위험이 따른다";
@@ -1790,7 +1824,7 @@ function preview(side){
   if(lab&&!pending){
     if(side){const ch=choiceOf(c,side), h=hint(ch);
       lab.className="pick "+(side==="left"?"r":"l");
-      lab.innerHTML=`<span class="arrow">${side==="left"?"← 왼쪽":"오른쪽 →"}</span><span class="txt">${esc(ch.label)}</span>${h?`<span class="sub">${h}</span>`:""}`;}
+      lab.innerHTML=`<span class="arrow">${side==="left"?"← 왼쪽":"오른쪽 →"}</span><span class="txt">${esc(ch.label)}</span>${(h||isBranch(ch))?`<span class="sub">${isBranch(ch)?BRANCH_TAG:""}${h}</span>`:""}`;}
     else setPick(0);
   }
 }
@@ -1842,7 +1876,7 @@ function showFront(){
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{e.stopPropagation();towerGo(+b.dataset.go);});
   el.querySelectorAll("[data-buy-item]").forEach(b=>b.onclick=e=>{e.stopPropagation();shopBuy(b.dataset.buyItem);});
   const ch={left:choiceOf(c,"left"),right:choiceOf(c,"right")};
-  $("choices").innerHTML=["left","right"].map(sd=>`<button data-side="${sd}" class="choice ${sd==="right"?"text-right":""}"><div>${sd==="left"?"← ":""}${esc(ch[sd].label)}${sd==="right"?" →":""}</div><div class="text-[11px] mt-1 text-stone-400">${hint(ch[sd])}</div></button>`).join("");
+  $("choices").innerHTML=["left","right"].map(sd=>`<button data-side="${sd}" class="choice ${sd==="right"?"text-right":""}"><div>${sd==="left"?"← ":""}${esc(ch[sd].label)}${sd==="right"?" →":""}</div><div class="text-[11px] mt-1 text-stone-400">${isBranch(ch[sd])?BRANCH_TAG:""}${hint(ch[sd])}</div></button>`).join("");
   document.querySelectorAll("#choices [data-side]").forEach(b=>{
     b.onclick=()=>pressSide(b.dataset.side);
     if(!TOUCH){ b.onmouseenter=()=>{preview(b.dataset.side);tilt(b.dataset.side==="left"?-28:28,110);setPick(1);}; b.onmouseleave=()=>{if(!pending&&!busy){tilt(0);preview(null);}}; }
@@ -2024,6 +2058,7 @@ function openOpts(){
     <div class="bg-[#151311] border border-stone-800 rounded-[20px] w-full max-w-[480px] my-6 fade p-5">
       <div class="flex justify-between items-center mb-5"><h2 class="text-[17px] font-bold">설정</h2><button id="panel-close" class="text-stone-400 text-[13px]">닫기 ✕</button></div>
       ${row("글자 크기","size",[["m","보통"],["l","크게"],["xl","아주 크게"]])}
+      ${row("갈림길 알림","branch",[["true","켬"],["false","끔"]])}
       ${row("움직임 줄이기","calm",[["false","끔"],["true","켬"]])}
       ${TOUCH?row("고르는 방식","oneTap",[["false","두 번 눌러 고르기"],["true","한 번 눌러 고르기"]]):""}
       ${(getMeta().weightMax||0)>0?sec("별의 무게 · 다음 생부터",`<div class="flex flex-wrap gap-2">${[...Array((getMeta().weightMax||0)+1).keys()].map(i=>`<button data-weight="${i}" class="opt ${(getMeta().weightSel||0)===i?"on":""}">${i}</button>`).join("")}</div><div class="text-[11px] text-stone-400 mt-2 leading-5">${[...Array((getMeta().weightSel||0)+1).keys()].slice(1).map(i=>i+". "+WEIGHT_DESC[i]).join("<br>")||"무게 없이 시작한다."}</div>`):""}

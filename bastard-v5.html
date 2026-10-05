@@ -86,6 +86,13 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0}
 .gnode.now{border-color:#facc15;color:#fef3c7;box-shadow:0 0 0 1px #facc15 inset}
 .gnode.lock{color:#57534e;border-style:dashed}
 .garrow{text-align:center;color:#57534e;font-size:11px;line-height:16px}
+.tmap{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:16px}
+.tcell{min-height:52px;border:1px solid #2a2622;border-radius:10px;background:#12100e;color:#57534e;font-size:12px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;line-height:1.3}
+.tcell.seen{background:#1f1b18;color:#a8a29e;border-color:#3a3633}
+.tcell.near{border-color:#a16207;color:#fcd34d;cursor:pointer}
+.tcell.near:hover{background:#2a2117}
+.tcell.cur{background:#3a2a12;border-color:#facc15;color:#fef3c7;font-weight:700}
+.tcell.t-exit{color:#fde68a}
 :root{--story-fs:15px}
 html[data-size="l"]{--story-fs:17px}html[data-size="xl"]{--story-fs:19px}
 .story{font-size:var(--story-fs);line-height:2.05}
@@ -194,7 +201,7 @@ function initialFlags(){return{
   // 4막 결말 갈래 (v5.6)
   villageReturned:false, wallFreed:null, villageWay:null, knightSaved:false, osricRefused:false, sawHighland:false,
   // v5.7 정·마르타·복선
-  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false
+  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false, diedInSpire:false
 };}
 function inSpire(s){const f=s.flags;return f.spireFloor>0&&!f.spireDone&&!f.spireSealed;}
 function newState(){return{
@@ -562,7 +569,7 @@ const CARDS=[
  left:{label:"막는다",duelAct:"block"},right:{label:"벤다",duelAct:"strike"}},
 {id:"tower",acts:[3,4],queueOnly:true,repeat:true,dur:0,cond:s=>inSpire(s),
  who:s=>s.tower&&s.tower.phase==="fight"?s.tower.enemy.n:`첨탑 ${s.tower?s.tower.floor:1}층`,
- role:s=>s.tower&&s.tower.phase==="fight"?"싸움":`방 ${s.tower?Math.min(s.tower.step+1,ROOMS_PER_FLOOR):1} / ${ROOMS_PER_FLOOR}`,
+ role:s=>s.tower&&s.tower.phase==="fight"?"싸움":`${s.tower?s.tower.floor:1}층 약도`,
  text:s=>towerText(),left:s=>towerChoice("left"),right:s=>towerChoice("right")},
 
 // ===== 4막 =====
@@ -813,38 +820,35 @@ function leaveRoutes(s){return LEAVE_ROUTES.filter(x=>x.ok(s.flags));}
 
 
 /* ---------------- 첨탑 던전 ----------------
-   첨탑 안에서는 왕국 스탯 대신 체력·등불·부적으로 진행한다.
-   층마다 방 2개 → 관문(기존 수수께끼). 문 너머 소리로 방 종류를 짐작한다.
-   싸움: 적의 자세를 보고 막는다/벤다.
-     칼을 든다 → 막기   /  뒤로 물러선다 → 막기
-     숨을 몰아쉰다 → 베기 / 그림자가 갈라진다 → 베기
-   체력 0 또는 등불 0 → 첨탑에서 쫓겨난다(봉인). 죽지는 않는다. */
+   첨탑 안에서는 왕국 스탯 대신 체력·등불·부적·물약·열쇠로 진행한다. 아래 '첨탑 약도' 참고.
+   싸움: 적의 자세를 보고 막는다/벤다. */
 const T_DARK={1:0,2:.25,3:.4}; // 층마다 어둠: 적의 자세나 문 너머 소리가 안 보일 확률
-const T_ENEMY={1:{n:"그림자 병사",hp:2,w:{raise:3,breath:3,retreat:2,feint:2}},
-               2:{n:"석상 기사",hp:3,w:{raise:4,breath:2,retreat:2,feint:2}},
-               3:{n:"그림자",hp:4,w:{raise:2,breath:2,retreat:3,feint:3}}};
+const T_ENEMY={1:[{n:"해골 병사",hp:2,w:{raise:3,breath:3,retreat:2,feint:2}},{n:"그림자 병사",hp:2,w:{raise:3,breath:3,retreat:2,feint:2}}],
+               2:[{n:"석상 기사",hp:3,w:{raise:4,breath:2,retreat:2,feint:2}},{n:"해골 병사",hp:3,w:{raise:3,breath:2,retreat:3,feint:2}}],
+               3:[{n:"그림자",hp:4,w:{raise:2,breath:2,retreat:3,feint:3}},{n:"해골 기사",hp:4,w:{raise:3,breath:2,retreat:2,feint:3}}]};
 /* ---------------- 싸움 묘사 ----------------
    규칙(막기/베기)은 그대로 두고, 상대 종류(style)마다 자세·결과 묘사를 여러 개 두어 무작위로 고른다.
    자세 이름(TELL_NAME)은 언제나 같아서, 묘사가 달라도 배운 수를 알아볼 수 있다. */
 const TELL_NAME={raise:"크게 치켜든다",breath:"숨을 고른다",retreat:"물러선다",feint:"허상이 생긴다"};
-const STYLE_OF={"케인":"blade","근위대장 케인":"blade","순찰병":"club","징수관 호위병":"spear","용":"beast","그림자 병사":"shade","석상 기사":"stone","그림자":"shade"};
+const STYLE_OF={"케인":"blade","근위대장 케인":"blade","순찰병":"club","징수관 호위병":"spear","용":"beast","그림자 병사":"shade","석상 기사":"stone","그림자":"shade","해골 병사":"bone","해골 기사":"bone"};
 const TELLS={
  blade:{raise:["칼을 머리 위로 번쩍. 내려칠 기세.","두 손으로 칼자루를 움켜쥐고 높이 든다."],breath:["어깨가 처진다. 숨이 거칠다.","칼끝이 내려간다. 가슴이 들썩들썩."],retreat:["한 발 물러선다. 발끝으로 거리를 재면서.","칼을 거두며 뒤로 빠진다."],feint:["몸을 비튼다. 칼끝이 둘로 보이고.","왼쪽으로 들어오는 척, 어깨는 반대로."]},
  club:{raise:["몽둥이가 머리 위에서 붕붕 돈다.","몽둥이를 어깨 뒤로 한껏 젖힌다."],breath:["몽둥이를 짚고 헐떡인다.","땀 훔치느라 손이 내려갔다."],retreat:["뒷걸음질 친다.","동료 쪽으로 슬금슬금."],feint:["발을 구르며 어느 쪽으로 올지 숨긴다.","몽둥이를 이 손 저 손으로 바꿔 쥔다."]},
  spear:{raise:["창을 높이 들고 내리찍을 자세.","창 자루가 머리 위로 올라간다."],breath:["창끝이 흔들린다. 숨 고르는 중.","창을 땅에 짚고 크게 숨을 들이켠다."],retreat:["창 길이만큼 물러선다.","창을 겨눈 채 뒤로 쭉 빠진다."],feint:["찌르는 척, 창끝이 멈칫.","창 자루를 휙 돌려 반대쪽 끝을 내민다."]},
  beast:{raise:["꼬리를 높이 치켜든다.","앞발이 들린다. 발톱이 횃불에 번뜩."],breath:["목덜미가 들썩인다. 숨을 들이켠다.","콧구멍에서 연기가 샌다. 가슴이 부풀고."],retreat:["머리를 뒤로 뺀다.","몸을 웅크리며 동굴 안쪽으로."],feint:["날개를 펼친다. 그림자가 둘이 된다.","고개는 이쪽, 꼬리는 저쪽."]},
  shade:{raise:["그림자 칼날이 천장까지 늘어난다.","검은 팔이 머리 위로 솟구친다."],breath:["윤곽이 흐려진다. 모양을 다시 잡는 중.","몸이 촛불 쪽으로 쏠린다. 빛을 마시기라도 하듯."],retreat:["벽 속으로 반쯤 스며든다.","바닥을 타고 스르륵 물러난다."],feint:["몸이 둘로 갈라진다. 하나는 그림자.","등잔 불빛에 그림자가 셋으로."]},
+ bone:{raise:["녹슨 칼을 머리 위로 치켜든다. 어깨뼈가 삐걱거린다.","뼈마디가 꺾이며 칼끝이 천장을 향한다."],breath:["턱뼈가 덜걱거린다. 잠깐, 움직임이 멎었다.","갈비뼈 사이로 바람이 빠져나간다. 흩어진 뼈를 다시 맞추는 중이다."],retreat:["뼈 발이 돌바닥을 긁으며 물러선다.","덜그럭, 덜그럭. 한 걸음씩 뒤로 물러난다."],feint:["갈비뼈 사이에서 그림자가 빠져나와 둘이 된다.","해골이 고개를 홱 꺾는다. 칼은 반대쪽에서 들어오려 한다."]},
  stone:{raise:["돌팔이 삐걱대며 머리 위로.","석검이 들린다. 돌가루가 우수수."],breath:["무릎 이음매에서 모래가 흘러내린다. 동작이 멎었다.","가슴 금 사이로 빛이 꺼졌다 켜졌다."],retreat:["무거운 발이 한 칸 뒤로 끌린다.","제자리로 돌아가려는 듯 석상이 물러선다."],feint:["석상 뒤에서 똑같은 석상이 하나 더 움직인다.","돌방패가 기울어 몸통을 가린다."]}
 };
 const HITS={ // 결과 종류별 묘사. 상대 종류에 따로 없으면 _ 를 쓴다
- parry:{_:["칼날끼리 부딪쳐 불꽃이 튄다. 손목이 저릿. 그래도 버텼다.","내리친 칼을 칼등으로 흘려 낸다. 귀를 찢는 쇳소리."],club:["몽둥이가 칼자루에 걸려 튕겨 나간다.","몽둥이를 칼로 받는다. 나무 부스러기가 튄다."],beast:["꼬리가 칼 위로 떨어진다. 무릎이 꺾일 뻔. 버텼다.","발톱이 칼날에 걸려 미끄러진다. 불똥."],shade:["그림자 칼날이 네 칼에 닿는 순간 연기처럼 흩어진다."],stone:["돌주먹이 칼등을 때린다. 팔이 울리지만, 막았다."]},
+ parry:{bone:["녹슨 칼날이 네 칼에 부딪혀 부스러졌다. 쇳가루가 흩날렸다."],_:["칼날끼리 부딪쳐 불꽃이 튄다. 손목이 저릿. 그래도 버텼다.","내리친 칼을 칼등으로 흘려 낸다. 귀를 찢는 쇳소리."],club:["몽둥이가 칼자루에 걸려 튕겨 나간다.","몽둥이를 칼로 받는다. 나무 부스러기가 튄다."],beast:["꼬리가 칼 위로 떨어진다. 무릎이 꺾일 뻔. 버텼다.","발톱이 칼날에 걸려 미끄러진다. 불똥."],shade:["그림자 칼날이 네 칼에 닿는 순간 연기처럼 흩어진다."],stone:["돌주먹이 칼등을 때린다. 팔이 울리지만, 막았다."]},
  evade:{_:["상대가 빠진 자리로 바람만 휙.","서로 거리를 잰다. 발밑 흙이 밀린다."],beast:["용이 머리를 뺀다. 뜨거운 숨만 얼굴을 훑고 간다."],shade:["그림자가 벽 쪽으로 물러난다. 등잔불이 흔들리고."]},
  wait:{_:["칼만 세우고 기다리는 사이 상대가 숨을 다 골랐다. 틈이 닫혔다.","너무 오래 막기만 했다. 상대가 다시 자세를 잡는다."],beast:["용이 숨 들이켜는 동안 멀뚱히 서 있었다. 목덜미가 다시 비늘로 덮인다."]},
- hit:{_:["숨 고르는 틈으로 칼이 파고든다. 상대가 휘청.","칼끝이 갑옷 이음매를 뚫는다. 손에 묵직하게 전해지는 감촉."],beast:["비늘 틈 맨살에 칼이 박힌다. 동굴 가득 울음소리.","목덜미를 긋는다. 뜨거운 피가 눈밭에 후드득."],shade:["칼이 그림자를 가른다. 찢긴 자리로 찬바람이 샌다."],stone:["돌 틈에 칼이 박힌다. 쩍, 금이 간다."],club:["칼등으로 손목을 내리친다. 몽둥이가 진흙에 처박힌다."]},
+ hit:{bone:["칼이 갈비뼈 사이를 지나 등뼈를 쳤다. 뼈 하나가 바닥으로 굴러떨어졌다."],_:["숨 고르는 틈으로 칼이 파고든다. 상대가 휘청.","칼끝이 갑옷 이음매를 뚫는다. 손에 묵직하게 전해지는 감촉."],beast:["비늘 틈 맨살에 칼이 박힌다. 동굴 가득 울음소리.","목덜미를 긋는다. 뜨거운 피가 눈밭에 후드득."],shade:["칼이 그림자를 가른다. 찢긴 자리로 찬바람이 샌다."],stone:["돌 틈에 칼이 박힌다. 쩍, 금이 간다."],club:["칼등으로 손목을 내리친다. 몽둥이가 진흙에 처박힌다."]},
  hitFeint:{_:["갈라진 둘 중 진짜를 벤다. 허상은 연기처럼 꺼지고.","속임수가 보였다. 돌아 들어오는 옆구리에 칼이 먼저 닿는다."],beast:["날개 그림자는 무시. 몸통을 벤다."]},
- trade:{_:["칼과 칼이 동시에 닿는다. 피가 튄다. 양쪽 다.","먼저 베긴 했는데, 내려오는 칼을 못 피했다."],beast:["칼이 비늘을 긁는 순간 꼬리가 옆구리를 후린다."],stone:["석검과 네 칼이 엇갈린다. 돌이 깨지고, 네 어깨도."]},
+ trade:{bone:["칼이 해골의 턱을 날려 버리는 사이, 녹슨 칼날도 네 어깨를 긁고 지나갔다."],_:["칼과 칼이 동시에 닿는다. 피가 튄다. 양쪽 다.","먼저 베긴 했는데, 내려오는 칼을 못 피했다."],beast:["칼이 비늘을 긁는 순간 꼬리가 옆구리를 후린다."],stone:["석검과 네 칼이 엇갈린다. 돌이 깨지고, 네 어깨도."]},
  hurtFeint:{_:["막은 쪽이 허상이었다. 진짜가 옆구리를 친다.","엉뚱한 데를 막았다. 갈비뼈에 둔탁한 충격."],beast:["날개 그림자를 막았는데, 진짜 발톱은 반대편에서 온다."]},
- whiff:{_:["헛친다. 되돌아온 일격이 어깨를 때린다.","물러선 상대를 쫓아 휘두른 칼이 허공만 벤다. 곧장 반격."],beast:["허공을 벤 칼. 물러났던 머리가 그대로 들이받는다."]}
+ whiff:{bone:["허공을 벤 칼끝 너머에서 뼈 주먹이 날아들었다."],_:["헛친다. 되돌아온 일격이 어깨를 때린다.","물러선 상대를 쫓아 휘두른 칼이 허공만 벤다. 곧장 반격."],beast:["허공을 벤 칼. 물러났던 머리가 그대로 들이받는다."]}
 };
 const HIT_HEAD={start:"싸움",parry:"막아냈다",evade:"거리를 쟀다",wait:"틈을 놓쳤다",hit:"명중",hitFeint:"간파",trade:"맞교환",hurtFeint:"속았다",whiff:"빗나감",charm:"부적이 막았다",trap:"함정"};
 function josa(w,a,b){const c=String(w).charCodeAt(String(w).length-1);if(c<0xAC00||c>0xD7A3)return b;return (c-0xAC00)%28?a:b;}
@@ -856,15 +860,29 @@ function clash(tell,act){
   if(act==="block") return tell==="raise"?{kind:"parry",dealt:0,taken:0,learn:true}:tell==="retreat"?{kind:"evade",dealt:0,taken:0,learn:true}:tell==="breath"?{kind:"wait",dealt:0,taken:0}:{kind:"hurtFeint",dealt:0,taken:1};
   return tell==="breath"?{kind:"hit",dealt:1,taken:0,learn:true}:tell==="feint"?{kind:"hitFeint",dealt:1,taken:0,learn:true}:tell==="raise"?{kind:"trade",dealt:1,taken:1}:{kind:"whiff",dealt:0,taken:1};
 }
-const T_ROOM={fight:{tell:"쇠사슬 끄는 소리",w:4},rest:{tell:"촛농 냄새",w:2},oil:{tell:"기름 냄새",w:2},trap:{tell:"바람 소리",w:2}};
-const ROOMS_PER_FLOOR=2, GATE={1:"spire_1",2:"spire_2",3:"spire_3"};
+/* 첨탑 약도: 층마다 3×3 방. 아래 가운데에서 출발해, 같은 층 어딘가의 열쇠로 맨 윗줄 계단 문을 연다.
+   옆방은 소리와 냄새로 짐작한다(어두운 층일수록 안 들린다). 약도를 주우면 그 층 전체가 보인다.
+   한 칸 움직일 때마다 등불 1. 등불이 꺼지면 쫓겨나고, 쓰러지면 첨탑의 해골이 된다(결말). */
+const T_ROOM={fight:{w:2.2,name:"싸움",hint:"덜그럭 소리"},potion:{w:2,name:"물약",hint:"풀 냄새"},oil:{w:1.5,name:"기름",hint:"기름 냄새"},
+  charm:{w:1,name:"부적",hint:"종이 소리"},trap:{w:1.5,name:"함정",hint:"바람 소리"},empty:{w:1.5,name:"빈 방",hint:"고요함"},
+  key:{w:0,name:"열쇠",hint:"쇳소리"},map:{w:0,name:"약도",hint:"숯 냄새"},exit:{w:0,name:"계단",hint:"위에서 부는 바람"}};
+const GW=3,GH=3,T_START=7,GATE={1:"spire_1",2:"spire_2",3:"spire_3"};
+const tAdj=i=>{const x=i%GW,y=Math.floor(i/GW),a=[];if(x>0)a.push(i-1);if(x<GW-1)a.push(i+1);if(y>0)a.push(i-GW);if(y<GH-1)a.push(i+GW);return a;};
 function wpick(w){let t=0;for(const k in w)t+=w[k];let r=Math.random()*t;for(const k in w){r-=w[k];if(r<0)return k;}return Object.keys(w)[0];}
-function rollDoors(){const w={};for(const k in T_ROOM)w[k]=T_ROOM[k].w;let a=wpick(w),b=wpick(w);if(a===b&&Math.random()<.6)b=wpick(w);return [a,b];}
 function darkRoll(t){return Math.random()<(T_DARK[t.floor]||0);}
+function genFloor(t){
+  const exit=Math.floor(Math.random()*GW);
+  const pool=[...Array(GW*GH).keys()].filter(i=>i!==T_START&&i!==exit);
+  const cand=pool.filter(i=>i<GW*2), key=cand[Math.floor(Math.random()*cand.length)];
+  const rest=pool.filter(i=>i!==key), map=Math.random()<.7?rest[Math.floor(Math.random()*rest.length)]:-1;
+  const w={};for(const k in T_ROOM)if(T_ROOM[k].w)w[k]=T_ROOM[k].w;
+  t.cells=[...Array(GW*GH)].map((_,i)=>({t:i===exit?"exit":i===key?"key":i===map?"map":i===T_START?"empty":wpick(w),seen:i===T_START,done:i===T_START,hide:darkRoll(t)}));
+  t.pos=T_START;t.known=false;t.key=false;t.phase="map";t.enemy=null;
+}
 function newTower(){const f=state.flags;let hp=3+(state.stats.military>=60?1:0)+((f.hasNormalWeapon||f.hasLegendaryWeapon)?1:0)-(f.injury>0?1:0);
-  hp=Math.max(2,hp);const t={floor:1,step:0,hp,max:hp,light:6,charm:0,phase:"door",doors:rollDoors(),enemy:null};t.hide=[false,false];return t;}
+  hp=Math.max(2,hp);const t={floor:1,hp,max:hp,light:9,charm:0,potion:0};genFloor(t);return t;}
 const towerMode=()=>inSpire(state)&&!!state.tower;
-function towerSync(){const t=state.tower;if(!t)return;const fl=state.flags.spireFloor;if(fl!==t.floor&&fl<=3){t.floor=fl;t.step=0;t.phase="door";t.doors=rollDoors();t.hide=[darkRoll(t),darkRoll(t)];}}
+function towerSync(){const t=state.tower;if(!t)return;const fl=state.flags.spireFloor;if(fl!==t.floor&&fl<=3){t.floor=fl;t.light+=4;t.hp=Math.min(t.max,t.hp+1);genFloor(t);}} // 층계참: 기름 한 병, 숨 돌리기
 function pips(n,m,on,off){return on.repeat(Math.max(0,n))+off.repeat(Math.max(0,m-n));}
 const HEART='<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.6h2c.7-1.4 2.2-2.6 4.3-2.6 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>';
 // 하트: 이번 수에 잃은 칸은 깨지는 애니메이션
@@ -876,45 +894,63 @@ function foeRow(v,me){return `<div class="flex justify-between items-end gap-4">
 function duelView(d){return {n:d.n,hp:d.hp,max:d.max,my:d.my,mymax:d.mymax};}
 function towerText(){const t=state.tower;if(!t)return"";
   if(t.phase==="fight"){const e=t.enemy;return e.dark?"등불이 흔들린다. 상대의 자세가 보이지 않는다.":(e.tellText||tellLine(styleOf(e.n),e.tell));}
-  const dt=i=>t.hide&&t.hide[i]?"아무 소리도 없다":T_ROOM[t.doors[i]].tell;
-  return `복도 끝에 문이 둘.\n\n왼쪽 문 너머, ${dt(0)}.\n오른쪽 문 너머, ${dt(1)}.`+(t.light<=2?"\n\n등잔 기름이 바닥을 보인다.":"");}
+  return "등잔을 들어 올리자 이어진 방들이 희미하게 드러났다. 옆방에서 새어 나오는 소리와 냄새로 짐작할 수밖에 없었다."
+    +(t.key?"\n품속의 열쇠가 차갑게 느껴졌다.":"\n위층 문을 열려면 열쇠부터 찾아야 했다.")
+    +(t.light<=2?"\n기름이 얼마 남지 않았다.":"");}
 function towerChoice(side){const t=state.tower;
   if(t&&t.phase==="fight") return side==="left"?{label:"막는다",towerAct:"block"}:{label:"벤다",towerAct:"strike"};
-  return side==="left"?{label:"왼쪽 문을 연다",towerAct:"door0"}:{label:"오른쪽 문을 연다",towerAct:"door1"};}
+  if(side==="left") return t&&t.potion>0?{label:`물약을 마신다 (${t.potion})`,towerAct:"drink"}:{label:"벽에 기대 숨을 고른다",towerAct:"rest"};
+  return {label:"포기하고 내려간다",towerAct:"leave"};}
 function towerResolve(act){
   const t=JSON.parse(JSON.stringify(state.tower)),out={result:"",then:"tower",set:{},fx:{},hit:null};
-  const hurt=()=>{if(t.charm>0){t.charm--;return "별 부적이 갈라지며 칼날을 받아낸다.";}t.hp--;return "";};
-  if(act==="door0"||act==="door1"){
-    const room=t.doors[act==="door0"?0:1]; t.light--;
-    if(room==="fight"){const E=T_ENEMY[t.floor],tell=wpick(E.w);t.enemy={n:E.n,hp:E.hp,max:E.hp,tell,tellText:tellLine(styleOf(E.n),tell),dark:darkRoll(t)};t.phase="fight";out.result=`문을 열자 ${E.n}${josa(E.n,"이","가")} 일어선다.`;
-      out.hit={kind:"start",dealt:0,taken:0,view:{n:E.n,hp:E.hp,max:E.hp,my:t.hp,mymax:t.max}};}
-    else{
-      if(room==="rest"){const full=t.hp>=t.max;t.hp=Math.min(t.max,t.hp+1);out.result=full?"촛불 하나가 켜진 빈방. 쉬어 갈 것도 없이 지나간다.":"촛불 하나가 켜진 빈방. 벽에 기대 숨을 고른다.";}
-      if(room==="oil"){if(Math.random()<.55){t.light+=2;out.result="선반에 등잔 기름 한 병.";}else{t.charm++;out.result="책상 위에 별 일곱이 새겨진 부적 하나.";}}
-      if(room==="trap"){const m=hurt();out.result=m||"바닥 돌이 꺼진다. 무릎이 깨진다.";out.hit={kind:m?"charm":"trap",dealt:0,taken:m?0:1,finish:t.hp<=0?"lose":null};}
-      t.step++;
+  const hurt=()=>{if(t.charm>0){t.charm--;return "별 부적이 갈라지며 대신 받아냈다.";}t.hp--;return "";};
+  const expel=why=>({result:[out.result,why].filter(Boolean),tower:null,then:null,set:{spireSealed:true,regionOverride:null},fx:{},hit:out.hit});
+  if(act.startsWith("go:")){
+    const i=+act.slice(3); if(!tAdj(t.pos).includes(i)){out.tower=t;return out;}
+    t.light--; t.pos=i; const c=t.cells[i]; c.seen=true;
+    if(c.done) out.result=pick(["이미 지나온 방이었다. 먼지 위에 네 발자국만 남아 있었다.","아까 들렀던 방이었다."]);
+    else switch(c.t){
+      case "fight":{const E=pick(T_ENEMY[t.floor]),tell=wpick(E.w),st=styleOf(E.n);
+        t.enemy={n:E.n,hp:E.hp,max:E.hp,w:E.w,tell,tellText:tellLine(st,tell),dark:darkRoll(t)};t.phase="fight";
+        out.result=st==="bone"?`문을 열자 바닥에 흩어져 있던 뼈들이 덜그럭거리며 맞춰졌다. ${E.n}였다.`+(getMeta().lastEnding==="spire_bones"?"\n왼손 뼈마디에 낯익은 반지가 걸려 있었다.":""):`문을 열자 ${E.n}${josa(E.n,"이","가")} 천천히 몸을 일으켰다.`;
+        out.hit={kind:"start",dealt:0,taken:0,view:{n:E.n,hp:E.hp,max:E.hp,my:t.hp,mymax:t.max}};break;}
+      case "potion":t.potion++;c.done=true;out.result="선반 위에 작은 유리병이 놓여 있었다. 마개를 열자 쌉싸름한 풀 냄새가 올라왔다.\n너는 그것을 품에 넣었다.";break;
+      case "oil":t.light+=3;c.done=true;out.result="구석에 등잔 기름 한 병이 굴러다니고 있었다. 심지를 돋우자 방 안이 한결 밝아졌다.";break;
+      case "charm":t.charm++;c.done=true;out.result="책상 위에 별 일곱이 새겨진 부적이 하나 남아 있었다. 누가 두고 간 건지는 알 수 없었다.";break;
+      case "trap":{c.done=true;const m=hurt();out.result=m?"디딘 바닥 돌이 꺼졌다.\n"+m:"디딘 바닥 돌이 꺼졌다. 무릎을 찧고 나서야 함정이었다는 걸 알았다.";out.hit={kind:m?"charm":"trap",dealt:0,taken:m?0:1,finish:t.hp<=0?"lose":null};break;}
+      case "key":t.key=true;c.done=true;out.result="해골 하나가 벽에 기대앉아 있었다. 뼈만 남은 손가락 사이에 녹슨 열쇠가 끼어 있었다.\n열쇠를 빼내는 동안에도 해골은 끝내 움직이지 않았다.";break;
+      case "map":t.known=true;c.done=true;out.result="벽에 숯으로 그린 약도가 남아 있었다. 이 층의 방들이 하나하나 표시되어 있었다.\n너보다 먼저 이곳에 온 누군가가 남긴 것이었다.";break;
+      case "exit":if(t.key){out.result="열쇠가 맞았다. 녹슨 자물쇠가 힘겹게 돌아가더니, 문 너머로 계단이 이어졌다.";t.phase="gate";out.then=GATE[t.floor];}
+        else out.result="위층으로 가는 문은 잠겨 있었다. 열쇠 구멍 둘레에 별 일곱이 새겨져 있었다.";break;
+      default:c.done=true;out.result=pick(["아무것도 없는 방이었다. 촛농만 바닥에 굳어 있었다.","빈 방이었다. 벽에 손톱으로 긁은 자국이 줄지어 있었다. 날짜를 세던 걸까.","누군가 여기서 오래 기다렸던 모양이었다. 벽에 등을 기댄 자국이 아직 남아 있었다."]);
     }
-  }else{
+  }else if(act==="drink"){t.potion--;const was=t.hp;t.hp=Math.min(t.max,t.hp+1);out.result=was<t.max?"쓴 물약이 목을 타고 넘어갔다. 욱신거리던 상처가 조금 가라앉았다.":"물약을 마셨지만 딱히 달라지는 건 없었다.";}
+  else if(act==="rest"){t.light-=2;const was=t.hp;t.hp=Math.min(t.max,t.hp+1);out.result=was<t.max?"벽에 등을 기대고 한참 숨을 골랐다. 그사이 등잔 기름이 눈에 띄게 줄어 있었다.":"쉬어 봤자 기름만 줄어들 뿐이었다.";}
+  else if(act==="leave"){return expel("등잔을 들고 왔던 계단을 내려갔다.\n문밖으로 나서자 등 뒤에서 빗장이 걸렸다.");}
+  else{
     const e=t.enemy,dmg=1+(state.flags.hasLegendaryWeapon?1:0),style=styleOf(e.n),prevHp=e.hp,prevMy=t.hp;
     const c=clash(e.tell,act); if(c.learn) learnTell(e.tell,act);
     const dealt=c.dealt?dmg:0; e.hp-=dealt;
     let r=linePick(HITS[c.kind],style), kind=c.kind, taken=0;
     if(c.taken){const m=hurt(); if(m){r+="\n"+m; if(!dealt) kind="charm";} else taken=1;}
-    if(dealt>1) r+="\n룬 검이 번쩍. 상처가 두 배로 벌어진다.";
+    if(dealt>1) r+="\n룬 검이 번뜩였다. 상처가 두 배로 벌어졌다.";
     out.hit={kind,dealt,taken,style,finish:e.hp<=0?"win":t.hp<=0?"lose":null,view:{n:e.n,hp:Math.max(0,e.hp),max:e.max,my:Math.max(0,t.hp),mymax:t.max,prevHp,prevMy}};
-    if(e.hp<=0){r+=`\n\n${e.n}${josa(e.n,"이","가")} 무너진다.`;t.phase="door";t.enemy=null;t.step++;}
-    else {e.tell=wpick(T_ENEMY[t.floor].w);e.dark=darkRoll(t);e.tellText=tellLine(style,e.tell);
-      if(t.hp===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝.";}
+    if(e.hp<=0){r+=`\n\n${e.n}${josa(e.n,"이","가")} 무너져 내렸다.`;t.phase="map";t.enemy=null;t.cells[t.pos].done=true;}
+    else{e.tell=wpick(e.w);e.dark=darkRoll(t);e.tellText=tellLine(style,e.tell);
+      if(t.hp===1) r+="\n숨이 찬다. 한 번 더 맞는다면, 끝장이다.";}
     out.result=r;
   }
-  if(t.hp<=0) return {result:[out.result,"눈앞이 하얘진다. 계단을 굴러 떨어진다.\n눈을 뜨니 첨탑 문밖 눈밭. 문은 닫혀 있다."],tower:null,then:null,set:{spireSealed:true,regionOverride:null,injury:4},fx:{military:-8},hit:out.hit};
-  if(t.phase!=="fight"&&t.step>=ROOMS_PER_FLOOR){out.then=GATE[t.floor];t.phase="gate";}
-  else if(t.phase==="door"){
-    if(t.light<=0) return {result:[out.result,"등불이 꺼진다. 벽을 짚으며 계단을 내려간다.\n문밖으로 나오자 등 뒤에서 빗장 소리."],tower:null,then:null,set:{spireSealed:true,regionOverride:null},fx:{},hit:out.hit};
-    t.doors=rollDoors();t.hide=[darkRoll(t),darkRoll(t)];
-  }
+  if(t.hp<=0) return {result:[out.result,"무릎이 꺾였다. 차가운 돌바닥이 뺨에 닿았고, 등잔은 저만치 굴러가 꺼졌다.\n어둠 속 어딘가에서 덜그럭거리는 소리가 가까워지고 있었다."],tower:null,then:null,ending:"spire_bones",set:{diedInSpire:true,spireSealed:true},fx:{},hit:out.hit};
+  if(t.phase==="map"&&t.light<=0) return expel("등불이 꺼졌다. 벽을 더듬어 겨우 계단을 찾아 내려갔다.\n문밖으로 나서자 등 뒤에서 빗장이 걸렸다.");
   out.tower=t;return out;
 }
+// 약도: 지금 방, 지나온 방, 소리로만 짐작되는 옆방
+function towerMapHTML(){const t=state.tower,adj=tAdj(t.pos);let h='<div class="tmap">';
+  t.cells.forEach((c,i)=>{const cur=i===t.pos,near=adj.includes(i),show=c.seen||t.known;
+    const label=cur?"너":show?(c.done&&c.t!=="exit"?"·":T_ROOM[c.t].name):near?(c.hide?"?":T_ROOM[c.t].hint):"";
+    h+=`<button class="tcell ${cur?"cur":""} ${show?"seen":""} ${near?"near":""} ${show?"t-"+c.t:""}" ${near?`data-go="${i}"`:"disabled"} aria-label="${near?"이동: ":""}${esc(label||"모름")}">${esc(label)}</button>`;});
+  return h+'</div>';}
+function towerGo(i){if(busy||pending||state.ended)return;chooseWith({label:"방을 옮긴다",towerAct:"go:"+i});}
 
 
 /* ---------------- 결투 (첨탑 밖에서도 쓰는 공용 싸움) ----------------
@@ -946,6 +982,7 @@ const ENDINGS={
   last_bastard:{title:"마지막 사생아",tag:"숨겨진 결말"},
   spire_keeper:{title:"별지기",tag:"숨겨진 결말"},
   blank_ledger:{title:"빈 원장",tag:"최종 결말"},
+  spire_bones:{title:"첨탑의 해골",tag:"첨탑"},
   throne_reclaim:{title:"왕좌",tag:"왕도"},
   regent_heir:{title:"섭정의 양자",tag:"왕도"},
   last_knight:{title:"마지막 근위기사",tag:"베르난"},
@@ -974,6 +1011,7 @@ const ENDINGS={
 const ENDING_HINT={
   last_bastard:"북쪽의 노란 별에서 들은 것을, 왕도 사람들 앞에서.",
   spire_keeper:"북쪽의 노란 별에서 들은 것을 안고, 왕도를 등진다.",
+  spire_bones:"별지기 첨탑의 어둠 속에서 쓰러진다.",
   blank_ledger:"결말을 열둘 모은 뒤, 첨탑 꼭대기에서 왕의 피를 묻는다.",
   throne_reclaim:"증거와 사람을 모아 대관식 날 성문 앞에 선다.",
   tyrant_ending:"왕좌에 앉은 첫날, 자비 대신 본보기를.",
@@ -1071,6 +1109,7 @@ const ENDING_TRAIL={
 ENDING_TRAIL.village_ash=ENDING_TRAIL.village_guard;
 ENDING_TRAIL.hermit=[[f=>f.path==="leave","대관식 한 달 전, 왕도로 가지 않는다"],[f=>leaveRoutes({flags:f}).length===1,"아무 인연도 끝까지 이어 가지 않는다"]];
 ENDING_TRAIL.wanderer=[[f=>f.path==="leave"||f.throneFails>=2,"왕도를 등지거나, 성문에서 두 번 밀려난다"],[f=>f.sawHighland||leaveRoutes({flags:f}).length===1||f.throneFails>=2,"마음 둘 곳 없이 길에 선다"]];
+ENDING_TRAIL.spire_bones=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.diedInSpire,"첨탑 안에서 체력이 다해 쓰러진다"]];
 ENDING_TRAIL.blank_ledger=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.spireTruth,"꼭대기에서 왕의 피가 무엇인지 묻는다"],[()=>finalOpen(),"결말을 열두 개 이상 모았다"]];
 function endingTrail(id,st){return (ENDING_TRAIL[id]||[]).filter(([ok])=>ok(st.flags)).map(([,t])=>t);}
 function yearsText(st){const y=Math.floor(st.totalDays/365);return y<1?"한 해도 안 되어":`${y}년 만에`;}
@@ -1087,6 +1126,12 @@ function endingDesc(id,st){
   const where=f.regionOverride||ACTS[st.act].region;
   if(DEATH_TEXT[id]){const t=DEATH_TEXT[id][Math.max(1,Math.min(4,st.act))-1];return `${t}\n\n${st.year}년, ${where}. ${st.age}세.`+(st.flags.lastWords?`\n마지막 선택: ${st.flags.lastWords}`:"");}
   const P=[], add=x=>{if(x)P.push(x);};
+  if(id==="spire_bones"){
+    add("계단 아래로 쓰러진 뒤의 일은 흐릿했다. 차가운 돌바닥, 꺼져 가던 등잔, 그리고 점점 가까워지던 덜그럭거리는 소리.");
+    add("얼마나 지났을까. 너는 다시 일어섰다. 손을 내려다보니 살이 없었다.\n벽에 기대앉은 해골들 사이에 네 자리가 하나 비어 있었다. 오래전부터 그 자리였던 것처럼.");
+    add((f.hasRing?"왼손 뼈마디에는 아직 반지가 걸려 있었다. 언젠가 누군가 이 방에 들어와 그걸 보게 되겠지.\n":"")+"이온은 가끔 등잔을 들고 내려와 너희 얼굴을 하나씩 비춰 보았다. 대답하는 해골은 없었다.");
+    return P.join("\n\n");
+  }
   if(id==="blank_ledger"){
     add(`원장이 다 타는 데 한나절 걸렸다. ${st.pastLives}번의 생이 한꺼번에 재가 됐다.\n이온은 재를 쓸어 창밖으로 날렸다. 그림자는 돌아오지 않았다.`);
     add("그해 섭정은 왕관을 썼다. 이름 적을 책 없이.\n사람들은 그 왕관을 오래 믿지 않았다.");
@@ -1358,7 +1403,7 @@ function resolve(ch){
     for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];for(const k in r.add) out.add[k]=(out.add[k]||0)+r.add[k];
     out.queue.push(...r.queue);if(r.ending)out.ending=r.ending;out.duel=r.duel;out.hasDuel=true;out.hit=r.hit;}
   if(ch.towerAct){const r=towerResolve(ch.towerAct);out.result=r.result;out.then=r.then;Object.assign(out.set,r.set);
-    for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];out.tower=r.tower;out.hasTower=true;out.hit=r.hit||null;}
+    for(const k in r.fx) out.fx[k]=(out.fx[k]||0)+r.fx[k];out.tower=r.tower;out.hasTower=true;out.hit=r.hit||null;if(r.ending)out.ending=r.ending;}
   if(ch.check){
     const c=ch.check, ok=effective(c)+(Math.floor(Math.random()*21)-10)>=c.base, b=ok?c.success:c.failure;
     for(const k in (b.fx||{})) out.fx[k]=(out.fx[k]||0)+b.fx[k];
@@ -1376,7 +1421,11 @@ function resolve(ch){
 
 function choose(side){
   if(pending||state.ended) return;
-  const c=card(state.currentId), ch=choiceOf(c,side), out=resolve(ch);
+  chooseWith(choiceOf(card(state.currentId),side));
+}
+function chooseWith(ch){
+  if(pending||state.ended) return;
+  const c=card(state.currentId), out=resolve(ch);
   const ns={...state.stats}, delta={};
   const mult=fxMult();
   for(const k in out.fx){const b=ns[k];ns[k]=clamp(ns[k]+Math.round(out.fx[k]*mult));delta[k]=ns[k]-b;}
@@ -1569,7 +1618,7 @@ function updateHeader(stats){
   else if(tw) $("towerbar").innerHTML=`<div class="flex justify-between items-end text-[13px]">
     <div><div class="text-[11px] text-stone-500 mb-1">체력</div>${heartsHTML(tw.hp,tw.max,hv&&hv.prevMy)}</div>
     <div><div class="text-[11px] text-stone-500 mb-1">등불</div><div class="text-amber-300 tracking-widest">${pips(tw.light,Math.max(6,tw.light),"●","○")}</div></div>
-    <div><div class="text-[11px] text-stone-500 mb-1">부적</div><div class="text-amber-100">${tw.charm?"✦".repeat(tw.charm):"·"}</div></div>
+    <div><div class="text-[11px] text-stone-500 mb-1">소지품</div><div class="text-amber-100 text-[12px]">${[tw.key?"열쇠":"",tw.potion?"물약 "+tw.potion:"",tw.charm?"부적 "+tw.charm:""].filter(Boolean).join(" · ")||"·"}</div></div>
     <div class="text-right"><div class="text-[11px] text-stone-500 mb-1">층</div><div>${tw.floor} / 3</div></div></div>`
     +(ev&&(tw.phase==="fight"||hv)?`<div class="mt-3">${foeBar(ev)}</div>`:"");
   // 체력이 한 칸 남으면 화면 가장자리가 붉게 맥박친다
@@ -1639,7 +1688,7 @@ function pressSide(side){
 }
 function bindDrag(el){
   const TH=()=>Math.min(110,(el.offsetWidth||400)*0.28);
-  el.addEventListener("pointerdown",e=>{ if(state.ended||busy) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
+  el.addEventListener("pointerdown",e=>{ if(state.ended||busy||(e.target.closest&&e.target.closest("[data-go]"))) return; drag={x0:e.clientX,dx:0}; try{el.setPointerCapture(e.pointerId);}catch(_){} el.style.transition="none"; });
   el.addEventListener("pointermove",e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; tilt(drag.dx,TH()); });
   const end=()=>{ if(!drag) return; const dx=drag.dx; drag=null; el.style.transition="";
     if(pending){ if(Math.abs(dx)>TH()||Math.abs(dx)<6) nextResult(dx>=0?"right":"left"); else tilt(0); return; }
@@ -1655,7 +1704,9 @@ function showFront(){
   el.innerHTML=`<div class="flex items-center gap-3">${sigil({who:val(c.who)})}<div><div class="text-[15px] font-bold">${esc(val(c.who))}</div><div class="text-[11px] text-stone-500">${esc(val(c.role))}</div></div></div>
     <div class="mt-5 story whitespace-pre-line">${esc(val(c.text))}</div>
     ${foe?`<div class="cue">자세 · <b>${foe.dark?"?":TELL_NAME[foe.tell]}</b></div>`:""}
+    ${state.currentId==="tower"&&state.tower&&state.tower.phase==="map"?towerMapHTML():""}
     <div id="veil" class="veil"></div><div id="swipe-label" class="pick" aria-hidden="true"></div>`;
+  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{e.stopPropagation();towerGo(+b.dataset.go);});
   const ch={left:choiceOf(c,"left"),right:choiceOf(c,"right")};
   $("choices").innerHTML=["left","right"].map(sd=>`<button data-side="${sd}" class="choice ${sd==="right"?"text-right":""}"><div>${sd==="left"?"← ":""}${esc(ch[sd].label)}${sd==="right"?" →":""}</div><div class="text-[11px] mt-1 text-stone-500">${hint(ch[sd])}</div></button>`).join("");
   document.querySelectorAll("#choices [data-side]").forEach(b=>{
@@ -1898,6 +1949,10 @@ if(typeof document!=="undefined"&&document.addEventListener) document.addEventLi
   if($("panel").innerHTML){ if(e.key==="Escape"){const m=getMeta();m.introSeen=true;setMeta(m);closePeople();} return; }
   if(state.ended) return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
+  if(!pending&&state.currentId==="tower"&&state.tower&&state.tower.phase==="map"){
+    const dir={ArrowUp:-GW,w:-GW,ArrowDown:GW,s:GW,ArrowLeft:-1,a:-1,ArrowRight:1,d:1}[k];
+    if(dir!=null){e.preventDefault();const to=state.tower.pos+dir;if(tAdj(state.tower.pos).includes(to))towerGo(to);return;}
+  }
   const side=(k==="ArrowLeft"||k==="a"||k==="1")?"left":(k==="ArrowRight"||k==="d"||k==="2")?"right":null;
   if(pending){ if(side||k==="Enter"||k===" "){e.preventDefault();nextResult(side||"right");} return; }
   if(side){e.preventDefault();pressSide(side);} else if(k==="Enter"&&previewSide){e.preventDefault();commitSwipe(previewSide);}

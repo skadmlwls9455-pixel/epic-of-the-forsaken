@@ -139,12 +139,12 @@ html.calm #pzoom,html.calm #pzoom figure{animation:none}
 .t-sub{min-width:200px;padding:11px 28px;border-radius:3px;letter-spacing:.2em;border:1px solid #57534e;color:#d6d3d1;font-size:14px}
 .t-art{position:absolute;inset:0;left:50%;width:min(100%,56.25vh);transform:translateX(-50%);background:#060504 center/cover no-repeat;opacity:0;animation:tfade 2.2s .1s ease forwards}
 .t-art video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.t-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,5,4,.25) 0%,transparent 22%,transparent 50%,rgba(6,5,4,.7) 66%,rgba(6,5,4,.94) 82%,#060504 100%),linear-gradient(to right,#060504 0%,transparent 12%,transparent 88%,#060504 100%)}
+.t-art::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,5,4,.6) 0%,rgba(6,5,4,.3) 18%,transparent 32%,transparent 70%,rgba(6,5,4,.75) 86%,#060504 100%),linear-gradient(to right,#060504 0%,transparent 12%,transparent 88%,#060504 100%)}
 #title.has-art{align-items:flex-end;background:#060504}
 #title.has-art::before,#title.has-art .t-stars{display:none}
-#title.has-art .t-box{padding-bottom:max(26px,env(safe-area-inset-bottom))}
+#title.has-art .t-box{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:max(34px,env(safe-area-inset-top)) 24px max(26px,env(safe-area-inset-bottom))}
+#title.has-art .t-btns{margin-top:auto}
 #title.has-art .t-main{margin:10px 0 8px;text-shadow:0 2px 18px #000,0 0 28px rgba(250,204,21,.22)}
-#title.has-art .t-btns{margin-top:22px}
 #title.has-art .t-snd{margin-top:14px}
 .t-snd{margin-top:22px;font-size:11px;color:#78716c;opacity:0;animation:tfade 1s 3.4s ease forwards}.t-snd button{color:#d6c7a1;text-decoration:underline}
 @keyframes tfade{to{opacity:1}}
@@ -306,7 +306,7 @@ html.calm #title *{opacity:1!important;filter:none!important;transform:none!impo
 const SAVE_KEY="bastard_v5_save", DISC_KEY="bastard_v5_disc";
 const STAT_KEYS=["military","people","legitimacy","gold"];
 const STAT_LABEL={military:"무력",people:"민심",legitimacy:"정통성",gold:"금전"};
-const START_YEAR=603, START_AGE=20;
+const START_YEAR=603, START_AGE=15;
 
 /* ---- 힌트 표시 설정 ----
    FX_HINT_MODE : 선택 전에 "어느 스탯이 움직이는지" 보여주는 방식. 방향(오르냐 내리냐)은 어느 모드든 숨김.
@@ -402,7 +402,7 @@ const CARDS=[
  left:{label:"어머니 이야기를 묻는다",then:"a1_dawn_mother",fx:{people:2},result:"마르타가 앞치마에 손을 닦았다. 어디서부터 말해야 할지 고르는 얼굴이었다."},
  right:{label:"아버지 이야기를 묻는다",then:"a1_dawn_father",fx:{legitimacy:2},result:"마르타가 콧방귀를 뀌었다."}},
 {id:"a1_dawn_mother",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"엘레나",
- text:"“엘레나는 북쪽 고원 사람이야. 고향 얘기는 끝까지 안 하더라.”\n“에드릭 전하가 귀양 와서 한 계절 머물다 갔어. 그 뒤로 노왕이 엘레나를 별궁에 가뒀지. 스무 해를……”",
+ text:"“엘레나는 북쪽 고원 사람이야. 고향 얘기는 끝까지 안 하더라.”\n“에드릭 전하가 귀양 와서 한 계절 머물다 갔어. 그 뒤로 노왕이 엘레나를 별궁에 가뒀지. 열여섯 해를……”",
  left:{label:"어머니를 구하러 돌아가자고 한다",then:"a1_dawn_back",fx:{legitimacy:2,military:-2},set:{motherNorth:true},result:"마르타의 손이 멈췄다."},
  right:{label:"자장가 가사를 묻는다",fx:{people:2},set:{motherNorth:true},clue:"lullaby",
    result:"“별궁에선 다들 ‘기사도 왕’이라고 불러.”\n“양치기라고 부른 건 엘레나뿐이었어. 북쪽에선 그렇게 부른다면서.”"}},
@@ -421,7 +421,7 @@ const CARDS=[
  left:{label:"그 은화를 묻는다",fx:{gold:6},clue:"coin",
    result:"마르타가 주머니를 뒤집어 털었다. 은화 스무 닢이 쏟아졌다.\n그중 하나는 뒷면에 왕관 대신 별 일곱이 새겨져 있었다.\n“이건 달라. 엘레나가 처음부터 갖고 있던 거야.”"},
  right:{label:"그런 아버지는 필요 없다고 한다",fx:{legitimacy:-4,people:3},set:{rejectsFather:true},
-   result:"“엘레나도 똑같은 소리를 했어.”\n마르타가 피식 웃었다.\n“그래 놓고 그 반지를 스무 해 동안 한 번도 안 팔았지.”"}},
+   result:"“엘레나도 똑같은 소리를 했어.”\n마르타가 피식 웃었다.\n“그래 놓고 그 반지를 열여섯 해 동안 한 번도 안 팔았지.”"}},
 
 // --- 허기 ---
 {id:"a1_hunger",acts:[1],dur:3,who:"허기",role:"도망 사흘째",
@@ -440,10 +440,10 @@ const CARDS=[
    failure:{fx:{military:-3,people:3},result:"덫 앞에서 주인과 딱 마주쳤다.\n사냥꾼은 한참 너를 훑어보더니 꿩 반쪽을 던져 주었다.\n“다음엔 남의 덫 건드리지 마.”"}}}},
 
 // --- 리엔 ---
-{id:"a1_child",acts:[1],dur:2,who:"길가의 여자",role:"불탄 마을 어귀",
- text:s=>{const lp=getMeta().lienPast;return (lp==="left"?"처음 보는 얼굴이었다. 그런데 왠지, 이번만은 그냥 지나치면 안 될 것 같았다.\n\n":lp==="saved"?"처음 보는 얼굴이었다. 그런데도 업으면 얼마나 무거울지 알 것 같았다.\n\n":"")+"불탄 마을 어귀를 지날 때였다. 길가에 주저앉아 있던 여자가 고개를 들었다. 열여덟쯤 되었을까. 감싸 쥔 발목이 눈에 띄게 부어 있었다.\n“업어 줄 수 있어요? 강 건너까지만요.”\n업고 가면 걸음은 절반으로 줄 것이었다. 근위대와의 거리는 반나절. 너는 그 반나절을 속으로 몇 번이고 셈해 보았다.";},
+{id:"a1_child",acts:[1],dur:2,who:"길가의 소녀",role:"불탄 마을 어귀",
+ text:s=>{const lp=getMeta().lienPast;return (lp==="left"?"처음 보는 얼굴이었다. 그런데 왠지, 이번만은 그냥 지나치면 안 될 것 같았다.\n\n":lp==="saved"?"처음 보는 얼굴이었다. 그런데도 업으면 얼마나 무거울지 알 것 같았다.\n\n":"")+"불탄 마을 어귀를 지날 때였다. 길가에 주저앉아 있던 여자애가 고개를 들었다. 열넷쯤 되었을까. 감싸 쥔 발목이 눈에 띄게 부어 있었다.\n“업어 줄 수 있어요? 강 건너까지만요.”\n업고 가면 걸음은 절반으로 줄 것이었다. 근위대와의 거리는 반나절. 너는 그 반나절을 속으로 몇 번이고 셈해 보았다.";},
  left:{label:"업는다",then:"rest_lien_song",fx:{people:5,military:-4,gold:-2},set:{childSaved:true},add:{bondLien:1},queue:[{id:"a2_lien_return",delay:8}],result:"“리엔이에요.”\n업히자마자 이름부터 말하더니, 네 어깨를 꼭 붙잡았다."},
- right:{label:"지나친다",then:"a1_child_left",fx:{military:4,people:-6},set:{childAbandoned:true},queue:[{id:"a3_lien_betray",delay:10}],result:"언덕 위에서 한 번 돌아보았다.\n여자는 그 자리에 앉은 채, 아직 이쪽을 보고 있었다."}},
+ right:{label:"지나친다",then:"a1_child_left",fx:{military:4,people:-6},set:{childAbandoned:true},queue:[{id:"a3_lien_betray",delay:10}],result:"언덕 위에서 한 번 돌아보았다.\n여자애는 그 자리에 앉은 채, 아직 이쪽을 보고 있었다."}},
 {id:"a1_child_carry",acts:[1],queueOnly:true,dur:2,who:"리엔",role:"등 위",
  text:"노래가 끝나자 리엔은 쉬지 않고 떠들기 시작했다.\n“엄마는 지난겨울에 세금 대신 왕도 성벽 공사에 끌려갔어요. 할머니는 강 건너 갈대 마을에 살고요.”\n잠깐 조용하더니, 귓가에 대고 물었다.\n“오빠는 누구한테 쫓기는 거예요?”",
  left:{label:"갈대 마을까지 데려다준다",then:"a1_reed_village",fx:{people:3,military:-3},set:{lienVillage:true,lienDropped:true},result:"너는 대답하지 않았다. 리엔도 더는 묻지 않았다.\n해가 질 무렵, 갈대로 엮은 지붕들이 보이기 시작했다."},
@@ -454,11 +454,11 @@ const CARDS=[
    result:["노파는 젊었을 적에 왕비 친정집 부엌에서 일했다고 했다.\n“오스릭은 그 집 마구간에서 컸어. 마부 아들이라고. 노왕 서자는 무슨…….”","새벽에 근위대가 마을을 뒤지기 시작했다.\n리엔은 너를 건초 더미 속에 밀어 넣더니, 그 앞에서 태연하게 빨래를 널었다. 손이 조금 떨리고 있었지만."]},
  right:{label:"바로 떠난다",fx:{military:3},result:"떠나는 너를 문간까지 따라 나온 리엔이 말했다.\n“빚진 거예요. 꼭 갚을게요.”"}},
 {id:"a1_child_left",acts:[1],queueOnly:true,dur:1,who:"나루터",role:"그날 저녁",
- text:"저녁 무렵의 나루터였다. 근위병들이 강가를 샅샅이 뒤지고 있었다.\n그 틈에 낮에 본 그 여자가 서 있었다. 근위병 하나가 빵을 내밀자, 여자의 눈이 천천히 네가 숨은 갈대 쪽으로 향했다.",
+ text:"저녁 무렵의 나루터였다. 근위병들이 강가를 샅샅이 뒤지고 있었다.\n그 틈에 낮에 본 그 여자애가 서 있었다. 근위병 하나가 빵을 내밀자, 여자애의 눈이 천천히 네가 숨은 갈대 쪽으로 향했다.",
  left:{label:"눈을 맞추고 고개를 젓는다",check:{stat:"people",base:44,
-   success:{fx:{people:3},set:{lienHesitated:true},result:"여자는 빵을 받아 들더니 하류 쪽을 가리켰다.\n근위병들이 우르르 그쪽으로 몰려갔다. 여자는 끝내 이쪽을 돌아보지 않았다."},
-   failure:{fx:{people:-3,military:-3},set:{injury:2},result:"여자의 손가락이 갈대숲을 가리켰다.\n생각할 틈도 없이 강으로 뛰어들었다. 귀 옆 물살을 돌멩이가 때리고 지나갔다."}}},
- right:{label:"먼저 강에 뛰어든다",fx:{military:3,gold:-6},result:"짐의 절반이 물살에 떠내려갔다.\n건너편에 올라 돌아보니, 그 여자는 아직도 이쪽을 보고 있었다."}},
+   success:{fx:{people:3},set:{lienHesitated:true},result:"여자애는 빵을 받아 들더니 하류 쪽을 가리켰다.\n근위병들이 우르르 그쪽으로 몰려갔다. 여자애는 끝내 이쪽을 돌아보지 않았다."},
+   failure:{fx:{people:-3,military:-3},set:{injury:2},result:"여자애의 손가락이 갈대숲을 가리켰다.\n생각할 틈도 없이 강으로 뛰어들었다. 귀 옆 물살을 돌멩이가 때리고 지나갔다."}}},
+ right:{label:"먼저 강에 뛰어든다",fx:{military:3,gold:-6},result:"짐의 절반이 물살에 떠내려갔다.\n건너편에 올라 돌아보니, 그 여자애는 아직도 이쪽을 보고 있었다."}},
 
 // --- 케인 ---
 {id:"a1_kane",acts:[1],dur:2,who:"케인",role:"강가 나루터",
@@ -659,7 +659,7 @@ const CARDS=[
  left:{label:"부관으로 받는다",fx:{military:4,people:2,legitimacy:-2},set:{kaneAlly:true},add:{bondKane:1},result:"“너한테 충성하는 거 아니야. 섭정 목이 필요할 뿐이지.”\n그날 밤, 케인은 네 천막 입구를 베고 잠들었다."},
  right:{label:"돌아가라고 한다",fx:{legitimacy:2,military:-2},result:"“왕도에서 보자.”"}},
 {id:"a3_lien_betray",acts:[3],queueOnly:true,dur:5,who:"리엔",role:"골목",cond:s=>s.flags.childAbandoned,
- text:s=>"골목에서 누군가 앞을 막아섰다. 나루터의 그 여자였다.\n“리엔이에요. 기억 안 나죠?”\n“케인 부하들한테 오빠 있는 데 팔았어요. 엄마 찾으러 갈 노잣돈이 필요했거든요.”"+(s.flags.lienHesitated?"\n“나루터에선 안 팔았어요. 그때는.”":""),
+ text:s=>"골목에서 누군가 앞을 막아섰다. 나루터의 그 여자애였다.\n“리엔이에요. 기억 안 나죠?”\n“케인 부하들한테 오빠 있는 데 팔았어요. 엄마 찾으러 갈 노잣돈이 필요했거든요.”"+(s.flags.lienHesitated?"\n“나루터에선 안 팔았어요. 그때는.”":""),
  left:{label:"그날 일을 사과한다",check:{stat:"people",base:48,bonus:s=>s.flags.lienHesitated?16:0,
    success:{fx:{people:4},set:{lienForgave:true},result:"리엔은 한참 발끝만 내려다보다 입을 열었다.\n“걔들 동쪽 길로 와요. 서쪽으로 가요.”"},
    failure:{fx:{people:-6},queue:[{id:"a3_ambush",delay:1}],result:"“늦었어요.”\n멀리서 말발굽 소리가 들려왔다."}}},
@@ -2087,7 +2087,7 @@ let shownHp=null, previewSide=null, built=false, shown=null, drag=null, resultPa
 const $=id=>document.getElementById(id);
 // 인물 초상: PORTRAIT[이름]에 파일 이름을 적으면 ASSET_DIR의 이미지가 원 안에 들어간다 (없으면 첫 글자)
 const PORTRAIT={ // 파일 이름은 docs/이미지-에셋-요청서.md의 4장과 같다
-  "어머니":"portraits/portrait_elena.jpg","엘레나":"portraits/portrait_elena.jpg","유모 마르타":"","마르타":"","리엔":"","길가의 여자":"","케인":"","근위대장 케인":"","베르난":"",
+  "어머니":"portraits/portrait_elena.jpg","엘레나":"portraits/portrait_elena.jpg","유모 마르타":"","마르타":"","리엔":"","길가의 소녀":"","케인":"","근위대장 케인":"","베르난":"",
   "오스릭":"","회색 망토":"","이온":"","이온과 그림자":"","수도원장 테오":"","촌장":"","촌장의 아들":"","용병대장 하그":"",
   "리엔의 할머니":"","브란":"","서기관 오틀린":"","섭정의 징수관":"","세공사":"","대장장이":"","사냥꾼":"","점성술사":"",
   "외눈 무기상":"","장터 상인":"","뒷골목 상인":"","행상":"","행상인":"","고원의 노파":"","우물가의 아이":"","칼잡이들":"",
@@ -2390,7 +2390,7 @@ function nextResult(side){
 const GROUP_ORDER=["가족","곁","적","그 밖"];
 const INTRO=[
   {t:"아르벤 왕국",b:"노왕이 세상을 떠났다.\n나라를 쥔 건 노왕의 서자를 자처하는 섭정 오스릭이었다.\n삼년상이 끝나는 날, 그는 왕관을 쓸 생각이었다."},
-  {t:"너",b:"너는 제2왕자 에드릭의 사생아였다. 에드릭은 끝내 너를 아들로 인정하지 않았다.\n어머니 엘레나와 함께 별궁 세탁장에서 스무 해를 살았다.\n사흘 전, 섭정이 에드릭을 반역죄로 처형했다.\n그리고 오늘 밤, 별궁에 불이 붙었다."},
+  {t:"너",b:"너는 제2왕자 에드릭의 사생아였다. 에드릭은 끝내 너를 아들로 인정하지 않았다.\n어머니 엘레나와 함께 별궁 세탁장에서 열다섯 해를 살았다.\n사흘 전, 섭정이 에드릭을 반역죄로 처형했다.\n그리고 오늘 밤, 별궁에 불이 붙었다."},
   {t:"하는 법",b:"카드를 좌우로 밀거나 아래 선택지를 눌러 고릅니다.\n\n위쪽의 네 게이지(무력·민심·정통성·금전) 중 하나라도 바닥나거나 가득 차면 위기가 닥칩니다. 그 위기마저 넘기지 못하면 이번 생은 끝납니다.\n\n처음 보는 것들은 그때그때 짧게 알려 드립니다."}
 ];
 const PLACES=[

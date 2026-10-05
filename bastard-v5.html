@@ -79,6 +79,13 @@ body{font-family:'Gowun Batang',serif;background:#0e0c0a;color:#e8ddd0}
 .pop.big{left:0;right:0;top:38%;text-align:center;font-size:34px;letter-spacing:.2em;color:#fde68a}
 .pop.big.lose{color:#ef4444}
 @keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:translateY(0) scale(1.15)}30%{transform:scale(1)}100%{opacity:0;transform:translateY(-30px)}}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,12px);max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;background:#1f1a14;border:1px solid #a16207;color:#fde68a;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.gnode{border:1px solid #44403c;border-radius:10px;padding:8px 12px;font-size:13px;color:#a8a29e}
+.gnode.lit{border-color:#a16207;color:#fde68a}
+.gnode.now{border-color:#facc15;color:#fef3c7;box-shadow:0 0 0 1px #facc15 inset}
+.gnode.lock{color:#57534e;border-style:dashed}
+.garrow{text-align:center;color:#57534e;font-size:11px;line-height:16px}
 :root{--story-fs:15px}
 html[data-size="l"]{--story-fs:17px}html[data-size="xl"]{--story-fs:19px}
 .story{font-size:var(--story-fs);line-height:2.05}
@@ -97,6 +104,7 @@ html.calm *,html.calm *::before,html.calm *::after{animation:none!important;tran
 <div id="banner"></div>
 <div id="fx" aria-hidden="true"></div>
 <div id="vign" aria-hidden="true"></div>
+<div id="toast" role="status"></div>
 <script>
 "use strict";
 /* =========================================================
@@ -127,6 +135,15 @@ html.calm *,html.calm *::before,html.calm *::after{animation:none!important;tran
            새 결말 6개(섭정의 양자·마지막 근위기사·성벽 아래의 약속·일꾼 오빠·잿더미 골짜기·양치기).
            결말 화면에 "이 결말까지 이어진 일"을 보여 준다.
    - 버그: 촌장 부탁을 거절해도 '약속을 지킨' 보너스를 받던 문제(villageReturned로 분리).
+   v5.7 변경
+   - 쉬는 장면(rest): 판정 없는 짧은 장면으로 리엔·베르난·케인·마르타와 정이 든다. 긴장된 장면 뒤에 끼어든다.
+     정(bondLien 등)은 인물 탭에 낯섦→가족 단계로 보이고 일부 판정에 더해진다. 2·3막 최소 결정 수 +3.
+   - 복선 회수: 마르타 생사(시신을 거두면 재회, 아니면 교수대 구출 판정), 이름 없는 은화, 빵 훔친 아이,
+     용 검의 대가, 별 일곱 = 별지기 인장, 아버지 거부.
+   - 회차 반응: 어머니(데자뷔)는 앞 생 결말에, 이온(전부 기억)은 앞 생 결말 이름에, 갈림길은 앞 생 길에 반응.
+   - 공략집: 결말을 처음 볼 때마다 영혼 1개, 일반 공략 1개·숨겨진/최종 공략 2개. 지난 생에 밟은 칸 표시, 칸을 채우면 알림.
+   - 최종 결말 "빈 원장": 결말 12개 이후 첨탑 꼭대기에서 왕의 피를 물으면 원장 맨 뒷장이 열린다.
+   - 문장: 겹치는 말을 덜고 어미를 섞었다.
    ========================================================= */
 const SAVE_KEY="bastard_v5_save", DISC_KEY="bastard_v5_disc";
 const STAT_KEYS=["military","people","legitimacy","gold"];
@@ -152,8 +169,8 @@ const CRISIS_HI=84, CRISIS_LO=16; // 스탯이 이 선을 넘으면 위기 카�
 const ACTS=[
   {name:"프롤로그",region:"별궁",goal:"불타는 별궁을 빠져나가라",required:[],min:0,max:99},
   {name:"1막 · 도망",region:"남부 숲길",goal:"추적을 피해 강을 건너라",required:["a1_hunger","a1_child","a1_kane"],min:10,max:16},
-  {name:"2막 · 은신",region:"산골 마을",goal:"숨어서 힘을 길러라 · 대관식까지 약 3년",required:["a2_bernan_meet","a2_tax"],min:11,max:18},
-  {name:"3막 · 세력",region:"북부 변경",goal:s=>inSpire(s)?"첨탑 꼭대기까지 올라라":"왕도로 갈 사람과 증거를 모아라 · 대관식까지 약 1년",required:["a3_merc","a3_dragon_rumour","a3_execution"],min:10,max:s=>inSpire(s)?26:17},
+  {name:"2막 · 은신",region:"산골 마을",goal:"숨어서 힘을 길러라 · 대관식까지 약 3년",required:["a2_bernan_meet","a2_tax"],min:14,max:21},
+  {name:"3막 · 세력",region:"북부 변경",goal:s=>inSpire(s)?"첨탑 꼭대기까지 올라라":"왕도로 갈 사람과 증거를 모아라 · 대관식까지 약 1년",required:["a3_merc","a3_dragon_rumour","a3_execution"],min:13,max:s=>inSpire(s)?29:20},
   {name:"4막 · 결단",region:"왕도 외곽",goal:s=>s.flags.throneReady?"대관식 날, 왕도 성문을 넘어라":s.flags.path==="leave"?"어디로 갈지 정하라":"왕좌로 갈지 정하라",required:[],min:0,max:999}
 ];
 
@@ -175,7 +192,9 @@ function initialFlags(){return{
   motherNorth:false, hairpin:false, puppetSaved:false, kaneBeaten:false, kaneYielded:false, kaneScar:false, buriedSeven:false, mercRank:0, promiseLien:false, rejectsFather:false, lienVillage:false, lienHesitated:false, kaneKnown:false, stoleBread:false,
   ringAtMerchant:false, ringBought:false, militia:false, villageTrust:false, promiseVillage:false, villageSaved:false,
   // 4막 결말 갈래 (v5.6)
-  villageReturned:false, wallFreed:null, villageWay:null, knightSaved:false, osricRefused:false, sawHighland:false
+  villageReturned:false, wallFreed:null, villageWay:null, knightSaved:false, osricRefused:false, sawHighland:false,
+  // v5.7 정·마르타·복선
+  bondLien:0, bondKane:0, bondMarta:0, martaAlive:false, martaDead:false, knowsCoins:false, swordBound:false
 };}
 function inSpire(s){const f=s.flags;return f.spireFloor>0&&!f.spireDone&&!f.spireSealed;}
 function newState(){return{
@@ -200,339 +219,341 @@ function evidence(s){const f=s.flags,a=[];
 const CARDS=[
 // ===== 프롤로그 =====
 {id:"pro_fire",acts:[0],forced:true,next:"pro_corridor",dur:1,who:"어머니",role:"별궁 세탁장",clue:"lullaby",
- text:s=>"별궁 지붕이 무너진다.\n어머니가 네 손에 반지를 쥐여준다. 쥐여주면서 자장가를 흥얼거린다.\n‘별이 이름을 적으면, 양치기도 왕.’\n“네 아버지 반지다. 가져가.”\n복도 끝에서 군화 소리가 난다."
-   +(s.pastLives>=1?"\n\n서까래가 떨어질 자리를 너는 미리 알고 비켜선다.":""),
+ text:s=>"별궁 지붕이 무너지는 중.\n어머니가 네 손에 반지를 쥐여 주며 흥얼거린다.\n‘별이 이름을 적으면, 양치기도 왕.’\n“네 아버지 반지야. 가져가.”\n복도 끝, 군화 소리."
+   +(s.pastLives>=1?"\n\n서까래가 떨어질 자리를 너는 미리 알고 비켜선다."+motherDream():""),
  left:{label:"어머니 손을 놓지 않는다",fx:{legitimacy:2,people:4,military:-4},
-   result:"어머니가 네 손가락을 하나씩 편다.\n“둘이 가면 둘 다 잡힌다.”\n너를 뒷문 밖으로 밀고 빗장을 건다."},
+   result:"어머니가 네 손가락을 하나씩 편다.\n“둘이 가면 둘 다 잡혀.”\n등 떠밀려 나오자마자 빗장 걸리는 소리."},
  right:{label:"반지를 쥐고 뒷문으로 뛴다",fx:{legitimacy:6,military:4,people:-4},
    result:"뒷문을 나서자 지붕이 내려앉는다.\n손바닥에 반지 자국."}},
 {id:"pro_corridor",acts:[0],forced:true,next:"pro_nurse",dur:1,who:"케인",role:"섭정 근위대 부대장",
- text:"연기 속에서 누가 외친다.\n“사생아를 찾아라. 머리만 가져와도 값은 쳐준다.”\n근위병들이 그를 케인 부대장이라 부른다.\n발밑에 수로 덮개가 있다. 옆 회랑에는 불이 번지고 있다.",
- left:{label:"수로로 내려간다",fx:{military:2,legitimacy:-2},add:{kaneEscaped:1},result:"시궁창 물이 허리까지 찼다.\n머리 위로 케인의 목소리가 지나갔다. “쥐구멍부터 막아.”"},
- right:{label:"불붙은 회랑을 뛰어 건넌다",fx:{military:5,people:-2},set:{injury:3},add:{kaneEscaped:1},result:"왼팔에 불이 붙는다. 바닥에 굴러 끈다.\n따라오는 사람은 없다."}},
+ text:"연기 너머로 고함. “사생아를 찾아! 머리만 가져와도 값은 쳐준다.”\n근위병들이 케인 부대장, 하고 부른다.\n발밑엔 수로 덮개, 옆 회랑엔 번지는 불.",
+ left:{label:"수로로 내려간다",fx:{military:2,legitimacy:-2},add:{kaneEscaped:1},result:"시궁창 물이 허리까지 찬다.\n머리 위로 케인 목소리가 지나간다. “쥐구멍부터 막아.”"},
+ right:{label:"불붙은 회랑을 뛰어 건넌다",fx:{military:5,people:-2},set:{injury:3},add:{kaneEscaped:1},result:"왼팔에 불이 옮겨붙는다. 바닥에 굴러 겨우 끈다.\n따라오는 발소리는 없고."}},
 {id:"pro_nurse",acts:[0],forced:true,dur:1,who:"유모 마르타",role:"성벽 밖 개울가",
- text:"개울가 갈대 속에서 유모 마르타가 손짓한다.\n“섭정 오스릭이 네 아버지를 반역죄로 죽였다. 오늘 밤은 너였고.”\n“노왕 삼년상이 끝나는 날, 섭정이 왕관을 쓴다. 그 전에 네가 죽어야 그자한테 편하지.”",
+ text:"개울가 갈대숲에서 유모 마르타가 손짓한다.\n“섭정 오스릭이 네 아버지를 반역죄로 죽였어. 오늘 밤은 네 차례였고.”\n“삼년상 끝나는 날 그자가 왕관을 써. 그 전에 네가 죽어 줘야 편하겠지.”",
  left:{label:"반지가 무슨 소용이냐고 묻는다",fx:{legitimacy:4,military:-2},set:{knowsLedger:true},queue:[{id:"a2_library",delay:12}],
-   result:"마르타가 반지 안쪽을 보여준다. ‘제2왕자 에드릭.’\n“섭정은 이걸 가짜라고 할 거다. 진짜인 건 왕도 도서관 세공 장부에 남아 있어. 서기관 오틀린을 찾아.”"},
+   result:"마르타가 반지 안쪽을 보여 준다. ‘제2왕자 에드릭.’\n“섭정은 가짜라고 우길 거다. 진짜라는 증거는 왕도 도서관 세공 장부에 있어. 서기관 오틀린을 찾아.”"},
  right:{label:"마르타를 끌고 갈대 속에 엎드린다",fx:{people:4},
-   result:"근위병 셋이 개울 건너편을 지나간다.\n그들이 멀어지고 나서야 마르타가 네 팔을 놓는다."}},
+   result:"근위병 셋이 개울 건너편을 지나간다.\n발소리가 멀어지고서야 마르타가 팔을 놓는다."}},
 
 // ===== 1막 =====
 {id:"a1_dawn",acts:[1],forced:true,dur:1,who:"유모 마르타",role:"새벽 개울가",
- text:"날이 밝는다. 상류에서 개 짖는 소리가 난다.\n마르타가 네 손의 그을음을 개울물에 씻긴다.\n“물어볼 게 있으면 지금 물어.”",
+ text:"날이 밝는다. 상류 쪽에서 개 짖는 소리.\n마르타가 네 손의 그을음을 개울물로 닦아 준다.\n“물을 게 있으면 지금 물어.”",
  left:{label:"어머니 이야기를 묻는다",then:"a1_dawn_mother",fx:{people:2},result:"마르타가 앞치마에 손을 닦는다."},
  right:{label:"아버지 이야기를 묻는다",then:"a1_dawn_father",fx:{legitimacy:2},result:"마르타가 콧방귀를 뀐다."}},
 {id:"a1_dawn_mother",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"엘레나",
- text:"“엘레나는 북쪽 고원에서 왔다. 고향 얘기는 안 했어.”\n“에드릭 전하가 별궁에 귀양 와서 한 계절 머물렀다. 전하가 떠난 뒤 노왕은 엘레나를 별궁에 가뒀지. 스무 해.”",
+ text:"“엘레나는 북쪽 고원 사람이야. 고향 얘긴 끝까지 안 했지.”\n“에드릭 전하가 귀양 와서 한 계절 머물다 갔어. 그 뒤로 노왕이 엘레나를 별궁에 가뒀고. 스무 해를.”",
  left:{label:"어머니를 구하러 돌아가자고 한다",then:"a1_dawn_back",fx:{legitimacy:2,military:-2},result:"마르타의 손이 멈춘다."},
  right:{label:"자장가 가사를 묻는다",fx:{people:2},set:{motherNorth:true},clue:"lullaby",
-   result:"“별궁 노래는 ‘별이 이름을 적으면, 기사도 왕’이야.”\n“엘레나만 양치기라고 불렀다. 북쪽에선 그렇게 부른대.”"}},
+   result:"“별궁에선 ‘기사도 왕’이라고 불러.”\n“양치기라고 부른 건 엘레나뿐이었어. 북쪽에선 그렇게 부른다나.”"}},
 {id:"a1_dawn_back",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"새벽 개울가",
- text:"“별궁엔 이제 재하고 근위대뿐이다.”\n마르타가 네 앞을 막아선다. 개 짖는 소리가 가까워진다.",
- left:{label:"그래도 돌아간다",then:"a1_ruins",fx:{military:2,people:-2},result:"마르타가 개 짖는 쪽으로 걸어간다.\n갈대를 일부러 크게 헤치면서."},
- right:{label:"마르타 말을 따른다",fx:{people:3},result:"마르타가 빵 한 덩이를 쥐여준다. “남쪽 숲길로 가.”\n그녀는 개 짖는 쪽으로 걸어갔다."}},
+ text:"“별궁엔 이제 재랑 근위대밖에 없어.”\n마르타가 앞을 막아선다. 개 짖는 소리가 가까워진다.",
+ left:{label:"그래도 돌아간다",then:"a1_ruins",fx:{military:2,people:-2},result:"마르타가 개 짖는 쪽으로 걸어간다.\n갈대를 일부러 요란하게 헤치면서."},
+ right:{label:"마르타 말을 따른다",fx:{people:3},result:"마르타가 빵 한 덩이를 쥐여 준다. “남쪽 숲길로 가.”\n그러고는 개 짖는 쪽으로 걸어간다."}},
 {id:"a1_ruins",acts:[1],queueOnly:true,dur:1,who:"타버린 별궁",role:"세탁장 터",
- text:"세탁장 자리. 근위병 둘이 불씨를 뒤적인다.\n어머니 방이 있던 자리에서 무언가 반짝인다.\n근위병들이 등을 돌린다.",
+ text:"세탁장 자리. 근위병 둘이 불씨를 뒤적이고 있다.\n어머니 방 자리에서 뭔가 반짝.\n마침 근위병들이 등을 돌린다.",
  left:{label:"기어가서 줍는다",check:{stat:"military",base:44,bonus:wpn,
-   success:{fx:{legitimacy:4},set:{hairpin:true},clue:"hairpin",result:"어머니의 머리핀이다.\n핀 끝에 별 일곱이 새겨져 있다. 별궁 물건이 아니다."},
-   failure:{fx:{military:-4,people:-2},set:{injury:3},result:"재가 무너지는 소리.\n창끝이 어깨를 긁고 지나간다. 빈손으로 달아날 수밖에."}}},
+   success:{fx:{legitimacy:4},set:{hairpin:true},clue:"hairpin",result:"어머니 머리핀이다.\n핀 끝에 별 일곱. 별궁에서 쓰던 물건은 아니다."},
+   failure:{fx:{military:-4,people:-2},set:{injury:3},result:"발밑에서 재가 무너진다.\n창끝이 어깨를 긁고 지나간다. 빈손으로 달아날 수밖에."}}},
  right:{label:"멀리서 무릎을 꿇었다가 떠난다",fx:{legitimacy:2,people:2},result:"잿더미 쪽으로 고개를 숙이고, 남쪽으로."}},
 {id:"a1_dawn_father",acts:[1],queueOnly:true,dur:1,who:"유모 마르타",role:"에드릭",
- text:"“전하는 겁이 많았다. 후계자가 되자 별궁 쪽은 쳐다보지도 않았어.”\n“대신 네 생일마다 은화가 한 닢씩 왔다. 이름 없이.”",
+ text:"“전하는 겁쟁이였어. 후계자가 되고 나선 별궁 쪽은 쳐다보지도 않았지.”\n“그런데 네 생일마다 은화가 한 닢씩 왔어. 보낸 사람 이름 없이.”",
  left:{label:"그 은화를 묻는다",fx:{gold:6},clue:"coin",
-   result:"마르타가 주머니를 뒤집는다. 은화 스무 닢.\n하나는 뒷면에 왕관 대신 별 일곱이 있다.\n“이건 엘레나가 처음부터 갖고 있던 거다.”"},
+   result:"마르타가 주머니를 뒤집는다. 은화 스무 닢.\n그중 하나는 뒷면에 왕관 대신 별 일곱.\n“이건 엘레나가 처음부터 갖고 있던 거야.”"},
  right:{label:"그런 아버지는 필요 없다고 한다",fx:{legitimacy:-4,people:3},set:{rejectsFather:true},
-   result:"“엘레나도 그랬다. 그러고는 그 반지를 스무 해 동안 안 팔았지.”"}},
+   result:"“엘레나도 그 소리 했어. 그래 놓고 그 반지를 스무 해 동안 안 팔았지.”"}},
 
 // --- 허기 ---
 {id:"a1_hunger",acts:[1],dur:3,who:"허기",role:"도망 사흘째",
- text:"사흘째. 먹은 건 빵 반 덩이.\n장터 상인이 네 반지를 본다.\n“그거면 한 달은 먹겠는데.”",
- left:{label:"반지를 판다",then:"a1_hunger_sold",fx:{gold:16,legitimacy:-10,people:2},set:{hasRing:false,ringSold:true},queue:[{id:"a2_bernan_anger",delay:4}],result:"상인이 인장을 손톱으로 긁어보고 금화를 센다."},
- right:{label:"반지를 숨기고 돌아선다",then:"a1_hunger_kept",fx:{gold:-6,legitimacy:6,military:-4},result:"반지를 끈에 꿰어 옷 속에 넣는다.\n배가 운다."}},
+ text:"사흘째. 먹은 거라곤 빵 반 덩이.\n장터 상인 눈이 네 반지에 꽂힌다.\n“그거면 한 달은 먹고살겠는데.”",
+ left:{label:"반지를 판다",then:"a1_hunger_sold",fx:{gold:16,legitimacy:-10,people:2},set:{hasRing:false,ringSold:true},queue:[{id:"a2_bernan_anger",delay:4}],result:"상인이 인장을 손톱으로 긁어 보더니 금화를 센다."},
+ right:{label:"반지를 숨기고 돌아선다",then:"a1_hunger_kept",fx:{gold:-6,legitimacy:6,military:-4},result:"반지를 끈에 꿰어 옷 속에 넣는다.\n배가 꾸르륵."}},
 {id:"a1_hunger_sold",acts:[1],queueOnly:true,dur:1,who:"장터 상인",role:"흥정",
- text:"상인이 금화를 세다 멈춘다.\n“이거 섭정 칙령에 나온 인장이네. 근위대에 가져가면 포상금이 따로 나오지 않나.”",
- left:{label:"금화를 낚아채고 달린다",fx:{gold:4,people:-4},result:"골목 셋을 지나서 멈췄다. 금화 열한 닢.\n뒤에서 상인이 외쳤다. “반지 낀 놈이다!”"},
- right:{label:"절반을 돌려주고 입을 막는다",fx:{gold:-8,people:2},set:{ringAtMerchant:true},result:"상인이 반지를 진열대 유리 밑에 넣는다.\n“다시 사러 오면 그때 값을 매기지.”"}},
+ text:"금화를 세던 상인 손이 멈춘다.\n“가만, 이거 칙령에 나온 인장 아냐? 근위대에 갖다주면 포상금이 따로 나올 텐데.”",
+ left:{label:"금화를 낚아채고 달린다",fx:{gold:4,people:-4},result:"골목 셋을 지나서야 멈춘다. 손에 금화 열한 닢.\n뒤에서 상인이 고래고래. “반지 낀 놈이다!”"},
+ right:{label:"절반을 돌려주고 입을 막는다",fx:{gold:-8,people:2},set:{ringAtMerchant:true},result:"상인이 반지를 진열대 유리 밑에 넣는다.\n“다시 사러 오면 그때 값 쳐 주지.”"}},
 {id:"a1_hunger_kept",acts:[1],queueOnly:true,dur:1,who:"허기",role:"나흘째",
- text:"나흘째. 무릎이 꺾인다.\n농가 창턱에 빵이 식고 있다. 숲에서 덫에 걸린 꿩 소리가 난다.",
+ text:"나흘째. 무릎이 자꾸 꺾인다.\n농가 창턱에서 식어 가는 빵. 숲에선 덫에 걸린 꿩이 퍼덕이고.",
  left:{label:"빵을 집는다",fx:{military:3,people:-4},set:{stoleBread:true},result:"빵을 품에 넣고 뛴다.\n등 뒤에서 아이 목소리. “엄마, 빵!”"},
  right:{label:"꿩을 찾아간다",check:{stat:"military",base:44,bonus:wpn,
    success:{fx:{military:4,gold:2},result:"꿩 한 마리를 뼈까지."},
-   failure:{fx:{military:-3,people:3},result:"덫 주인과 마주쳤다.\n사냥꾼이 꿩 반쪽을 던져줬다. “다음엔 남의 덫 건드리지 마.”"}}}},
+   failure:{fx:{military:-3,people:3},result:"덫 주인과 딱 마주친다.\n사냥꾼이 꿩 반쪽을 던져 준다. “다음엔 남의 덫 건드리지 마.”"}}}},
 
 // --- 리엔 ---
 {id:"a1_child",acts:[1],dur:2,who:"길가의 여자",role:"불탄 마을 어귀",
- text:"불탄 마을 어귀. 열여덟쯤 된 여자가 길가에 앉아 있다. 발목이 부었다.\n“업어 줄 수 있어요? 강 건너까지만.”\n업으면 걸음이 반으로 준다. 근위대는 반나절 뒤에 있다.",
- left:{label:"업는다",then:"a1_child_carry",fx:{people:5,military:-4,gold:-2},set:{childSaved:true},queue:[{id:"a2_lien_return",delay:8}],result:"“리엔이에요.”\n그녀가 네 어깨를 잡는다."},
- right:{label:"지나친다",then:"a1_child_left",fx:{military:4,people:-6},set:{childAbandoned:true},queue:[{id:"a3_lien_betray",delay:10}],result:"언덕 위에서 돌아보니, 그녀는 아직 이쪽을 보고 있다."}},
+ text:s=>{const lp=getMeta().lienPast;return (lp==="left"?"처음 보는 얼굴인데, 이번엔 지나치면 안 될 것 같다.\n\n":lp==="saved"?"처음 보는 얼굴인데, 업으면 어느 만큼 무거울지 알 것 같다.\n\n":"")+"불탄 마을 어귀. 열여덟쯤 된 여자가 길가에 주저앉아 있다. 발목이 퉁퉁 부었다.\n“업어 줄 수 있어요? 강 건너까지만.”\n업으면 걸음이 반으로 준다. 근위대는 반나절 거리.";},
+ left:{label:"업는다",then:"a1_child_carry",fx:{people:5,military:-4,gold:-2},set:{childSaved:true},add:{bondLien:1},queue:[{id:"a2_lien_return",delay:8},{id:"rest_lien_song",delay:2}],result:"“리엔이에요.”\n어깨를 잡는 손에 힘이 들어간다."},
+ right:{label:"지나친다",then:"a1_child_left",fx:{military:4,people:-6},set:{childAbandoned:true},queue:[{id:"a3_lien_betray",delay:10}],result:"언덕 위에서 돌아본다. 그 여자는 아직 이쪽을 보고 있다."}},
 {id:"a1_child_carry",acts:[1],queueOnly:true,dur:2,who:"리엔",role:"등 위",
- text:"리엔은 업히자마자 말을 시작한다.\n“엄마는 지난겨울 세금 대신 왕도 성벽 공사에 끌려갔어요. 할머니는 강 건너 갈대 마을에 살고요.”\n“오빠는 누구한테 쫓겨요?”",
- left:{label:"갈대 마을까지 데려다준다",then:"a1_reed_village",fx:{people:3,military:-3},set:{lienVillage:true},result:"대답하지 않는다. 리엔도 더 묻지 않는다.\n해 질 무렵, 갈대 지붕."},
- right:{label:"나루터에 내려준다",fx:{military:2,people:2},result:"사공에게 동전을 주고 리엔을 태운다.\n강 가운데에서 리엔이 손을 든다."}},
+ text:"업히자마자 리엔의 입이 쉬지를 않는다.\n“엄마는 지난겨울에 세금 대신 왕도 성벽 공사에 끌려갔어요. 할머니는 강 건너 갈대 마을에 살고요.”\n“오빠는 누구한테 쫓기는데요?”",
+ left:{label:"갈대 마을까지 데려다준다",then:"a1_reed_village",fx:{people:3,military:-3},set:{lienVillage:true},result:"대답하지 않는다. 리엔도 더 안 묻고.\n해 질 녘, 갈대 지붕이 보인다."},
+ right:{label:"나루터에 내려준다",fx:{military:2,people:2},result:"사공에게 동전을 쥐여 주고 리엔을 태운다.\n강 한복판에서 리엔이 손을 흔든다."}},
 {id:"a1_reed_village",acts:[1],queueOnly:true,dur:2,who:"리엔의 할머니",role:"갈대 마을",
  text:s=>"노파가 리엔을 끌어안는다. 그러다 네 "+(s.flags.hasRing?"반지를":"손을")+" 본다.\n“별궁 쪽 사람이구먼. 자고 가. 할 얘기가 있어.”\n강 건너에 횃불이 보인다.",
  left:{label:"하룻밤 머문다",fx:{people:3,military:-2},set:{usurperSecret:true},
-   result:["노파는 젊어서 왕비 친정집 부엌일을 했다고 한다.\n“섭정 오스릭은 그 집 마구간에서 컸어. 마부 아들이야. 노왕 서자는 무슨.”","새벽, 근위대가 마을을 뒤진다.\n리엔은 너를 건초 더미에 밀어 넣고 그 앞에서 빨래를 넌다."]},
- right:{label:"바로 떠난다",fx:{military:3},result:"리엔이 문간에서 말한다. “빚진 거예요. 갚을게요.”"}},
+   result:["노파는 젊을 때 왕비 친정집 부엌에서 일했다고.\n“오스릭은 그 집 마구간에서 컸어. 마부 아들이야. 노왕 서자는 무슨.”","새벽에 근위대가 마을을 뒤진다.\n리엔이 너를 건초 더미에 밀어 넣고, 그 앞에서 태연히 빨래를 넌다."]},
+ right:{label:"바로 떠난다",fx:{military:3},result:"문간에서 리엔이 말한다. “빚진 거예요. 꼭 갚을게요.”"}},
 {id:"a1_child_left",acts:[1],queueOnly:true,dur:1,who:"나루터",role:"그날 저녁",
- text:"저녁 나루터. 근위병들이 강가를 뒤진다.\n그들 사이에 낮의 그 여자가 서 있다. 근위병이 그녀에게 빵을 내민다.\n그녀가 네가 숨은 갈대 쪽을 본다.",
+ text:"저녁 나루터. 근위병들이 강가를 뒤지는 중.\n그 틈에 낮의 그 여자. 근위병 하나가 빵을 내민다.\n여자의 눈이 네가 숨은 갈대 쪽으로.",
  left:{label:"눈을 맞추고 고개를 젓는다",check:{stat:"people",base:44,
-   success:{fx:{people:3},set:{lienHesitated:true},result:"그녀가 빵을 받아 들고 하류를 가리켰다.\n근위병들이 하류로 뛰어갔다."},
-   failure:{fx:{people:-3,military:-3},set:{injury:2},result:"그녀의 손가락이 갈대를 가리킨다.\n강으로 뛰어든다. 돌 하나가 귀 옆 물을 친다."}}},
- right:{label:"먼저 강에 뛰어든다",fx:{military:3,gold:-6},result:"짐 절반이 떠내려간다.\n건너편에서 돌아보니, 그녀는 아직 이쪽을 보고 있다."}},
+   success:{fx:{people:3},set:{lienHesitated:true},result:"여자가 빵을 받아 들고 하류를 가리킨다.\n근위병들이 우르르 하류로."},
+   failure:{fx:{people:-3,military:-3},set:{injury:2},result:"여자의 손가락이 갈대를 가리킨다.\n강으로 뛰어든다. 귀 옆 물살을 돌멩이가 때리고."}}},
+ right:{label:"먼저 강에 뛰어든다",fx:{military:3,gold:-6},result:"짐 절반이 떠내려간다.\n건너편에서 돌아보니, 여자는 아직 이쪽을 보고 있다."}},
 
 // --- 케인 ---
 {id:"a1_kane",acts:[1],dur:2,who:"케인",role:"강가 나루터",
- text:s=>"나루터. 낯익은 목소리.\n“또 만났군. 수로 냄새가 아직 나.”\n케인이다. 근위병 둘이 배를 막고 있다."+(s.flags.ringSold?"\n근위병 하나가 네 손을 가리킨다. 장터 상인한테 들었다고 한다.":""),
- left:{label:"갈대숲에 엎드린다",then:"a1_kane_overhear",fx:{people:2,military:-2},add:{kaneEscaped:1},result:"장화가 머리 한 뼘 앞을 지나갔다."},
- right:{label:"먼저 덤빈다",duel:{n:"케인",hp:3,w:{raise:3,breath:2,retreat:2,feint:3},intro:"케인이 칼을 뽑는다. 근위병 둘은 물러서서 본다.",
-   win:{fx:{military:5,legitimacy:2},add:{kaneEscaped:1},set:{kaneScar:true,kaneBeaten:true},result:"네 칼이 케인의 왼뺨을 긋는다.\n그대로 강으로.",then:"a1_kane_after"},
-   lose:{fx:{military:-6,gold:-6},set:{injury:4},result:"칼등이 무릎을 친다.\n강으로 구르고, 짐은 떠내려간다.",then:"a1_kane_after"}}}},
+ text:s=>"나루터. 귀에 익은 목소리.\n“또 보네. 수로 냄새가 아직 나는데.”\n케인. 근위병 둘이 배를 막고 섰다."+(s.flags.ringSold?"\n근위병 하나가 네 손을 가리킨다. 장터 상인한테 들었다면서.":""),
+ left:{label:"갈대숲에 엎드린다",then:"a1_kane_overhear",fx:{people:2,military:-2},add:{kaneEscaped:1},result:"장화가 머리 한 뼘 앞을 지나간다."},
+ right:{label:"먼저 덤빈다",duel:{n:"케인",hp:3,w:{raise:3,breath:2,retreat:2,feint:3},intro:"케인이 칼을 뽑는다. 근위병 둘은 한 발 물러서서 구경.",
+   win:{fx:{military:5,legitimacy:2},add:{kaneEscaped:1},set:{kaneScar:true,kaneBeaten:true},result:"네 칼끝이 케인 왼뺨을 긋는다.\n그 길로 강에 뛰어든다.",then:"a1_kane_after"},
+   lose:{fx:{military:-6,gold:-6},set:{injury:4},result:"칼등에 무릎을 맞는다.\n강으로 굴러떨어지고, 짐은 떠내려가고.",then:"a1_kane_after"}}}},
 {id:"a1_kane_overhear",acts:[1],queueOnly:true,dur:1,who:"케인",role:"갈대숲 너머",
- text:"케인이 근위병에게 말한다.\n“난 하수구 청소부 아들이다. 부대장 된 건 규칙 덕이야. 규칙이 사생아를 잡으라면 잡는다.”\n“섭정 각하가 대장 자리 주신다면서요.”\n케인은 대답하지 않는다.",
- left:{label:"돌을 던져 유인한다",fx:{military:2},result:"근위병들이 돌 소리 쪽으로 뛰어갔다.\n케인은 갈대 쪽을 잠깐 보고 천천히 걸어갔다."},
- right:{label:"끝까지 듣는다",fx:{people:2,military:-2},set:{kaneKnown:true},result:"혼자 남은 케인이 중얼거렸다.\n“규칙이 틀리면 어떻게 하지.”"}},
+ text:"케인이 근위병에게 말한다.\n“난 하수구 청소부 아들이야. 부대장 단 것도 규칙 덕이지. 규칙이 사생아 잡으라면 잡는 거고.”\n“섭정 각하가 대장 자리 주신다던데요?”\n케인은 대꾸가 없다.",
+ left:{label:"돌을 던져 유인한다",fx:{military:2},result:"근위병들이 돌 소리 쪽으로 뛰어간다.\n케인은 갈대숲을 잠깐 보더니, 천천히 걸어간다."},
+ right:{label:"끝까지 듣는다",fx:{people:2,military:-2},set:{kaneKnown:true},result:"혼자 남은 케인이 중얼거린다.\n“규칙이 틀리면, 그땐 어쩌지.”"}},
 {id:"a1_kane_after",acts:[1],queueOnly:true,dur:1,who:"케인",role:"강 한가운데",
- text:"케인이 물가에서 외친다.\n“왕 피가 반 섞이면 뭐가 다르냐? 난 하수구에서 났어!”\n근위병이 활을 당긴다.",
- left:{label:"나는 세탁장에서 났다고 외친다",fx:{people:3,military:-2},set:{kaneKnown:true},result:"케인이 손을 들어 활을 내리게 한다.\n건너편에 올라서서 돌아본다. 케인은 아직 물가에."},
- right:{label:"대답 없이 헤엄친다",fx:{military:3},result:"화살이 귀 옆 물을 갈랐다."}},
+ text:"물가에서 케인이 소리친다.\n“왕 피가 반 섞이면 뭐가 다른데? 난 하수구에서 났어!”\n근위병이 활시위를 당긴다.",
+ left:{label:"나는 세탁장에서 났다고 외친다",fx:{people:3,military:-2},set:{kaneKnown:true},result:"케인이 손을 들어 활을 내리게 한다.\n건너편에 올라 돌아보니, 케인은 아직 물가에 서 있다."},
+ right:{label:"대답 없이 헤엄친다",fx:{military:3},result:"화살이 귀 옆 물살을 가른다."}},
 
 // --- 1막 곁가지 ---
 {id:"a1_jeweler",acts:[1,2],dur:2,who:"세공사",role:"장터 노점",cond:s=>s.flags.hasRing,
- text:"세공사가 반지를 눈에 대고 돌려본다.\n“왕실 솜씨요. 근데 칙령으로 제2왕자 인장은 전부 위조품이 됐어. 증명하려면 세공 장부랑 맞춰 봐야지.”",
- left:{label:"장부가 어디 있는지 묻는다",fx:{gold:-4,legitimacy:2},set:{knowsLedger:true},queue:[{id:"a2_library",delay:6}],result:"은화 두 닢을 받고서야 세공사가 입을 연다.\n“왕도 도서관 지하.”"},
- right:{label:"반지를 돌려받는다",fx:{military:2,people:-2},result:"장터를 나서다 돌아본다. 세공사는 아직 이쪽을 보고 있다."}},
+ text:"세공사가 반지를 눈앞에 대고 굴려 본다.\n“왕실 솜씨네. 근데 칙령 이후로 제2왕자 인장은 전부 위조품 취급이야. 증명하려면 세공 장부랑 대조해야지.”",
+ left:{label:"장부가 어디 있는지 묻는다",fx:{gold:-4,legitimacy:2},set:{knowsLedger:true},queue:[{id:"a2_library",delay:6}],result:"은화 두 닢을 받고서야 입을 연다.\n“왕도 도서관 지하.”"},
+ right:{label:"반지를 돌려받는다",fx:{military:2,people:-2},result:"장터를 나서다 돌아본다. 세공사는 아직 이쪽을 보는 중."}},
 {id:"a1_puppet",acts:[1,2],dur:1,who:"인형극",role:"장터 구석",clue:"puppet",
- text:"인형극. 양치기 인형이 별 일곱 달린 펜으로 제 이름을 쓴다. 머리 위로 왕관이 내려온다.\n순찰병 둘이 다가온다. “민담 금지 칙령 못 들었나.”",
- left:{label:"순찰병 앞을 막아선다",duel:{n:"순찰병",hp:2,w:{raise:2,breath:4,retreat:2,feint:1},intro:"순찰병이 몽둥이를 든다. “너도 같이 끌려가고 싶나.”",
-   win:{fx:{people:5,gold:-2},set:{puppetSaved:true},result:["순찰병 둘이 진흙탕에 엎어진다. 구경꾼들이 흩어진다.","인형극꾼이 양치기 인형을 네 손에 쥐여 준다.\n“첫 왕 아르벤이오. 높은 분들은 이 얘기를 싫어하지.”"]},
-   lose:{fx:{gold:-4,people:2},set:{injury:2},result:"몽둥이가 이마를 친다.\n정신이 들었을 땐 무대도 인형극꾼도 없다. 진흙 속에 양치기 인형 하나."}}},
- right:{label:"지나간다",fx:{military:2,people:-2},result:"등 뒤에서 무대가 부서지는 소리가 났다."}},
+ text:"인형극. 양치기 인형이 별 일곱 달린 펜으로 제 이름을 쓰자, 머리 위로 왕관이 내려온다.\n순찰병 둘이 다가온다. “민담 금지 칙령 못 들었어?”",
+ left:{label:"순찰병 앞을 막아선다",duel:{n:"순찰병",hp:2,w:{raise:2,breath:4,retreat:2,feint:1},intro:"순찰병이 몽둥이를 치켜든다. “너도 같이 끌려갈래?”",
+   win:{fx:{people:5,gold:-2},set:{puppetSaved:true},result:["순찰병 둘이 진흙탕에 처박힌다. 구경꾼들은 뿔뿔이.","인형극꾼이 양치기 인형을 네 손에 쥐여 준다.\n“첫 왕 아르벤이오. 높으신 분들은 이 얘기 질색하지.”"]},
+   lose:{fx:{gold:-4,people:2},set:{injury:2},result:"몽둥이가 이마를 때린다.\n눈을 떠 보니 무대도 인형극꾼도 없다. 진흙 속에 양치기 인형 하나만."}}},
+ right:{label:"지나간다",fx:{military:2,people:-2},result:"등 뒤에서 무대 부서지는 소리."}},
 {id:"a1_wanted",acts:[1,2],dur:1,who:"현상금 벽보",role:"마을 어귀",
- text:"벽보에 네 얼굴. 금화 오십 닢.\n지나가던 농부가 벽보를 보고, 너를 본다.",
+ text:"벽보에 네 얼굴. 현상금 금화 오십 닢.\n지나가던 농부가 벽보 한 번, 너 한 번.",
  left:{label:"농부에게 말을 건다",check:{stat:"people",base:48,
-   success:{fx:{people:4},result:"농부가 벽보를 떼어 접는다. “불쏘시개로 좋겠네.”"},
-   failure:{fx:{gold:-6,people:-2},result:"농부가 뛰어갔다. 그날 밤 마을을 떴다."}}},
- right:{label:"모자를 눌러쓴다",fx:{military:2,people:-4},result:"등 뒤에서 농부가 누군가를 불렀다."}},
+   success:{fx:{people:4},result:"농부가 벽보를 떼어 반으로 접는다. “불쏘시개로 딱이네.”"},
+   failure:{fx:{gold:-6,people:-2},result:"농부가 뛰어간다. 그날 밤으로 마을을 뜬다."}}},
+ right:{label:"모자를 눌러쓴다",fx:{military:2,people:-4},result:"등 뒤에서 농부가 누군가를 부른다."}},
 
 // ===== 2막 =====
 {id:"ch_2",acts:[2],forced:true,dur:90,who:"석 달 뒤",role:"산골 마을",
- text:s=>{const f=s.flags;return "강을 건넌 지 석 달. 산골 마을 외양간 다락에서 지낸다.\n마을 사람들은 너를 떠돌이 일꾼으로 안다.\n\n"
-   +(f.hasRing?"반지는 목에.":f.ringAtMerchant?"반지는 장터 진열대 유리 밑에 있다.":"반지를 끼던 손가락엔 자국만.")
-   +(f.lienVillage?"\n갈대 마을에서 리엔이 일러준 길로 왔다.":"")
+ text:s=>{const f=s.flags;return "강을 건넌 지 석 달. 산골 마을 외양간 다락이 요즘 잠자리다.\n마을 사람들 눈엔 그냥 떠돌이 일꾼.\n\n"
+   +(f.hasRing?"반지는 목에.":f.ringAtMerchant?"반지는 장터 진열대 유리 밑에.":"반지를 끼던 손가락엔 자국만.")
+   +(f.lienVillage?"\n갈대 마을에서 리엔이 알려 준 길로 왔다.":"")
    +"\n대관식까지 두 해 아홉 달.";},
- left:{label:"낮에는 마을 일을 거든다",fx:{people:3,gold:2,military:-2},result:"아이들이 너를 ‘일꾼 오빠’라고 불렀다."},
- right:{label:"밤마다 막대기를 휘두른다",fx:{military:3,people:-2},result:"손바닥 물집이 굳은살이 됐다."}},
+ left:{label:"낮에는 마을 일을 거든다",fx:{people:3,gold:2,military:-2},result:"아이들이 ‘일꾼 오빠’라고 부르며 따라다닌다."},
+ right:{label:"밤마다 막대기를 휘두른다",fx:{military:3,people:-2},result:"손바닥 물집이 어느새 굳은살로."}},
 {id:"a2_bernan_meet",acts:[2],dur:15,who:"베르난",role:"헛간",
- text:"헛간 문이 열린다. 백발 노인이 등불을 네 얼굴에 댄다. 턱, 눈썹, 귀를 차례로 본다.\n그러고는 무릎을 꿇는다.\n“베르난. 에드릭 전하의 근위기사였다. 너를 왕으로 만들러 왔다.”",
+ text:"헛간 문이 열린다. 백발 노인이 등불로 네 얼굴을 비춘다. 턱, 눈썹, 귀.\n그러더니 무릎을 꿇는다.\n“베르난이다. 에드릭 전하의 근위기사였지. 너를 왕으로 만들러 왔다.”",
  left:{label:"따라가겠다고 한다",then:"a2_bernan_past",fx:{military:4,legitimacy:4},set:{metMaster:true},add:{bernardTrust:1},
-   result:s=>s.flags.hasRing?"베르난이 네 목의 끈을 본다.\n“손가락에 껴라. 숨길 물건이 아니다.”":"베르난이 네 빈 손가락을 본다. 아무 말 없이 앞장선다."},
+   result:s=>s.flags.hasRing?"베르난의 눈이 네 목에 걸린 끈으로 간다.\n“손가락에 껴라. 숨길 물건 아니다.”":"베르난이 네 빈 손가락을 보고는, 말없이 앞장선다."},
  right:{label:"혼자 가겠다고 한다",fx:{people:4,legitimacy:-2},set:{bernanRefused:true},queue:[{id:"a3_bernan_return",delay:10}],
-   result:"“네 길이다.”\n베르난이 등불을 기둥에 걸어 두고 나갔다."}},
+   result:"“네 길이니까.”\n등불을 기둥에 걸어 두고 베르난이 나간다."}},
 {id:"a2_bernan_past",acts:[2],queueOnly:true,dur:3,who:"베르난",role:"모닥불",
- text:"베르난이 칼을 무릎에 놓는다.\n“전하가 별궁을 떠나던 날, 엘레나가 갓난 너를 안고 성문까지 따라왔다.”\n“말에 박차를 가하시라고 한 건 나였다.”",
+ text:"베르난이 칼을 무릎에 올린다.\n“전하가 별궁을 떠나던 날, 엘레나가 갓난 너를 안고 성문까지 따라왔다.”\n“말에 박차를 가하시라고 한 게, 나였다.”",
  left:{label:"그래서 이제 와서 찾았냐고 묻는다",fx:{legitimacy:3},add:{bernardTrust:1},
-   result:"“전하가 형장에서 마지막으로 물으신 게 네 이름이었다. 나는 몰랐다.”\n그가 네 이름을 묻는다. 두 번 따라 한다."},
- right:{label:"그 얘기는 됐다고 한다",fx:{people:2,legitimacy:-2},result:"베르난이 칼을 네 손에 쥐여준다.\n쥐는 법을 세 번 고쳐준다."}},
+   result:"“형장에서 전하가 마지막으로 물으신 게 네 이름이었다. 난 대답을 못 했지.”\n이름을 묻고, 두 번 소리 내 따라 한다."},
+ right:{label:"그 얘기는 됐다고 한다",fx:{people:2,legitimacy:-2},result:"베르난이 네 손에 칼을 쥐여 준다.\n쥐는 법을 세 번이나 고쳐 잡아 주면서."}},
 {id:"a2_bernan_anger",acts:[2,3],queueOnly:true,dur:5,who:"베르난",role:"스승",cond:s=>s.flags.ringSold&&!s.flags.ringBought&&s.flags.metMaster&&!s.flags.bernanGone,
- text:"베르난이 네 손을 뒤집는다. 빈 손가락.\n“팔았나. 전하의 인장을. 빵 몇 덩이에.”",
- left:{label:"장부로 증명하겠다고 한다",fx:{legitimacy:2,people:2},set:{knowsLedger:true},queue:[{id:"a2_library",delay:3}],result:"베르난이 지도에 도서관 가는 길을 그렸다.\n“오틀린. 그 사람이 장부를 갖고 있다.”"},
- right:{label:"굶어 죽는 게 충성이냐고 묻는다",fx:{people:4,legitimacy:-4},add:{bernardTrust:-1},result:"베르난은 대답하지 않는다.\n밤새 숫돌 소리."}},
+ text:"베르난이 네 손을 뒤집는다. 빈 손가락.\n“팔았나. 전하 인장을. 빵 몇 덩이에.”",
+ left:{label:"장부로 증명하겠다고 한다",fx:{legitimacy:2,people:2},set:{knowsLedger:true},queue:[{id:"a2_library",delay:3}],result:"베르난이 지도에 도서관 가는 길을 그어 준다.\n“오틀린. 장부는 그 사람한테 있다.”"},
+ right:{label:"굶어 죽는 게 충성이냐고 묻는다",fx:{people:4,legitimacy:-4},add:{bernardTrust:-1},result:"대답은 없다.\n밤새 숫돌 가는 소리만."}},
 {id:"a2_bernan_crown",acts:[2,3],dur:20,who:"베르난",role:"수련이 끝난 밤",cond:s=>s.flags.metMaster&&!s.flags.bernanGone,clue:"coronation",
- text:"“노왕 대관식 때 나는 열여섯이었다.”\n“북쪽에서 별지기라는 노인이 내려와 장부에 노왕 이름을 적었다. 왕관은 그다음이었다.”\n“섭정도 별지기가 필요하다. 별지기는 북쪽 고원 첨탑에 산다. 네 이름이 먼저 적혀야 한다.”",
- left:{label:"왕이 되겠다고 한다",fx:{legitimacy:7,people:-2},add:{bernardTrust:1},set:{heardSpire:true},queue:[{id:"a3_spire_gate",delay:6}],result:"베르난이 그날 밤 술을 한 잔 마셨다."},
- right:{label:"그건 내가 정한다고 한다",fx:{people:4,legitimacy:-4},add:{bernardTrust:-1},set:{heardSpire:true},queue:[{id:"a3_spire_gate",delay:6}],result:"“전하도 그렇게 말씀하셨다.”\n베르난이 모닥불에 흙을 덮는다."}},
+ text:"“노왕 대관식 때 난 열여섯이었다.”\n“북쪽에서 별지기라는 노인이 내려와 장부에 노왕 이름부터 적더군. 왕관은 그다음이고.”\n“섭정한테도 별지기가 필요해. 북쪽 고원 첨탑에 산다. 네 이름이 먼저 적혀야 한다.”",
+ left:{label:"왕이 되겠다고 한다",fx:{legitimacy:7,people:-2},add:{bernardTrust:1},set:{heardSpire:true},queue:[{id:"a3_spire_gate",delay:6}],result:"그날 밤 베르난이 술을 딱 한 잔 마신다."},
+ right:{label:"그건 내가 정한다고 한다",fx:{people:4,legitimacy:-4},add:{bernardTrust:-1},set:{heardSpire:true},queue:[{id:"a3_spire_gate",delay:6}],result:"“전하도 꼭 그렇게 말씀하셨지.”\n베르난이 모닥불에 흙을 덮는다."}},
 {id:"a2_bernan_care",acts:[2,3],dur:7,who:"베르난",role:"부상",cond:s=>s.flags.metMaster&&!s.flags.bernanGone&&s.flags.injury>0,
- text:"베르난이 네 붕대를 풀고 고름을 짜낸다. 약초를 바른다.\n상처 얘기는 하지 않는다. 내일 수련 시간만 말한다.",
+ text:"베르난이 붕대를 풀고 고름을 짜낸 다음 약초를 바른다.\n상처 얘긴 한마디도 없다. 내일 수련 시간만 일러 줄 뿐.",
  left:{label:"고맙다고 한다",fx:{people:2},set:{injury:0},add:{bernardTrust:1},result:"“말로 갚지 마라.”"},
- right:{label:"손을 뺀다",fx:{military:2},result:"베르난이 약초 주머니를 두고 나갔다."}},
+ right:{label:"손을 뺀다",fx:{military:2},result:"약초 주머니만 두고 베르난이 나간다."}},
 {id:"a2_training",acts:[2,3],repeat:true,cooldown:4,dur:30,who:"베르난",role:"수련",cond:s=>s.flags.metMaster&&!s.flags.bernanGone,
- text:"베르난이 목검을 던진다.\n“오늘은 뭘 내놓을 거냐.”",
+ text:"목검이 날아온다.\n“오늘은 뭘 내놓을 거냐.”",
  left:{label:"쓰러질 때까지 휘두른다",check:{stat:"military",base:42,
-   success:{fx:{military:5,gold:-4},add:{bernardTrust:1},result:"마지막 합에서 베르난의 목검이 처음 밀렸다."},
-   failure:{fx:{military:2,gold:-2},set:{injury:3},result:"어깨가 빠진다. 베르난이 말없이 끼워 넣는다."}}},
- right:{label:"마을 아이들과 같이 한다",fx:{people:4,military:3,gold:-2},result:"아이 다섯이 막대기를 들고 왔다."}},
+   success:{fx:{military:5,gold:-4},add:{bernardTrust:1},result:"마지막 합. 처음으로 베르난의 목검이 밀린다."},
+   failure:{fx:{military:2,gold:-2},set:{injury:3},result:"어깨가 빠진다. 베르난이 말없이 도로 끼워 넣는다."}}},
+ right:{label:"마을 아이들과 같이 한다",fx:{people:4,military:3,gold:-2},result:"막대기를 든 아이 다섯이 몰려온다."}},
 {id:"a2_duel",acts:[2,3],repeat:true,cooldown:4,dur:5,who:"베르난",role:"시험",cond:s=>s.flags.metMaster&&!s.flags.bernanGone&&!s.flags.masterTrialPassed,
- text:"베르난이 진검을 뽑는다.\n“이기면 전하의 검을 주겠다.”",
+ text:"베르난이 진검을 뽑는다.\n“이기면 전하의 검을 주마.”",
  left:{label:"응한다",check:{stat:"military",base:56,bonus:wpn,
-   success:{fx:{military:4,legitimacy:6},set:{masterTrialPassed:true,hasNormalWeapon:true},add:{bernardTrust:1},result:"일곱 합째, 베르난의 칼이 떨어진다.\n그가 칼자루를 네 쪽으로 돌려 내민다. “에드릭 전하의 검이다.”"},
-   failure:{fx:{military:-4},set:{injury:3},result:"세 합 만에 칼끝이 목 앞에 멈췄다. “아직이다.”"}}},
+   success:{fx:{military:4,legitimacy:6},set:{masterTrialPassed:true,hasNormalWeapon:true},add:{bernardTrust:1},result:"일곱 합째, 베르난의 칼이 바닥에 떨어진다.\n칼자루를 네 쪽으로 돌려 내민다. “에드릭 전하의 검이다.”"},
+   failure:{fx:{military:-4},set:{injury:3},result:"세 합 만에 칼끝이 목 앞에 멈춘다. “아직이다.”"}}},
  right:{label:"아직 이르다고 한다",fx:{people:2,military:-2},result:"“때가 되면 와라.”"}},
 {id:"a2_wolf",acts:[2],dur:3,who:"늑대",role:"겨울 밤",
- text:"마을 우리 쪽에서 늑대가 운다.\n양 주인은 다리를 다쳐 누워 있다.",
+ text:"우리 쪽에서 늑대 울음.\n양 주인은 다리를 다쳐 누워 있고.",
  left:{label:"횃불을 들고 간다",check:{stat:"military",base:38,bonus:wpn,
-   success:{fx:{military:4,people:4},result:"늑대 셋이 물러났다. 다음 날 치즈 한 덩이가 왔다."},
-   failure:{fx:{military:-6,people:2},set:{injury:3},result:"종아리에 이빨 자국 넷. 양은 한 마리도 잃지 않았다."}}},
- right:{label:"문을 건다",fx:{people:-4,military:2},result:"아침, 양 두 마리가 없다."}},
+   success:{fx:{military:4,people:4},result:"늑대 셋이 꼬리를 만다. 다음 날 문 앞에 치즈 한 덩이."},
+   failure:{fx:{military:-6,people:2},set:{injury:3},result:"종아리에 이빨 자국 넷. 대신 양은 한 마리도 안 잃었다."}}},
+ right:{label:"문을 건다",fx:{people:-4,military:2},result:"아침에 세어 보니 양 두 마리가 비어 있다."}},
 {id:"a2_tax",acts:[2,3],dur:5,who:"섭정의 징수관",role:"곡물 창고",
- text:"징수관이 창고를 연다. 병사 셋이 겨울 날 곡식까지 수레에 싣는다.\n촌장이 소매를 붙잡다 밀려 넘어진다.\n너는 다락에서 보고 있다.",
- left:{label:"내려가서 수레를 막는다",duel:{n:"징수관 호위병",hp:2,w:{raise:3,breath:3,retreat:2,feint:1},intro:"호위병 하나가 창을 겨누고 나선다. 나머지 둘은 수레를 지킨다.",
-   win:{fx:{people:5,military:2,legitimacy:2},then:"a2_tax_won",result:"창 자루가 부러진다. 병사들이 수레를 버리고 달아난다.\n촌장이 네 이름을 묻는다."},
-   lose:{fx:{people:3,military:-6},set:{injury:3},then:"a2_tax_lost",result:"창 자루에 옆구리를 맞고 쓰러진다.\n징수관이 말 위에서 네 얼굴을 오래 본다."}}},
- right:{label:"다락에 숨어 있는다",then:"a2_tax_hid",fx:{people:-5,military:2},result:"수레가 떠나고, 창고 문은 열린 채."}},
+ text:"징수관이 창고를 연다. 병사 셋이 겨우내 먹을 곡식까지 수레에 싣는다.\n소매를 붙잡던 촌장이 떠밀려 넘어진다.\n너는 다락에서 내려다보는 중.",
+ left:{label:"내려가서 수레를 막는다",duel:{n:"징수관 호위병",hp:2,w:{raise:3,breath:3,retreat:2,feint:1},intro:"호위병 하나가 창을 겨누며 나선다. 둘은 수레 곁에.",
+   win:{fx:{people:5,military:2,legitimacy:2},then:"a2_tax_won",result:"창 자루가 부러진다. 병사들이 수레를 버리고 줄행랑.\n촌장이 네 이름을 묻는다."},
+   lose:{fx:{people:3,military:-6},set:{injury:3},then:"a2_tax_lost",result:"옆구리에 창 자루를 맞고 쓰러진다.\n말 위의 징수관이 네 얼굴을 한참 들여다본다."}}},
+ right:{label:"다락에 숨어 있는다",then:"a2_tax_hid",fx:{people:-5,military:2},result:"수레가 떠난다. 창고 문은 열린 그대로."}},
 {id:"a2_tax_won",acts:[2,3],queueOnly:true,dur:10,who:"촌장",role:"다음 날",
- text:"젊은이 여섯이 칼을 배우겠다고 찾아왔다.\n촌장이 말한다. “다음 달엔 병사 서른이 와요. 저 애들이 칼을 들면 마을이 반역자 소굴이 되고.”",
- left:{label:"가르친다",fx:{military:4,people:2,gold:-2},set:{militia:true},result:"넷이 끝까지 남는다.\n다음 달, 징수관은 목검 든 넷을 보고 말을 돌린다."},
- right:{label:"촌장 말을 따른다",fx:{people:-2,legitimacy:3},result:"마을은 곡식 절반을 내준다.\n젊은이 하나는 그 뒤로 인사를 하지 않는다."}},
+ text:"칼을 배우겠다고 젊은이 여섯이 찾아온다.\n촌장 얼굴이 굳는다. “다음 달엔 병사 서른이 와요. 저 애들 손에 칼 들리면 마을이 반역자 소굴 되는 거고.”",
+ left:{label:"가르친다",fx:{military:4,people:2,gold:-2},set:{militia:true},result:"넷이 끝까지 버틴다.\n다음 달, 목검 든 넷을 본 징수관이 말머리를 돌린다."},
+ right:{label:"촌장 말을 따른다",fx:{people:-2,legitimacy:3},result:"마을은 곡식 절반을 내준다.\n젊은이 하나는 그 뒤로 인사를 안 한다."}},
 {id:"a2_tax_lost",acts:[2,3],queueOnly:true,dur:7,who:"촌장",role:"의원 집",
- text:"의원이 네 옆구리를 꿰맨다.\n촌장이 말한다. “징수관이 얼굴을 봤어요. 벽보랑 맞춰 볼 거고. 오늘 밤 안에 정해요.”",
- left:{label:"오늘 밤 떠난다",fx:{people:4,gold:2,military:-2},result:"촌장이 말린 고기를 싸 준다.\n사흘을 걸어 닿은 다른 골짜기."},
+ text:"의원이 옆구리를 꿰매는 동안 촌장이 말한다.\n“징수관이 얼굴 봤어요. 벽보랑 맞춰 보겠죠. 오늘 밤 안에 정해요.”",
+ left:{label:"오늘 밤 떠난다",fx:{people:4,gold:2,military:-2},result:"촌장이 말린 고기를 싸 준다.\n사흘을 걸어 다른 골짜기에 닿는다."},
  right:{label:"징수관 입을 막으러 간다",check:{stat:"military",base:48,bonus:wpn,
-   success:{fx:{gold:-6,military:2},add:{tyrantPoints:1},result:"칼끝을 목에 대고, 금화 다섯 닢을 침대 위에.\n그 뒤로 징수관 입에서 벽보 얘기는 나오지 않는다."},
-   failure:{fx:{people:-4,military:-4},set:{injury:3},result:"호위의 칼이 팔을 벤다.\n촌장은 아무것도 묻지 않고 문을 닫는다."}}}},
+   success:{fx:{gold:-6,military:2},add:{tyrantPoints:1},result:"칼끝을 목에 대고, 금화 다섯 닢은 침대 위에.\n그 뒤로 징수관은 벽보 얘길 입에 안 올린다."},
+   failure:{fx:{people:-4,military:-4},set:{injury:3},result:"호위의 칼에 팔이 베인다.\n촌장은 아무것도 묻지 않고 문을 닫아 준다."}}}},
 {id:"a2_tax_hid",acts:[2,3],queueOnly:true,dur:3,who:"촌장",role:"다락",
- text:"밤. 촌장이 다락으로 올라와 앉는다.\n“봤어요. 숨어 있는 거.”\n그는 기다린다.",
+ text:"밤. 촌장이 다락에 올라와 앉는다.\n“봤어요. 숨어 있던 거.”\n그러고는 기다린다.",
  left:{label:"쫓기는 몸이라고 털어놓는다",check:{stat:"people",base:45,
-   success:{fx:{people:5},set:{villageTrust:true},result:"“다들 누군가한테 쫓기지.”\n그날부터 촌장 집 저녁상에 그릇 하나가 더 놓인다."},
-   failure:{fx:{people:-4},result:"다음 날 아침, 다락 사다리가 치워져 있다."}}},
- right:{label:"다음엔 막겠다고 약속한다",fx:{people:3},set:{promiseVillage:true},result:"“약속은 쉽지.”\n촌장이 사다리를 그대로 두고 내려갔다."}},
+   success:{fx:{people:5},set:{villageTrust:true},result:"“다들 누구한테든 쫓기며 살아요.”\n그날부터 촌장네 저녁상에 그릇이 하나 더."},
+   failure:{fx:{people:-4},result:"이튿날 아침, 다락 사다리가 치워져 있다."}}},
+ right:{label:"다음엔 막겠다고 약속한다",fx:{people:3},set:{promiseVillage:true},result:"“약속이야 쉽죠.”\n사다리는 그대로 두고 촌장이 내려간다."}},
 {id:"a2_ring_merchant",acts:[2,3],dur:4,who:"장터 상인",role:"장날",cond:s=>s.flags.ringAtMerchant&&!s.flags.ringBought,
- text:"그 상인이 같은 자리에 있다. 유리 밑에 네 반지.\n값은 판 값의 두 배다.\n“아무도 안 사더라고. 위조품이라.”",
+ text:"그 상인이 같은 자리에 있다. 유리 밑엔 네 반지.\n값은 판 값의 두 배.\n“아무도 안 사더라. 위조품이라고.”",
  left:{label:"되산다",check:{stat:"gold",base:52,
-   success:{fx:{gold:-14,legitimacy:7},set:{hasRing:true,ringBought:true},result:"주머니를 다 턴다. 다시 낀 반지가 헐겁다."},
-   failure:{fx:{gold:-2,legitimacy:-2},result:"모자랐다. “다음 장날에 오든가.”"}}},
+   success:{fx:{gold:-14,legitimacy:7},set:{hasRing:true,ringBought:true},result:"주머니를 탈탈 턴다. 다시 낀 반지가 헐렁하다."},
+   failure:{fx:{gold:-2,legitimacy:-2},result:"모자란다. “다음 장날에 오든가.”"}}},
  right:{label:"지나간다",fx:{people:2,legitimacy:-2},set:{ringBought:true},result:"돌아보지 않는다."}},
 {id:"a2_monastery",acts:[2,3],dur:10,who:"수도원장 테오",role:"산중 수도원",
- text:"테오가 국을 떠준다.\n“이름은 묻지 않겠소. 원하면 있어도 되오. 이름 없이.”",
+ text:"테오가 국을 떠 준다.\n“이름은 안 묻겠소. 있고 싶으면 있어도 되고. 이름 없이.”",
  left:{label:"며칠 머문다",fx:{people:4,gold:-2,military:-2},set:{monkBond:true,clueNameless:true,heardSpire:true},clue:"nameless",queue:[{id:"a3_spire_gate",delay:3}],
-   result:"종을 치고 장작을 패는 며칠.\n떠나는 날 테오가 말한다. “북쪽 별지기 첨탑 문은 이름을 대면 안 열린다더군. 당신은 이름 없이 잘 지내던데.”"},
+   result:"종 치고 장작 패며 며칠이 간다.\n떠나는 날 테오가 한마디. “북쪽 별지기 첨탑 문은 이름을 대면 안 열린다더군. 당신, 이름 없이도 잘 지내던데.”"},
  right:{label:"국만 먹고 간다",fx:{legitimacy:2,people:-2},result:"“문은 열려 있소.”"}},
 {id:"a2_kane",acts:[2],dur:5,who:"케인",role:"산길 검문소",cond:s=>!s.flags.kaneAlly&&s.flags.kaneEscaped<3,
- text:s=>"검문소에 케인이 서 있다. 볼이 꺼졌다."+(s.flags.kaneScar?" 왼뺨에 네가 낸 칼자국이 있다.":"")+"\n“섭정께서 기한을 주셨다. 이달 안에 못 잡으면 내 목이라고.”",
- left:{label:"수레 밑에 매달려 지나간다",fx:{military:-2,people:2},add:{kaneEscaped:1},result:"케인의 장화가 수레 옆에서 멈췄다가 지나갔다.\n“빌어먹을 기한.”"},
+ text:s=>"검문소에 케인이 서 있다. 볼이 쑥 꺼졌다."+(s.flags.kaneScar?" 왼뺨에 네가 낸 칼자국이 있다.":"")+"\n“섭정께서 기한을 주셨어. 이달 안에 못 잡으면 내 목이래.”",
+ left:{label:"수레 밑에 매달려 지나간다",fx:{military:-2,people:2},add:{kaneEscaped:1},result:"케인의 장화가 수레 옆에 멈췄다가, 지나간다.\n“빌어먹을 기한.”"},
  right:{label:"차단봉을 넘어 달린다",check:{stat:"military",base:52,bonus:wpn,
-   success:{fx:{military:4,people:2},add:{kaneEscaped:1},result:"케인은 쫓아오지 않는다. 차단봉에 기대 선 채."},
-   failure:{fx:{military:-6,gold:-6},set:{injury:3},result:"화살이 어깨를 긁는다. 위에서 케인이 그만 쏘라고 소리친다."}}}},
+   success:{fx:{military:4,people:2},add:{kaneEscaped:1},result:"케인은 쫓아오지 않는다. 차단봉에 기대선 채로."},
+   failure:{fx:{military:-6,gold:-6},set:{injury:3},result:"화살이 어깨를 긁는다. 위에서 케인이 그만 쏘라고 고함친다."}}}},
 {id:"a2_lien_return",acts:[2,3],queueOnly:true,dur:10,who:"리엔",role:"다시 만남",cond:s=>s.flags.childSaved,
- text:s=>"리엔이 외양간 앞에 서 있다. 발목은 나았다.\n“빚 갚으러 왔어요.”\n"+(s.flags.usurperSecret?"“할머니가 그때 그 얘기, 광장에서도 하겠대요.”":"“할머니가 그러는데 섭정은 왕비 친정집 마부 아들이래요. 할머니가 그 집 부엌에 있었어요.”")+"\n“그리고 나, 왕도 가야 돼요. 엄마 찾으러.”",
- left:{label:"같이 가자고 한다",fx:{legitimacy:5,people:4,gold:-2},set:{lienAccompanies:true,usurperSecret:true},result:"리엔이 네 짐을 메려다 무거워서 반을 덜어 낸다.\n“반은 오빠가 들어요.”"},
- right:{label:"할머니 곁에 있으라고 한다",fx:{people:4,legitimacy:2},set:{lienSafe:true,usurperSecret:true},result:"“왕도 가면 엄마 찾아 줄 거예요?”\n대답을 듣기 전에 리엔이 돌아섰다."}},
+ text:s=>"외양간 앞에 리엔이 서 있다. 발목은 다 나았다.\n“빚 갚으러 왔어요.”\n"+(s.flags.usurperSecret?"“할머니가 그 얘기, 광장에서도 하겠대요.”":"“할머니 말로는 섭정이 왕비 친정집 마부 아들이래요. 할머니가 그 집 부엌에 있었거든요.”")+"\n“그리고 저, 왕도 가야 돼요. 엄마 찾으러.”",
+ left:{label:"같이 가자고 한다",fx:{legitimacy:5,people:4,gold:-2},set:{lienAccompanies:true,usurperSecret:true},add:{bondLien:1},result:"리엔이 네 짐을 메 보더니 무거워서 반을 덜어 낸다.\n“반은 오빠가 들어요.”"},
+ right:{label:"할머니 곁에 있으라고 한다",fx:{people:4,legitimacy:2},set:{lienSafe:true,usurperSecret:true},result:"“왕도 가면 엄마 찾아 줄 거예요?”\n대답이 나오기도 전에 리엔이 돌아선다."}},
 {id:"a2_library",acts:[2,3],queueOnly:true,dur:15,who:"서기관 오틀린",role:"왕도 도서관 지하",cond:s=>!s.flags.document,clue:"ledgerName",
- text:"오틀린이 촛불을 든다.\n“세공 장부, 가계도, 다 여기 있소. 섭정이 태우라 했는데 안 태웠지.”\n“이것도 사본이오. 원본은 북쪽 별지기 첨탑에 있소. 장부엔 피가 아니라 이름이 적히지.”\n“가져가면 내 목이 위험하오.”",
+ text:"오틀린이 촛불을 든다.\n“세공 장부, 가계도, 다 여기 있소. 태우라는 걸 안 태웠지.”\n“이것도 사본이오. 원본은 북쪽 별지기 첨탑에 있고. 장부엔 피가 아니라 이름이 적히는 법이오.”\n“가져가면 내 목이 위태롭소.”",
  left:{label:"같이 가자고 설득한다",set:{heardSpire:true,clueLedgerName:true},queue:[{id:"a3_spire_gate",delay:3}],check:{stat:"people",base:50,
-   success:{fx:{legitimacy:7,people:3},set:{document:true,scribeWitness:true},result:"오틀린이 장부를 보자기에 싸고 촛불을 껐다.\n“증언도 하겠소. 늙은 목이오.”"},
-   failure:{fx:{legitimacy:5,people:-4},set:{document:true},result:"오틀린이 장부만 안겨 주고 지하실 문을 잠갔다."}}},
+   success:{fx:{legitimacy:7,people:3},set:{document:true,scribeWitness:true},result:"오틀린이 장부를 보자기에 싸고 촛불을 끈다.\n“증언도 하리다. 어차피 늙은 목이오.”"},
+   failure:{fx:{legitimacy:5,people:-4},set:{document:true},result:"오틀린은 장부만 안겨 주고 지하실 문을 잠근다."}}},
  right:{label:"밤에 몰래 가져간다",set:{heardSpire:true,clueLedgerName:true},queue:[{id:"a3_spire_gate",delay:3}],check:{stat:"military",base:46,bonus:wpn,
-   success:{fx:{legitimacy:7,gold:2},set:{document:true},result:"장부를 등에 묶고 지붕을 넘는다.\n오틀린의 방 창문은 열려 있다."},
+   success:{fx:{legitimacy:7,gold:2},set:{document:true},result:"장부를 등에 묶고 지붕을 넘는다.\n오틀린 방 창문이 일부러인 듯 열려 있다."},
    failure:{fx:{military:-4,gold:-4},set:{injury:3},result:"개가 짖는다. 장부를 떨어뜨린 채 담을 넘는다."}}}},
 
 // ===== 3막 =====
 {id:"ch_3",acts:[3],forced:true,dur:200,who:"이듬해 가을",role:"북쪽으로",
- text:s=>{const f=s.flags;return "현상금이 금화 이백 닢이 됐다.\n섭정의 병사들이 북쪽 고원으로 올라갔다는 소문이 돈다. 별지기를 데리러 갔다고 한다.\n대관식까지 일 년.\n\n"
-   +(f.metMaster&&!f.bernanGone?"베르난이 지도를 편다. “사람이 필요하다.”":"혼자서는 왕도에 못 간다.")
-   +(f.lienAccompanies?"\n리엔이 짐을 싸 놓고 기다린다.":"")
-   +(f.promiseVillage?"\n촌장과 한 약속은 아직 그대로다.":"");},
- left:{label:"마을에 인사하고 떠난다",fx:{people:3,military:-2},result:"촌장이 어귀까지 나와 어깨를 두 번 두드렸다."},
- right:{label:"새벽에 조용히 떠난다",fx:{military:3,people:-3},result:"다락에 은화 다섯 닢을 두고 왔다."}},
+ text:s=>{const f=s.flags;return "현상금이 금화 이백 닢으로 뛰었다.\n섭정 병사들이 북쪽 고원으로 올라갔다는 소문. 별지기를 데리러 갔다나.\n대관식까지 일 년.\n\n"
+   +(f.metMaster&&!f.bernanGone?"베르난이 지도를 펼친다. “사람이 필요해.”":"혼자서는 왕도에 못 간다.")
+   +(f.lienAccompanies?"\n리엔은 벌써 짐을 싸 놓고 기다리는 중.":"")
+   +(f.promiseVillage?"\n촌장과 한 약속은 아직 못 지켰고.":"");},
+ left:{label:"마을에 인사하고 떠난다",fx:{people:3,military:-2},result:"촌장이 어귀까지 따라 나와 어깨를 두 번 두드려 준다."},
+ right:{label:"새벽에 조용히 떠난다",fx:{military:3,people:-3},result:"다락에 은화 다섯 닢을 두고 나온다."}},
 {id:"a3_lien_watch",acts:[3],dur:3,who:"리엔",role:"불침번",cond:s=>s.flags.lienAccompanies,
- text:"리엔과 불침번을 선다.\n리엔이 칼을 무릎에 놓고 숫돌질을 한다. 네가 가르쳐 준 대로다.\n“엄마는 성벽 동쪽 공사장에 있대요. 거기서 겨울 나면 반은 죽는대요.”",
- left:{label:"왕도에 가면 같이 찾자고 한다",fx:{people:3,legitimacy:2},set:{promiseLien:true},result:"리엔의 숫돌질이 멈춘다.\n“약속이에요.” 그리고 다시 칼을 간다."},
- right:{label:"약속은 못 한다고 한다",fx:{military:2,people:-2},result:"“알아요.”\n새벽까지 숫돌 소리."}},
+ text:"리엔과 불침번.\n무릎에 칼을 올려놓고 숫돌질하는 리엔. 네가 가르친 그대로다.\n“엄마는 성벽 동쪽 공사장에 있대요. 거기서 겨울 나면 반은 죽는다던데.”",
+ left:{label:"왕도에 가면 같이 찾자고 한다",fx:{people:3,legitimacy:2},set:{promiseLien:true},add:{bondLien:1},result:"숫돌질이 멈춘다.\n“약속한 거예요.” 그리고 다시 칼을 간다."},
+ right:{label:"약속은 못 한다고 한다",fx:{military:2,people:-2},result:"“알아요.”\n새벽까지 숫돌 소리만 난다."}},
 {id:"a3_village_call",acts:[3],dur:8,who:"촌장의 아들",role:"주막",cond:s=>s.flags.promiseVillage&&!s.flags.villageSaved,
- text:"촌장의 아들이 찾아왔다. 신발이 다 해졌다.\n“징수관이 병사 스물을 데리고 왔어요. 아버지가 약속했다고 전하래요.”",
+ text:"촌장 아들이 찾아왔다. 신발 밑창이 다 나갔다.\n“징수관이 병사 스물을 끌고 왔어요. 아버지가, 약속했잖냐고 전하래요.”",
  left:{label:"마을로 돌아간다",check:{stat:"military",base:54,bonus:s=>wpn(s)+(s.flags.mercJoined?8:0)+(s.flags.kaneAlly?6:0)+(s.flags.militia?6:0),
-   success:{fx:{people:6,legitimacy:4,gold:-4},set:{villageSaved:true,villageReturned:true},result:["닷새를 걸어 마을에 닿고, 밤에 친다.\n병사 넷이 쓰러지자 나머지는 달아난다.","촌장이 다리를 절며 나와 네 손을 잡는다."]},
-   failure:{fx:{people:3,military:-6},set:{injury:3,villageSaved:true,villageReturned:true},result:"늦었다. 창고는 비었고, 촌장의 다리에는 부목."}}},
+   success:{fx:{people:6,legitimacy:4,gold:-4},set:{villageSaved:true,villageReturned:true},result:["닷새를 걸어 마을에 닿는다. 밤을 틈타서 친다.\n넷이 쓰러지자 나머지는 줄행랑.","촌장이 다리를 절며 나와 네 손을 꽉 잡는다."]},
+   failure:{fx:{people:3,military:-6},set:{injury:3,villageSaved:true,villageReturned:true},result:"늦었다. 창고는 텅 비었고, 촌장 다리엔 부목이 대어져 있다."}}},
  right:{label:"지금은 못 간다고 한다",fx:{people:-7,military:2},set:{villageSaved:true},result:"소년이 맨발로 돌아섰다."}},
 {id:"a3_bernan_return",acts:[3],queueOnly:true,dur:10,who:"베르난",role:"주막",cond:s=>s.flags.bernanRefused&&!s.flags.metMaster,
- text:"베르난이 맞은편에 앉는다. 머리가 더 셌다.\n“한 번만 더 묻겠다.”",
- left:{label:"따라간다",fx:{military:4,legitimacy:4},set:{metMaster:true},result:"“늦었다. 아주 늦지는 않고.”"},
- right:{label:"거절한다",fx:{people:4,legitimacy:-2},set:{bernanGone:true},result:"베르난은 북쪽 길로 간다. 그를 다시 본 적은 없다."}},
+ text:"맞은편에 베르난이 앉는다. 머리가 더 하얘졌다.\n“딱 한 번만 더 묻지.”",
+ left:{label:"따라간다",fx:{military:4,legitimacy:4},set:{metMaster:true},result:"“늦었다. 아주 늦진 않았고.”"},
+ right:{label:"거절한다",fx:{people:4,legitimacy:-2},set:{bernanGone:true},result:"베르난은 북쪽 길로 떠난다. 그게 마지막이었다."}},
 {id:"a3_merc",acts:[3],dur:20,who:"용병대장 하그",role:"검은 까마귀",
- text:"한쪽 귀가 없는 사내가 탁자에 다리를 올리고 있다. 용병단 검은 까마귀의 대장 하그.\n“섭정 보급대 털 일이 많아. 금화 주고 밥 준다. 같이 가자.”\n천막 밖에 까마귀 마흔.",
- left:{label:"깃발을 받는다",then:"a3_merc_job",fx:{gold:10,military:4,legitimacy:-4},set:{mercJoined:true},result:"“오늘부터 까마귀다.”\n하그가 바로 지도를 폈다."},
+ text:"한쪽 귀 없는 사내가 탁자에 발을 올리고 있다. 용병단 검은 까마귀 대장, 하그.\n“섭정 보급대 털 일이 쌓였어. 금화 주고 밥 주지. 같이 가자고.”\n천막 밖엔 까마귀 마흔.",
+ left:{label:"깃발을 받는다",then:"a3_merc_job",fx:{gold:10,military:4,legitimacy:-4},set:{mercJoined:true},result:"“오늘부터 넌 까마귀다.”\n하그가 곧장 지도를 편다."},
  right:{label:"거절한다",fx:{people:4,legitimacy:2,gold:-2},result:"“아님 말고.”"}},
 {id:"a3_merc_job",acts:[3],queueOnly:true,dur:15,who:"용병대장 하그",role:"첫 일감",cond:s=>s.flags.mercJoined,
- text:"하그가 지도의 마을 하나를 누른다.\n“섭정한테 세금 꼬박꼬박 바친 마을이다. 털어서 반은 너.”",
+ text:"하그가 지도의 마을 하나를 손가락으로 누른다.\n“섭정한테 세금 꼬박꼬박 바치는 동네야. 털어서 반은 네 몫.”",
  left:{label:"턴다",fx:{gold:12,people:-10},add:{tyrantPoints:1},queue:[{id:"a3_merc_rise",delay:3}],
-   result:"저항은 없다.\n마지막 자루를 실을 때 누가 ‘일꾼 오빠’ 하고 부른다. 산골 마을 아이."},
+   result:"저항 같은 건 없다.\n마지막 자루를 싣는데 누가 ‘일꾼 오빠’ 하고 부른다. 산골 마을 아이다."},
  right:{label:"섭정 보급대를 치자고 한다",queue:[{id:"a3_merc_rise",delay:3}],check:{stat:"military",base:50,bonus:wpn,
-   success:{fx:{gold:6,people:5,legitimacy:2},set:{mercRespect:true},result:"협곡에서 보급 마차 여섯 대.\n그 마을 어귀에는 곡식 두 수레를 내려놓고 온다."},
-   failure:{fx:{military:-6,gold:-4},set:{injury:3},result:"까마귀 셋이 돌아오지 못한다. 하그는 말없이 너를 본다."}}}},
+   success:{fx:{gold:6,people:5,legitimacy:2},set:{mercRespect:true},result:"협곡에서 보급 마차 여섯 대를 턴다.\n그 마을 어귀엔 곡식 두 수레를 내려놓고 온다."},
+   failure:{fx:{military:-6,gold:-4},set:{injury:3},result:"까마귀 셋이 끝내 안 돌아온다. 하그가 아무 말 없이 너를 본다."}}}},
 {id:"a3_merc_rise",acts:[3,4],queueOnly:true,dur:60,who:"용병대장 하그",role:"넉 달 뒤",cond:s=>s.flags.mercJoined&&!s.flags.mercRank,
- text:"하그가 허벅지에 화살을 맞고 누웠다. 상처가 곪았다.\n고참 둘이 대장 자리를 두고 칼을 뽑았다.\n“네가 해. 대신 까마귀는 의리로 안 움직인다.”",
- left:{label:"지휘를 맡는다",fx:{military:4,people:-3,gold:4},set:{mercRank:2},result:["고참 하나는 그날 밤 떠났다. 하나는 네 천막 앞에서 잤다.","석 달 사이 까마귀는 마흔에서 백이 됐다."]},
- right:{label:"부하로 남는다",fx:{people:2,military:-2},set:{mercRank:1},result:"고참 하나가 대장 자리에 앉는다."}},
+ text:"하그가 허벅지에 화살을 맞고 드러누웠다. 상처는 곪아 가고.\n고참 둘이 대장 자리를 놓고 칼을 뽑는다.\n“네가 맡아. 단, 까마귀는 의리로 안 움직여.”",
+ left:{label:"지휘를 맡는다",fx:{military:4,people:-3,gold:4},set:{mercRank:2},result:["고참 하나는 그 밤에 떠난다. 다른 하나는 네 천막 앞에서 잔다.","석 달 만에 까마귀가 마흔에서 백으로."]},
+ right:{label:"부하로 남는다",fx:{people:2,military:-2},set:{mercRank:1},result:"고참 하나가 대장 자리를 차지한다."}},
 {id:"a3_dragon_rumour",acts:[3],dur:10,who:"사냥꾼",role:"북부 주막",
- text:"“북쪽 고개에 용이 내려앉았어. 영주가 머리에 금화 삼백 닢을 걸었지.”\n“양 떼가 통째로 없어져. 허풍이 아니야.”",
- left:{label:"고개로 간다",fx:{military:3,gold:-2},set:{dragonRumour:true,regionOverride:"북부 고개"},queue:[{id:"a3_dragon_track",delay:2}],result:"사냥꾼이 빈 술잔을 민다. “살아 오면 채워.”"},
+ text:"“북쪽 고개에 용이 내려앉았다니까. 영주가 그 머리에 금화 삼백 닢을 걸었고.”\n“양 떼가 통째로 사라져. 허풍 아냐.”",
+ left:{label:"고개로 간다",fx:{military:3,gold:-2},set:{dragonRumour:true,regionOverride:"북부 고개"},queue:[{id:"a3_dragon_track",delay:2}],result:"사냥꾼이 빈 술잔을 밀어 준다. “살아 돌아오면 채워.”"},
  right:{label:"웃어넘긴다",fx:{gold:2,people:-2},result:"사냥꾼도 웃는다."}},
 {id:"a3_dragon_track",acts:[3,4],queueOnly:true,dur:10,who:"용의 흔적",role:"고개 꼭대기",cond:s=>s.flags.dragonRumour&&!s.flags.dragonSlain,
- text:"눈밭에 수레만 한 발자국.\n바위틈에 검이 꽂혀 있다. 칼날에 ‘힘은 대가를 원한다.’ 칼자루에 별 일곱.\n고원 너머로 검은 첨탑이 보인다.",
- left:{label:"검을 뽑는다",fx:{military:6,people:-6},set:{hasLegendaryWeapon:true,heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"무게가 거의 없다.\n별 문양은 첨탑 쪽을 향할 때만 빛났다."},
+ text:"눈밭에 수레만 한 발자국.\n바위틈에 꽂힌 검 하나. 칼날엔 ‘힘은 대가를 원한다.’ 칼자루엔 별 일곱.\n고원 너머로 검은 첨탑이 보인다.",
+ left:{label:"검을 뽑는다",fx:{military:6,people:-6},set:{hasLegendaryWeapon:true,heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"깃털처럼 가볍다.\n별 문양은 첨탑 쪽을 향할 때만 빛난다."},
  right:{label:"두고 간다",fx:{people:3,military:-2},set:{heardSpire:true},queue:[{id:"a3_dragon_fight",delay:2},{id:"a3_spire_gate",delay:4}],result:"첨탑 꼭대기에 불빛 하나."}},
 {id:"a3_dragon_fight",acts:[3,4],queueOnly:true,repeat:true,dur:5,who:"용",role:"동굴",cond:s=>!s.flags.dragonSlain&&s.flags.dragonFails<2,
- text:s=>(s.flags.dragonFails>0?"다시 동굴 앞이다.\n":"")+"용이 잠들어 있다. 숨 쉴 때마다 천장에서 돌가루가 떨어진다.\n목덜미 비늘 사이로 맨살이 드러나 있다.",
+ text:s=>(s.flags.dragonFails>0?"다시 동굴 앞이다.\n":"")+"잠든 용. 숨 쉴 때마다 천장에서 돌가루가 떨어진다.\n목덜미 비늘 틈으로 맨살이 보인다.",
  left:{label:"목덜미를 노린다",duel:{n:"용",hp:4,w:{raise:3,breath:3,retreat:2,feint:2},dark:.15,
-   tells:{raise:"꼬리를 높이 치켜든다.",breath:"목덜미가 들썩인다. 숨을 들이켠다.",retreat:"머리를 뒤로 뺀다.",feint:"날개를 펼친다. 그림자가 둘이 된다."},intro:"용이 눈을 뜬다.",
-   win:{fx:{military:4,legitimacy:10,people:3},set:{dragonSlain:true},result:"칼이 비늘 사이로 들어간다.\n사흘 동안 붉게 젖어 있던 고갯길의 눈."},
-   lose:{fx:{military:-8},set:{injury:4},add:{dragonFails:1},queue:[{id:"a3_dragon_fight",delay:4}],result:"꼬리에 맞아 눈밭까지 날아간다. 갈비뼈가 나간다.\n용은 다시 눈을 감는다."}}},
+   tells:{raise:"꼬리를 높이 치켜든다.",breath:"목덜미가 들썩인다. 숨을 들이켜는 중.",retreat:"머리를 뒤로 뺀다.",feint:"날개가 펼쳐진다. 그림자가 둘."},intro:"용이 눈을 뜬다.",
+   win:{fx:{military:4,legitimacy:10,people:3},set:{dragonSlain:true},queue:[{id:"a3_dragon_price",delay:0}],result:"칼이 비늘 사이로 파고든다.\n고갯길 눈이 사흘 내내 붉었다."},
+   lose:{fx:{military:-8},set:{injury:4},add:{dragonFails:1},queue:[{id:"a3_dragon_fight",delay:4}],result:"꼬리에 맞아 눈밭까지 날아간다. 갈비뼈 나가는 소리.\n용은 도로 눈을 감는다."}}},
  right:{label:"물러난다",fx:{people:2,military:-2},set:{dragonFails:2},result:"뒷걸음질로 나왔다."}},
 {id:"a3_kane",acts:[3],dur:5,who:"케인",role:"협곡 길",cond:s=>!s.flags.kaneAlly&&s.flags.kaneEscaped<3,
- text:"케인이 혼자 말을 타고 길을 막는다. 근위대 휘장이 없다.\n“마지막이다.”",
- left:{label:"협곡으로 뛰어내린다",fx:{military:-2,people:2},add:{kaneEscaped:1},result:"케인은 협곡 끝에서 말을 세운다. 내려오지 않는다."},
- right:{label:"칼을 뽑는다",duel:{n:"케인",hp:3,w:{raise:3,breath:2,retreat:3,feint:3},dark:.1,intro:"케인이 말에서 내린다. “이번엔 근위병도 없다.”",
-   win:{fx:{military:4,legitimacy:2},add:{kaneEscaped:1},set:{kaneBeaten:true},result:"케인의 칼이 튕겨 나간다.\n그는 칼을 줍지 않고 바위에 앉는다."},
-   lose:{fx:{military:-6,gold:-6},set:{injury:4},result:"칼끝이 목에 닿았다가 거둬진다.\n케인은 아무 말 없이 돌아간다."}}}},
+ text:"케인이 혼자 말을 타고 길을 막아선다. 근위대 휘장은 떼어 냈다.\n“이번이 마지막이다.”",
+ left:{label:"협곡으로 뛰어내린다",fx:{military:-2,people:2},add:{kaneEscaped:1},result:"케인은 협곡 끝에서 말을 세운다. 따라 내려오지는 않는다."},
+ right:{label:"칼을 뽑는다",duel:{n:"케인",hp:3,w:{raise:3,breath:2,retreat:3,feint:3},dark:.1,intro:"케인이 말에서 내린다. “오늘은 근위병도 없어.”",
+   win:{fx:{military:4,legitimacy:2},add:{kaneEscaped:1},set:{kaneBeaten:true},result:"케인의 칼이 튕겨 나간다.\n주울 생각도 않고 바위에 털썩 앉는다."},
+   lose:{fx:{military:-6,gold:-6},set:{injury:4},result:"칼끝이 목에 닿았다가, 거둬진다.\n케인은 한마디 없이 돌아선다."}}}},
 {id:"a3_kane_ally",acts:[3,4],dur:7,who:"케인",role:"천막 앞",cond:s=>s.flags.kaneEscaped>=3&&!s.flags.kaneAlly,
- text:s=>"케인이 칼을 땅에 꽂는다.\n“세 번 놓쳤다. 섭정은 내 부하 열둘을 대신 목매달았다.”"+(s.flags.kaneKnown?"\n“규칙이 틀렸더라.”":""),
- left:{label:"부관으로 받는다",fx:{military:4,people:2,legitimacy:-2},set:{kaneAlly:true},result:"“너한테 충성하는 거 아니다. 섭정 목이 필요한 거지.”\n그날 밤 그는 네 천막 입구에서 잤다."},
+ text:s=>"케인이 칼을 땅에 꽂는다.\n“세 번 놓쳤다. 섭정은 그 대가로 내 부하 열둘을 목매달았고.”"+(s.flags.kaneKnown?"\n“규칙이 틀렸더라.”":""),
+ left:{label:"부관으로 받는다",fx:{military:4,people:2,legitimacy:-2},set:{kaneAlly:true},add:{bondKane:1},result:"“너한테 충성하는 거 아니야. 섭정 목이 필요할 뿐이지.”\n그날 밤 케인은 네 천막 입구를 베고 잔다."},
  right:{label:"돌아가라고 한다",fx:{legitimacy:2,military:-2},result:"“왕도에서 보자.”"}},
 {id:"a3_lien_betray",acts:[3],queueOnly:true,dur:5,who:"리엔",role:"골목",cond:s=>s.flags.childAbandoned,
- text:s=>"골목에서 여자가 앞을 막는다. 나루터의 그 여자다.\n“리엔이에요. 기억 안 나죠.”\n“케인 부하들한테 오빠 있는 데 팔았어요. 엄마 찾으러 왕도 갈 노잣돈이 필요했거든요.”"+(s.flags.lienHesitated?"\n“나루터에선 안 팔았어요. 그때는.”":""),
+ text:s=>"골목에서 누가 앞을 막는다. 나루터의 그 여자.\n“리엔이에요. 기억 안 나죠?”\n“케인 부하들한테 오빠 있는 데 팔았어요. 엄마 찾으러 갈 노잣돈이 필요했거든요.”"+(s.flags.lienHesitated?"\n“나루터에선 안 팔았어요. 그땐.”":""),
  left:{label:"그날 일을 사과한다",check:{stat:"people",base:48,bonus:s=>s.flags.lienHesitated?16:0,
-   success:{fx:{people:4},set:{lienForgave:true},result:"리엔이 한참 발끝을 보다 말한다.\n“걔들 동쪽 길로 와요. 서쪽으로 가요.”"},
-   failure:{fx:{people:-6},queue:[{id:"a3_ambush",delay:1}],result:"“늦었어요.” 멀리서 말발굽 소리가 났다."}}},
- right:{label:"칼자루에 손을 얹는다",fx:{military:4,people:-10},add:{tyrantPoints:1},queue:[{id:"a3_ambush",delay:1}],result:"리엔이 뒷걸음질 쳐 골목 끝으로 사라졌다."}},
+   success:{fx:{people:4},set:{lienForgave:true},result:"리엔이 한참 발끝만 보다가 입을 연다.\n“걔들 동쪽 길로 와요. 서쪽으로 가요.”"},
+   failure:{fx:{people:-6},queue:[{id:"a3_ambush",delay:1}],result:"“늦었어요.” 멀리서 말발굽 소리."}}},
+ right:{label:"칼자루에 손을 얹는다",fx:{military:4,people:-10},add:{tyrantPoints:1},queue:[{id:"a3_ambush",delay:1}],result:"리엔이 뒷걸음질 치다 골목 끝으로 사라진다."}},
 {id:"a3_ambush",acts:[3],queueOnly:true,dur:2,who:"야습",role:"여관",
- text:"한밤중. 계단을 오르는 장화 소리. 마당에 횃불 여섯.",
+ text:"한밤중. 계단 오르는 장화 소리. 마당엔 횃불 여섯.",
  left:{label:"창문으로 뛰어내린다",check:{stat:"military",base:48,bonus:wpn,
-   success:{fx:{military:3},result:"마구간 지붕을 밟고 담을 넘는다."},
-   failure:{fx:{military:-6,gold:-8},set:{injury:4},result:"발목이 꺾이고, 돈주머니는 어디론가."}}},
- right:{label:"주인에게 금화를 쥐여준다",fx:{gold:-10,people:2},result:"부엌 바닥 밑 저장고. 머리 위로 장화 소리가 오간다."}},
+   success:{fx:{military:3},result:"마구간 지붕을 딛고 담을 넘는다."},
+   failure:{fx:{military:-6,gold:-8},set:{injury:4},result:"발목이 꺾이고, 돈주머니는 어디로 갔는지."}}},
+ right:{label:"주인에게 금화를 쥐여준다",fx:{gold:-10,people:2},result:"부엌 바닥 밑 저장고. 머리 위로 장화 소리가 왔다 갔다."}},
 {id:"a3_execution",acts:[3],dur:10,who:"행상인",role:"왕도 소식",
- text:s=>"섭정이 옛 왕가 기사 일곱을 처형해 성문에 걸었다.\n다섯 번째 이름이 마르타의 아들이다."+(s.flags.metMaster&&!s.flags.bernanGone?"\n베르난이 일곱 이름을 소리 없이 따라 읽는다.":""),
- left:{label:"시신을 거두러 간다",fx:{legitimacy:5,people:4,gold:-6,military:-2},set:{buriedSeven:true},result:["사흘을 걸어 성벽 밑. 밤에 줄을 끊는다.","일곱을 성 밖 언덕에 묻는다.\n이튿날부터 성문 위가 비었다는 말이 돈다."]},
- right:{label:"움직이지 않는다",fx:{military:3,people:-4},result:s=>s.flags.metMaster&&!s.flags.bernanGone?"베르난은 그날 저녁을 먹지 않는다.":"모닥불이 다 꺼질 때까지."}},
+ text:s=>"섭정이 옛 왕가 기사 일곱을 처형해 성문에 매달았다.\n다섯 번째 이름, 마르타의 아들."+(s.flags.metMaster&&!s.flags.bernanGone?"\n베르난이 일곱 이름을 소리 없이 따라 읽는다.":""),
+ left:{label:"시신을 거두러 간다",fx:{legitimacy:5,people:4,gold:-6,military:-2},set:{buriedSeven:true,martaAlive:true},add:{bondMarta:1},queue:[{id:"rest_marta",delay:3}],result:["사흘을 걸어 성벽 밑까지. 밤에 밧줄을 끊는다.","언덕에서 누가 같이 삽을 든다. 마르타다.\n“살아 있었니.” 흙 묻은 손으로 네 뺨을 감싼다.","일곱을 나란히 묻는다. 이튿날부터 성문 위가 비었다는 말이 돈다."]},
+ right:{label:"움직이지 않는다",fx:{military:3,people:-4},queue:[{id:"a3_marta_gallows",delay:2}],result:s=>s.flags.metMaster&&!s.flags.bernanGone?"베르난은 그날 저녁을 거른다.":"모닥불이 다 꺼질 때까지."}},
 
 // ===== 별지기 첨탑 =====
 {id:"a3_spire_gate",acts:[3,4],queueOnly:true,repeat:true,dur:6,who:"별지기 첨탑",role:"북부 고원",
  cond:s=>s.flags.heardSpire&&s.flags.spireFloor===0&&!s.flags.spireSealed&&!s.flags.spireDone&&s.flags.spireDefers<2&&s.flags.path!=="leave",
- text:s=>"눈보라 속 검은 첨탑. 꼭대기 창에 촛불.\n문 아래 섭정 병사들의 발자국이 있다. 문은 열린 적이 없다.\n문 위 글귀: "+(s.flags.clueNameless?"‘이름은 아래에 두고 오르라.’":"‘……은 아래에 두고 오르라.’"),
- left:{label:"문을 밀고 오른다",fx:{military:-2},set:{spireFloor:1,regionOverride:"별지기 첨탑"},then:"tower",result:"등잔 하나를 들고 계단을 오른다.\n위에서 지팡이 소리, 그 사이로 쇠사슬 소리."},
+ text:s=>"눈보라 속 검은 첨탑. 꼭대기 창에 촛불 하나.\n문 앞엔 섭정 병사들 발자국. 그런데 문은 한 번도 안 열렸다.\n문 위 글귀: "+(s.flags.clueNameless||getMeta().clues.includes("nameless")?"‘이름은 아래에 두고 오르라.’":"‘……은 아래에 두고 오르라.’"),
+ left:{label:"문을 밀고 오른다",fx:{military:-2},set:{spireFloor:1,regionOverride:"별지기 첨탑"},then:"tower",result:"등잔 하나 들고 계단을 오른다.\n위에서 지팡이 짚는 소리, 그 사이사이 쇠사슬 소리."},
  right:{label:"지금은 돌아선다",fx:{military:2,legitimacy:-2},add:{spireDefers:1},queue:[{id:"a3_spire_gate",delay:4}],result:s=>s.flags.spireDefers>=1?"돌아보니 창이 어두웠다.":"촛불은 꺼지지 않는다."}},
 {id:"spire_1",acts:[3,4],queueOnly:true,repeat:true,dur:1,who:"이온",role:"첨탑 · 이름의 문",cond:s=>s.flags.spireFloor===1&&s.flags.spireMisses<2,
- text:s=>"닫힌 문 앞에 눈동자가 하얀 노파가 서 있다.\n“나는 이온, 별지기다. 너는 누구냐.”"
-   +(s.pastLives>0?"\n노파가 멈칫한다. “……또 왔구나.”":"")
+ text:s=>"닫힌 문 앞, 눈동자가 하얀 노파.\n“나는 이온, 별지기다. 너는 누구냐.”"
+   +(s.pastLives>0?"\n노파가 멈칫한다. “…또 왔구나."+(getMeta().lastEnding&&ENDINGS[getMeta().lastEnding]?` 지난번엔 ‘${ENDINGS[getMeta().lastEnding].title}’였지.`:"")+"”":"")
+   +(getMeta().clues.includes("shadow")?"\n저 그림자는 거짓말을 한다. 어쩐지 너는 그걸 안다.":"")
    +(s.flags.hairpin||s.flags.motherNorth?"\n“엘레나 냄새가 나는구나. 내 견습생이었다. 장부 고치기 싫다고 도망쳤지.”":"")
-   +"\n벽에 비친 그녀의 그림자가 속삭인다. ‘이름을 대. 그럼 열려.’",
+   +(s.flags.hairpin||s.flags.knowsCoins?"\n노파가 네 품을 더듬어 본다. “별 일곱이네. 우리 인장을 갖고 다니는구나.”":"")
+   +"\n벽에 비친 노파의 그림자가 속삭인다. ‘이름을 대. 그럼 열릴 거야.’",
  left:{label:"에드릭의 아들이라 밝힌다",fx:{legitimacy:-6},add:{spireMisses:1},then:"spire_1",queue:[{id:"spire_sealed",delay:0}],
-   result:"빗장 걸리는 소리. 그림자의 웃음.\n“이름은 아래에 두고 오라 했을 텐데.”"},
+   result:"빗장 걸리는 소리. 킥킥, 그림자 웃음.\n“이름은 아래에 두고 오라 했을 텐데.”"},
  right:{label:"이름 없이 왔다고 한다",fx:{legitimacy:-2,people:2},set:{spireFloor:2},clue:"shadow",then:"tower",
-   result:"문이 열렸다.\n“일러두마. 이 탑에서 나는 거짓을 말 못 한다. 거짓은 내 그림자 몫이다.”"}},
+   result:"문이 열린다.\n“일러두마. 이 탑에서 나는 거짓말을 못 한다. 거짓은 내 그림자 몫이지.”"}},
 {id:"spire_2",acts:[3,4],queueOnly:true,repeat:true,dur:1,clue:"scale",who:"이온",role:"첨탑 · 저울의 방",cond:s=>s.flags.spireFloor===2&&s.flags.spireMisses<2,
- text:"사람 키만 한 저울. 왼쪽 접시에 녹슨 왕관. 오른쪽은 비었다.\n받침에 새긴 글: ‘증명하려는 것을 내려놓아라.’",
+ text:"사람 키만 한 저울. 왼쪽 접시엔 녹슨 왕관, 오른쪽은 빈 채.\n받침에 새긴 글. ‘증명하려는 것을 내려놓아라.’",
  left:s=>s.flags.hasRing
    ?{label:"반지를 올린다",fx:{legitimacy:-8},set:{hasRing:false,spireFloor:3},then:"tower",result:"접시가 수평을 이룬다. 반지는 접시 속으로 가라앉고,\n계단이 열린다."}
-   :{label:"빈손을 얹는다",fx:{legitimacy:-2},set:{spireFloor:3},then:"tower",result:"접시가 내려갔다.\n“이미 내려놓고 왔구나.”"},
+   :{label:"빈손을 얹는다",fx:{legitimacy:-2},set:{spireFloor:3},then:"tower",result:"접시가 스르르 내려간다.\n“이미 내려놓고 왔구나.”"},
  right:s=>(s.flags.hasLegendaryWeapon||s.flags.hasNormalWeapon)
-   ?{label:"검을 올린다",fx:{military:-8},set:{hasLegendaryWeapon:false,hasNormalWeapon:false},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 꿈쩍하지 않는다. 검만 가라앉는다.\n그림자가 말한다. ‘더 무거운 걸 올려야지.’"}
-   :{label:"금화 주머니를 올린다",fx:{gold:-10},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 그대로다. 주머니만 사라진다."}},
+   ?{label:"검을 올린다",fx:{military:-8},set:{hasLegendaryWeapon:false,hasNormalWeapon:false},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 꿈쩍도 않는다. 검만 가라앉을 뿐.\n그림자가 낄낄댄다. ‘더 무거운 걸 올려야지.’"}
+   :{label:"금화 주머니를 올린다",fx:{gold:-10},add:{spireMisses:1},then:"spire_2",queue:[{id:"spire_sealed",delay:0}],result:"저울은 그대로. 주머니만 사라진다."}},
 {id:"spire_3",acts:[3,4],queueOnly:true,repeat:true,dur:1,who:"이온과 그림자",role:"첨탑 · 두 갈래",cond:s=>s.flags.spireFloor===3&&s.flags.spireMisses<2,
- text:"계단이 둘로 갈린다.\n이온이 왼쪽을 가리킨다. “위는 이쪽이다.”\n그림자가 오른쪽으로 늘어난다. ‘저 늙은이 말은 다 거짓이야.’",
- left:{label:"이온을 따른다",fx:{people:2},set:{spireFloor:4},then:"spire_4",result:"계단이 계속 위로 이어졌다."},
- right:{label:"그림자를 따른다",fx:{military:-4},set:{injury:3},add:{spireMisses:1},then:"spire_3",queue:[{id:"spire_sealed",delay:0}],result:"열 칸 위에서 계단이 끊겼다.\n아래층 바닥에서 눈을 떴다."}},
+ text:"계단이 두 갈래.\n이온이 왼쪽을 가리킨다. “위는 이쪽이다.”\n그림자가 오른쪽으로 길게 늘어난다. ‘저 늙은이 말은 전부 거짓말이야.’",
+ left:{label:"이온을 따른다",fx:{people:2},set:{spireFloor:4},then:"spire_4",result:"계단은 계속 위로."},
+ right:{label:"그림자를 따른다",fx:{military:-4},set:{injury:3},add:{spireMisses:1},then:"spire_3",queue:[{id:"spire_sealed",delay:0}],result:"열 칸 오르자 계단이 뚝 끊긴다.\n눈을 떠 보니 아래층 바닥이다."}},
 {id:"spire_4",acts:[3,4],queueOnly:true,dur:4,who:"이온",role:"첨탑 꼭대기",cond:s=>s.flags.spireFloor===4,
- text:"책상에 두꺼운 책과 펜.\n“왕실 원장이다. 섭정이 이름 적으러 내려오라고 사람을 보냈지. 안 갔다.”\n“하나만 물어라.”",
+ text:"책상 위에 두꺼운 책과 펜.\n“왕실 원장이다. 섭정이 이름 적으러 내려오라고 사람을 보냈더군. 안 갔다.”\n“하나만 물어라.”",
  left:{label:"내가 왕의 핏줄인지 묻는다",fx:{legitimacy:6},set:{spireDone:true,regionOverride:null},
-   result:"“엘레나의 아들, 아비 에드릭. 원장엔 그렇게 적혀 있다.”\n이온이 책을 덮는다."},
- right:{label:"왕의 피가 무엇인지 묻는다",fx:{legitimacy:-10},set:{spireDone:true,spireTruth:true,hasOriginalLedger:true,regionOverride:null},clue:"truth",
+   result:"“엘레나의 아들, 아비는 에드릭. 원장엔 그렇게 적혀 있다.”\n이온이 책을 덮는다."},
+ right:{label:"왕의 피가 무엇인지 묻는다",fx:{legitimacy:-10},set:{spireDone:true,spireTruth:true,hasOriginalLedger:true,regionOverride:null},clue:"truth",queue:[{id:"spire_last",delay:0}],
    result:s=>[...(s.pastLives>0?[`맨 뒷장에 네 이름이 ${s.pastLives}번 적혀 있다. 줄마다 끝이 다르다.`]:[]),
      "“첫 왕 아르벤은 양치기였다. 우리가 반지를 만들고 이 책에 이름을 적었다. 그게 왕가다.”",
      "“피는 네 번 끊겼다. 끊길 때마다 우리가 고쳐 썼다. 노왕도 에드릭도 이 책 안에서만 왕족이다.”",
-     "이온이 원장을 네게 넘긴다.\n“다섯 번째로 고쳐 쓰든, 사람들 앞에서 읽든.”"]}},
+     "이온이 원장을 네 손에 넘긴다.\n“다섯 번째로 고쳐 쓰든, 사람들 앞에서 읽든. 네 마음이다.”"]}},
 {id:"spire_sealed",acts:[3,4],queueOnly:true,dur:2,who:"이온",role:"닫히는 첨탑",cond:s=>s.flags.spireMisses>=2&&!s.flags.spireDone&&!s.flags.spireSealed,
- text:"이온이 지팡이로 바닥을 두 번 친다.\n“두 번 틀렸다. 내려가라.”",
+ text:"지팡이가 바닥을 두 번 친다.\n“두 번 틀렸다. 내려가라.”",
  left:{label:"다시 기회를 달라고 한다",fx:{people:-2},set:{spireSealed:true,regionOverride:null},result:"“부탁은 답이 아니다.”"},
  right:{label:"내려간다",fx:{legitimacy:2},set:{spireSealed:true,regionOverride:null},result:"문턱에서 그림자만 멈췄다."}},
 
@@ -546,175 +567,228 @@ const CARDS=[
 
 // ===== 4막 =====
 {id:"a4_crossroads",acts:[4],forced:true,dur:10,who:"갈림길",role:"대관식 한 달 전",
- text:s=>{const f=s.flags;return "삼년상이 끝나는 달. 대관식 포고가 붙었다.\n남쪽은 왕도, 북쪽은 국경."
-   +(f.metMaster&&!f.bernanGone?"\n베르난이 남쪽으로 말 머리를 돌려 놓았다.":"")
-   +(f.lienAccompanies?"\n리엔은 남쪽만 보고 있다.":"")
-   +(f.mercRank>=2?"\n까마귀 백 명이 기다린다.":"")
-   +(f.hasOriginalLedger?"\n짐 밑바닥에 원장이 있다.":"");},
+ text:s=>{const f=s.flags;return "삼년상이 끝나는 달. 대관식 포고가 나붙었다.\n남쪽은 왕도, 북쪽은 국경."
+   +(f.metMaster&&!f.bernanGone?"\n베르난은 벌써 남쪽으로 말머리를 돌려 놨고.":"")
+   +(f.lienAccompanies?"\n리엔 눈은 남쪽에만 가 있다.":"")
+   +(f.mercRank>=2?"\n까마귀 백 명이 신호를 기다린다.":"")
+   +(f.hasOriginalLedger?"\n짐 밑바닥엔 원장.":"")
+   +(s.pastLives>0&&getMeta().lastPath?(getMeta().lastPath==="throne"?"\n지난 생엔 남쪽으로 갔다. 발이 그 길을 기억한다.":"\n지난 생엔 북쪽으로 갔다. 발이 그 길을 기억한다."):"");},
  left:{label:"왕도로 간다",fx:{legitimacy:4,gold:-4},set:{throneReady:true,path:"throne",regionOverride:"왕도"},add:{bernardTrust:1},queue:[{id:"a4_spire_reading",delay:1},{id:"a4_osric_offer",delay:2},{id:"a4_throne_trial",delay:3}],
    result:"사흘째, 왕도 종탑."},
  right:{label:"왕도로 가지 않는다",fx:{people:2,legitimacy:-4},set:{path:"leave"},add:{bernardTrust:-2},queue:[{id:"a4_leave",delay:0}],
-   result:s=>{const f=s.flags,a=[];if(f.metMaster&&!f.bernanGone)a.push("“전하도 결국 그러셨지.”\n베르난은 남쪽으로 혼자 갔다.");if(f.lienAccompanies)a.push("리엔이 짐을 반으로 나눴다.\n“엄마는 내가 찾을게요.”\n그녀도 남쪽으로 갔다.");return a.length?a:"북쪽으로 몸을 돌렸다.";}}},
+   result:s=>{const f=s.flags,a=[];if(f.metMaster&&!f.bernanGone)a.push("“전하도 결국 그러셨지.”\n베르난 혼자 남쪽으로 떠난다.");if(f.lienAccompanies)a.push("리엔이 짐을 반으로 나눈다.\n“엄마는 제가 찾을게요.”\n그러고는 남쪽으로.");return a.length?a:"북쪽으로 몸을 돌렸다.";}}},
 {id:"a4_leave",acts:[4],queueOnly:true,dur:5,who:"국경 갈림길",role:"대관식 다음 날",
  // 앞에서 이어 온 인연 가운데 가장 강한 둘이 양쪽 선택지가 된다 (LEAVE_ROUTES 순서가 우선순위)
- text:s=>{const r=leaveRoutes(s);return "대관식 종이 울렸다는 소식이 국경까지 왔다.\n\n"+r.slice(0,2).map(x=>x.why).join("\n");},
+ text:s=>{const r=leaveRoutes(s);return "대관식 종이 울렸다는 소식이 국경까지 닿았다.\n\n"+r.slice(0,2).map(x=>x.why).join("\n");},
  left:s=>leaveRoutes(s)[0].go,
- right:s=>{const r=leaveRoutes(s);return r[1]?r[1].go:{label:"아무 길로나 간다",ending:"wanderer",result:"동전을 던졌다. 동쪽이 나왔다."};}},
+ right:s=>{const r=leaveRoutes(s);return r[1]?r[1].go:{label:"아무 길로나 간다",ending:"wanderer",result:"동전을 던진다. 동쪽."};}},
 {id:"a4_wall",acts:[4],queueOnly:true,dur:3,who:"리엔",role:"동쪽 공사장",
- text:s=>{const f=s.flags;return "성벽 동쪽 공사장. 횃불 아래 사슬에 묶인 일꾼들이 돌을 나른다.\n리엔이 감독관 막사 뒤에 웅크리고 있다. “셋째 줄. 엄마예요.”\n경비는 열둘."
-   +(f.kaneAlly?"\n케인이 경비 교대 시간을 손가락으로 센다.":"")+(f.mercRank>=2?"\n언덕 뒤에 까마귀 스물이 엎드려 있다.":"")+(f.militia?"\n산골 마을에서 따라온 젊은이 넷이 진검을 쥐었다.":"");},
- left:{label:"사슬을 끊는다",check:{stat:"military",base:56,bonus:s=>wpn(s)+(s.flags.kaneAlly?8:0)+(s.flags.mercRank>=2?10:0)+(s.flags.militia?6:0),
-   success:{set:{wallFreed:2},ending:"lien_wall",result:["경비 교대 틈에 사슬 고리를 하나씩 깬다.","새벽까지 일꾼 백스무 명이 성벽 밖으로 걸어 나갔다.\n리엔은 어머니 손을 놓지 않는다."]},
-   failure:{set:{wallFreed:0,injury:4},ending:"lien_wall",result:["세 번째 사슬에서 종이 울린다.","리엔이 어머니를 끌고 배수구로 사라진다.\n너는 반대쪽으로 뛰어 경비를 끌고 간다."]}}},
+ text:s=>{const f=s.flags;return "성벽 동쪽 공사장. 사슬에 묶인 일꾼들이 횃불 아래서 돌을 나른다.\n감독관 막사 뒤에 리엔이 웅크리고 있다. “셋째 줄. 우리 엄마.”\n경비는 열둘."
+   +(f.kaneAlly?"\n케인은 손가락으로 경비 교대 시간을 세는 중.":"")+(f.mercRank>=2?"\n언덕 너머엔 까마귀 스물이 엎드렸다.":"")+(f.militia?"\n산골에서 따라온 젊은이 넷 손엔 진검이 들렸다.":"");},
+ left:{label:"사슬을 끊는다",check:{stat:"military",base:56,bonus:s=>wpn(s)+(s.flags.kaneAlly?8:0)+(s.flags.mercRank>=2?10:0)+(s.flags.militia?6:0)+(s.flags.bondLien||0)*3,
+   success:{set:{wallFreed:2},ending:"lien_wall",result:["교대하는 틈을 타 사슬 고리를 하나씩 깬다.","새벽까지 일꾼 백스무 명이 성벽 밖으로 빠져나간다.\n리엔은 엄마 손을 놓을 줄 모르고."]},
+   failure:{set:{wallFreed:0,injury:4},ending:"lien_wall",result:["세 번째 사슬에서 종이 울린다.","리엔이 엄마를 끌고 배수구로 사라진다.\n너는 반대쪽으로 뛰며 경비를 몰고 간다."]}}},
  right:{label:"감독관에게 금화를 쥐여준다",check:{stat:"gold",base:54,
-   success:{fx:{gold:-20},set:{wallFreed:1},ending:"lien_wall",result:"감독관이 금화를 세다 명부에서 이름 하나를 지운다.\n“병사(病死)로 적어 두지.”"},
-   failure:{fx:{gold:-10},set:{wallFreed:0,injury:4},ending:"lien_wall",result:["감독관이 금화를 받고 경비를 부른다.","리엔이 어머니를 끌고 배수구로 사라진다.\n너는 반대쪽으로 뛰어 경비를 끌고 간다."]}}}},
+   success:{fx:{gold:-20},set:{wallFreed:1},ending:"lien_wall",result:"금화를 세던 감독관이 명부에서 이름 하나를 긋는다.\n“병사(病死)로 해 두지.”"},
+   failure:{fx:{gold:-10},set:{wallFreed:0,injury:4},ending:"lien_wall",result:["금화를 챙긴 감독관이 경비를 부른다.","리엔이 엄마를 끌고 배수구로 사라진다.\n너는 반대쪽으로 뛰며 경비를 몰고 간다."]}}}},
 {id:"a4_village",acts:[4],queueOnly:true,dur:4,who:"촌장",role:"산골 마을 어귀",
- text:s=>{const f=s.flags;return "산골 마을. 대관식 기념세를 걷으러 징수관이 병사 서른을 데리고 왔다.\n촌장이 다리를 절며 어귀까지 나온다. “올 줄 알았어요.”"
-   +(f.militia?"\n네가 가르친 젊은이 넷이 창고 앞에 섰다.":"")+(f.villageReturned?"\n지난번 밤에 쓰러뜨린 병사 넷의 무덤이 마을 뒤에 있다.":"");},
+ text:s=>{const f=s.flags;return "산골 마을. 대관식 기념세를 걷겠다고 징수관이 병사 서른을 끌고 왔다.\n촌장이 다리를 절며 어귀까지 마중 나온다. “올 줄 알았어요.”"
+   +(f.militia?"\n네가 칼을 가르친 넷이 창고 앞을 지킨다.":"")+(f.villageReturned?"\n그때 쓰러뜨린 병사 넷의 무덤이 마을 뒤에 있다.":"");},
  left:{label:"골짜기 입구를 막는다",check:{stat:"military",base:58,bonus:s=>{const f=s.flags;return wpn(s)+(f.militia?10:0)+(f.villageReturned?6:0)+(f.kaneAlly?6:0)+(f.mercRank>=2?8:0);},
-   success:{set:{villageWay:"blade"},ending:"village_guard",result:["좁은 골짜기 입구에 돌을 굴리고 통나무를 박는다.","병사 서른이 반나절을 버티다 돌아간다.\n징수관은 다시 오지 않았다."]},
-   failure:{ending:"village_ash",result:["입구가 뚫린다.","창고에 불이 붙는다. 촌장이 아이들을 산으로 데려간다."]}}},
+   success:{set:{villageWay:"blade"},ending:"village_guard",result:["좁은 골짜기 입구에 바위를 굴리고 통나무를 박는다.","병사 서른이 반나절 버티다 물러간다.\n징수관은 그 뒤로 영영 안 왔다."]},
+   failure:{ending:"village_ash",result:["입구가 뚫린다.","창고에 불이 붙는다. 촌장이 아이들을 데리고 산으로 오른다."]}}},
  right:{label:"세금을 대신 내고 흥정한다",check:{stat:"gold",base:52,bonus:s=>s.flags.villageTrust?8:0,
-   success:{fx:{gold:-18},set:{villageWay:"coin"},ending:"village_guard",result:"징수관이 금화를 세고 장부에 ‘완납’이라고 쓴다.\n“내년에도 네가 낼 거냐?”"},
-   failure:{fx:{gold:-8},ending:"village_ash",result:["징수관이 금화만 챙기고 병사들에게 손짓한다.","창고에 불이 붙는다."]}}}},
+   success:{fx:{gold:-18},set:{villageWay:"coin"},ending:"village_guard",result:"징수관이 금화를 세고는 장부에 ‘완납’.\n“내년에도 네가 낼 거냐?”"},
+   failure:{fx:{gold:-8},ending:"village_ash",result:["금화만 챙긴 징수관이 병사들에게 턱짓을 한다.","창고에 불이 붙는다."]}}}},
 {id:"a4_highland",acts:[4],queueOnly:true,dur:6,who:"고원의 노파",role:"북쪽 고원",
- text:s=>"북쪽 고원. 양 떼 사이에 돌집 몇 채.\n노파가 "+(s.flags.hairpin?"네 머리핀을 보고 손을 떤다. “엘레나 핀이구나.”":"네 얼굴을 오래 본다. “엘레나 눈이구나.”")
-   +"\n“별지기 첨탑에서 도망쳐 온 애였지. 장부 고치는 게 싫다고. 여기서 양을 치다 귀양 온 왕자를 따라 남쪽으로 갔어.”",
- left:{label:"양 떼를 맡는다",ending:"shepherd",result:"노파가 지팡이를 네 손에 쥐여 준다. 손잡이에 별 일곱."},
+ text:s=>"북쪽 고원. 양 떼 사이로 돌집 몇 채.\n노파가 "+(s.flags.hairpin?"네 머리핀을 보더니 손을 떤다. “엘레나 핀이네.”":"네 얼굴을 한참 들여다본다. “엘레나 눈이야.”")
+   +"\n“첨탑에서 도망 온 애였지. 장부 고치는 게 싫다고. 여기서 양 치다가, 귀양 온 왕자 따라 남쪽으로 갔어.”",
+ left:{label:"양 떼를 맡는다",ending:"shepherd",result:"노파가 지팡이를 쥐여 준다. 손잡이에 별 일곱."},
  right:{label:"다시 길을 떠난다",set:{sawHighland:true},ending:"wanderer",result:"노파가 자장가 끝 소절을 불러 준다.\n‘…양치기는 이름을 안 적어도 양을 안다.’"}},
 {id:"a4_bernan_chase",acts:[4],queueOnly:true,dur:3,who:"베르난",role:"대관식 날 성문",
- text:s=>"사흘을 달려 성문 앞 언덕.\n광장 한가운데 베르난이 혼자 서 있다. 에드릭의 검을 들고. 근위대가 둥글게 에워싼다."+(s.flags.kaneAlly?"\n케인이 옆에서 숨을 고른다. “늙은이 혼자는 못 버텨.”":""),
+ text:s=>"사흘을 내달려 성문 앞 언덕.\n광장 한가운데 베르난이 혼자 서 있다. 손엔 에드릭의 검. 근위대가 빙 둘러싼다."+(s.flags.kaneAlly?"\n옆에서 케인이 숨을 고른다. “늙은이 혼자는 못 버텨.”":""),
  left:{label:"광장으로 뛰어든다",check:{stat:"military",base:60,bonus:s=>wpn(s)+(s.flags.kaneAlly?10:0)+(s.flags.masterTrialPassed?6:0)+(s.flags.bernardTrust>=3?6:0),
-   success:{set:{knightSaved:true},ending:"last_knight",result:["근위대 둘레를 뚫고 베르난 등 뒤에 선다.","등을 맞댄 채 서문까지 걷는다. 아무도 따라오지 못한다."]},
-   failure:{ending:"fallen_gate",result:"베르난에게 닿기 전에 창이 먼저 닿았다."}}},
- right:{label:"언덕에서 지켜본다",ending:"last_knight",result:["베르난이 근위대장에게 칼끝을 겨누고 이름 하나를 외친다. 네 이름이다.","창 열두 자루가 한꺼번에 내려온다."]}},
+   success:{set:{knightSaved:true},ending:"last_knight",result:["근위대 포위를 뚫고 베르난 등 뒤에 선다.","등을 맞댄 채 서문까지 걸어 나간다. 따라붙는 자는 없다."]},
+   failure:{ending:"fallen_gate",result:"베르난에게 닿기도 전에 창이 먼저 닿는다."}}},
+ right:{label:"언덕에서 지켜본다",ending:"last_knight",result:["베르난이 근위대장에게 칼끝을 겨누고 이름 하나를 외친다. 네 이름.","창 열두 자루가 한꺼번에 내리꽂힌다."]}},
 {id:"a4_final_train",acts:[4],dur:3,who:"베르난",role:"마지막 밤",cond:s=>s.flags.throneReady&&s.flags.metMaster&&!s.flags.bernanGone,
- text:"베르난이 칼을 다 갈고 네 무릎에 놓는다.\n“물을 게 있으면 지금 물어라.”",
+ text:"칼을 다 간 베르난이 네 무릎에 올려 준다.\n“물을 거 있으면 지금 물어라.”",
  left:{label:"아버지가 어떤 사람이었는지 묻는다",fx:{legitimacy:3,people:2},add:{bernardTrust:1},
-   result:"“겁이 많았다. 너를 인정하면 형님 자리를 노린다는 말을 들을까 봐.”\n“나는 말리지 않았다. 그래서 여기 있다.”"},
- right:{label:"한 번 더 겨루자고 한다",fx:{military:4,gold:-2},result:"새벽까지 칼 소리가 났다.\n마지막 합은 베르난이 졌다."}},
+   result:"“겁이 많으셨지. 너를 인정하면 형님 자리 노린다는 소릴 들을까 봐.”\n“나도 안 말렸다. 그러니 지금 여기 있는 거고.”"},
+ right:{label:"한 번 더 겨루자고 한다",fx:{military:4,gold:-2},result:"새벽까지 칼 소리.\n마지막 합은 베르난이 진다."}},
 {id:"a4_last_doc",acts:[4],dur:3,who:"서기관 오틀린",role:"쪽지",cond:s=>s.flags.throneReady&&!s.flags.document,
- text:"오틀린의 쪽지.\n장부는 아직 지하에 있다. 경비가 두 배다.",
+ text:"오틀린의 쪽지.\n장부는 아직 지하에. 경비는 두 배로 늘었다.",
  left:{label:"들어간다",check:{stat:"military",base:56,bonus:wpn,
    success:{fx:{legitimacy:9},set:{document:true},result:"장부를 품에 넣고 나왔다."},
    failure:{fx:{military:-6},set:{injury:3},result:"경비 셋에 막혔다."}}},
  right:{label:"장부 없이 간다",fx:{people:2,legitimacy:-2},result:"쪽지를 태웠다."}},
 {id:"a4_kane_gate",acts:[4],dur:2,who:"케인",role:"부관",cond:s=>s.flags.throneReady&&s.flags.kaneAlly,
- text:"케인이 손으로 쓴 경비 교대표를 편다.\n“남문, 자정. 열둘 중 넷은 내 옛 부하다.”",
- left:{label:"따른다",fx:{military:3},set:{gateIntel:true},result:"“이번엔 안 놓친다. 섭정을.”"},
- right:{label:"정문으로 간다고 한다",fx:{legitimacy:4,people:2},result:"케인이 교대표를 태웠다. “나쁘지 않아.”"}},
+ text:"케인이 손으로 쓴 경비 교대표를 펼친다.\n“남문, 자정. 열둘 중 넷이 내 옛 부하야.”",
+ left:{label:"따른다",fx:{military:3},set:{gateIntel:true},result:"“이번엔 안 놓쳐. 섭정 말이야.”"},
+ right:{label:"정문으로 간다고 한다",fx:{legitimacy:4,people:2},result:"케인이 교대표를 태운다. “나쁘지 않네.”"}},
 {id:"a4_lien_gate",acts:[4],dur:2,who:"리엔",role:"왕도 외곽",cond:s=>s.flags.throneReady&&s.flags.lienAccompanies,
- text:s=>"리엔이 소매를 끈다.\n“북문 배수구로 들어가면 동쪽 공사장을 지나요.”"+(s.flags.promiseLien?"\n“약속했죠.”":""),
- left:{label:"배수구로 간다",fx:{people:3},set:{northGate:true},result:s=>s.flags.promiseLien?["공사장 막사에서 리엔이 한 여자 앞에 멈췄다.\n“엄마.”","리엔의 어머니가 일꾼들을 깨웠다. 서른 명이 곡괭이를 들고 따라나섰다."]:"배수구는 리엔 어깨 높이.\n공사장 불빛을 지날 때 리엔이 그쪽을 한 번 본다."},
- right:{label:"할머니한테 돌아가라고 한다",fx:{people:2,legitimacy:2},set:{lienAccompanies:false,lienSafe:true},result:"리엔이 짐을 내려놓는다.\n“엄마는 내가 혼자 찾을게요.”"}},
+ text:s=>"리엔이 소매를 잡아끈다.\n“북문 배수구로 들어가면 동쪽 공사장 옆을 지나요.”"+(s.flags.promiseLien?"\n“약속했죠.”":""),
+ left:{label:"배수구로 간다",fx:{people:3},set:{northGate:true},result:s=>s.flags.promiseLien?["공사장 막사 앞에서 리엔이 한 여자 앞에 우뚝 멈춘다.\n“엄마.”","리엔 엄마가 일꾼들을 깨운다. 곡괭이를 든 서른 명이 따라나선다."]:"배수구는 리엔 어깨 높이.\n공사장 불빛을 지날 때 리엔이 그쪽을 한 번 돌아본다."},
+ right:{label:"할머니한테 돌아가라고 한다",fx:{people:2,legitimacy:2},set:{lienAccompanies:false,lienSafe:true},result:"리엔이 짐을 내려놓는다.\n“엄마는 저 혼자 찾을게요.”"}},
 {id:"a4_rally",acts:[4],dur:2,who:"빈민가 우물",role:"왕도 외곽",cond:s=>s.flags.throneReady,
- text:"물 긷던 여자가 네 얼굴을 보고 동이를 내려놓는다.\n‘에드릭의 아들’이라는 말이 우물을 한 바퀴 돈다.\n골목 건너에 순찰이 지나간다.",
- left:{label:"우물 턱에 올라선다",fx:{people:5,legitimacy:2,military:-4},result:"세금 얘기를 짧게 한다. 박수는 없다.\n다음 날 아침, 성문 앞에 모여든 빈민가 사람들."},
+ text:"물 긷던 여자가 네 얼굴을 보고 동이를 내려놓는다.\n‘에드릭의 아들’이란 말이 우물가를 한 바퀴 돈다.\n골목 건너로 순찰이 지나가고.",
+ left:{label:"우물 턱에 올라선다",fx:{people:5,legitimacy:2,military:-4},result:"세금 얘기를 짧게 한다. 박수는 없다.\n이튿날 아침, 성문 앞을 메운 빈민가 사람들."},
  right:{label:"골목으로 들어간다",fx:{military:2,people:-2},result:"순찰이 지나갔다."}},
 {id:"a4_osric_offer",acts:[4],queueOnly:true,dur:1,who:"회색 망토",role:"대관식 전날 밤",
  cond:s=>{const f=s.flags;return f.throneReady&&f.hasRing&&f.document&&!f.throneTrialPassed;},
- text:s=>"여관 방에 회색 망토가 앉아 있다. 후드를 벗는다. 섭정 오스릭. 혼자다.\n“반지와 장부를 넘겨라. 너를 양자로 들이고 북부 공작령을 주마. 나는 아들이 없다.”"
-   +(s.flags.usurperSecret?"\n“마부 아들이라는 말도 들었겠지. 맞다. 그래서 장부가 필요하다.”":""),
+ text:s=>"여관 방에 회색 망토 하나. 후드를 벗는다. 섭정 오스릭. 혼자다.\n“반지와 장부를 넘겨라. 양자로 들이고 북부 공작령을 주지. 나는 아들이 없다.”"
+   +(s.flags.usurperSecret?"\n“마부 아들이란 소문도 들었겠지. 맞아. 그래서 장부가 필요한 거다.”":""),
  left:{label:"반지와 장부를 넘긴다",fx:{gold:12,legitimacy:6},set:{hasRing:false,document:false},ending:"regent_heir",
-   result:["오스릭이 장부를 품에 넣고 반지를 제 손가락에 껴 본다. 맞지 않는다.","“내일 발코니에서 네 이름을 부르겠다. 아들로.”"]},
+   result:["오스릭이 장부를 품에 넣고 반지를 끼워 본다. 안 맞는다.","“내일 발코니에서 네 이름을 부르마. 아들로.”"]},
  right:{label:"돌려보낸다",fx:{legitimacy:5,people:2},set:{osricRefused:true},
-   result:s=>s.flags.usurperSecret?"“마부 아들이 왕관을 쓰면 안 되나.”\n문을 닫기 전에 오스릭이 처음으로 웃는다.":"“그럼 내일 광장에서.”"}},
+   result:s=>s.flags.usurperSecret?"“마부 아들은 왕관 쓰면 안 되나?”\n문을 닫기 전, 오스릭이 처음으로 웃는다.":"“그럼 내일 광장에서.”"}},
 {id:"a4_spire_reading",acts:[4],queueOnly:true,dur:2,who:"왕실 원장",role:"대관식 전날 밤",
  cond:s=>s.flags.hasOriginalLedger&&s.flags.throneReady&&!s.flags.throneTrialPassed&&!s.flags.truthRevealed&&!s.flags.forgedLedger,
- text:"원장 마지막 장에 빈 줄이 하나 있다.\n내일 섭정 이름이 들어갈 자리다. 별지기가 없으니 섭정은 이 줄을 채울 수 없다.\n이온의 펜이 책에 끼워져 있다.",
+ text:"원장 마지막 장에 빈 줄 하나.\n내일 섭정 이름이 들어갈 자리. 별지기가 없으니 섭정은 이 줄을 못 채운다.\n이온의 펜이 책에 끼워져 있다.",
  left:{label:"광장에서 처음부터 읽는다",check:{stat:"people",base:58,bonus:s=>{const f=s.flags;return (f.usurperSecret?6:0)+(f.scribeWitness?6:0)+(f.lienSafe?4:0)+(f.kaneAlly?4:0)+(f.mercRespect?4:0)+(f.villageTrust?4:0);},
    success:{fx:{legitimacy:-10},set:{truthRevealed:true,throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],
-     result:["수레 위에서 첫 장부터 읽는다.\n아르벤이 양치기였다는 대목에서 누가 웃는다.","피가 네 번째로 끊긴 대목에서 근위대장이 말에서 내렸다.","다 읽고 나니, 발코니에 섭정은 없다."]},
-   failure:{fx:{people:-8,legitimacy:-6},result:"세 장도 못 읽고 돌이 날아온다.\n원장을 끌어안고 빠져나올 수밖에."}}},
- right:{label:"빈 줄에 네 이름을 적는다",fx:{legitimacy:12,people:-4},set:{forgedLedger:true},add:{tyrantPoints:1},result:"펜 끝이 종이를 한 번 긁는다.\n잉크는 금방 마른다."}},
+     result:["수레 위에 올라 첫 장부터 읽는다.\n아르벤이 양치기였다는 대목에서 누가 킥 웃는다.","피가 네 번째 끊기는 대목. 근위대장이 말에서 내린다.","다 읽고 고개를 드니, 발코니에 섭정이 없다."]},
+   failure:{fx:{people:-8,legitimacy:-6},result:"세 장도 못 넘겼는데 돌이 날아든다.\n원장을 끌어안고 빠져나올 수밖에."}}},
+ right:{label:"빈 줄에 네 이름을 적는다",fx:{legitimacy:12,people:-4},set:{forgedLedger:true},add:{tyrantPoints:1},result:"펜 끝이 종이를 한 번 긁는다.\n잉크는 금세 마른다."}},
 {id:"a4_throne_trial",acts:[4],queueOnly:true,repeat:true,dur:1,who:"왕도 성문",role:"대관식 날",cond:s=>s.flags.throneReady&&!s.flags.throneTrialPassed&&s.flags.throneFails<2,
  text:s=>(s.flags.throneFails>0?"두 번째다.\n":"")+`성문 앞 광장. 근위대가 두 줄로 섰다. 발코니에 섭정.\n가진 것: ${evidence(s)}.`,
  left:{label:"증거를 들고 나선다",check:{stat:"legitimacy",base:66,bonus:s=>{const f=s.flags;return (f.hasRing?8:0)+(f.document?10:0)+(f.scribeWitness?4:0)+(f.usurperSecret?6:0)+(f.metMaster&&!f.bernanGone&&f.bernardTrust>=2?6:0)+(f.forgedLedger?14:0);},
-   success:{fx:{legitimacy:7},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:["근위대장이 반지 안쪽 글자와 장부를 한 장씩 맞춰 봤다.","그가 창을 내린다. 뒤의 근위병들도.\n발코니는 비어 있다."]},
-   failure:{fx:{legitimacy:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"“위조범을 잡아라!”\n군중에 섞여 빠져나왔다."}}},
+   success:{fx:{legitimacy:7},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:["근위대장이 반지 안쪽 글자와 장부를 한 장씩 맞대 본다.","근위대장이 창을 내린다. 뒤에 선 근위병들도 하나둘.\n발코니는 비어 있다."]},
+   failure:{fx:{legitimacy:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"“위조범을 잡아라!”\n군중 틈에 섞여 겨우 빠져나온다."}}},
  right:{label:"섭정의 출신을 외친다",check:{stat:"people",base:62,bonus:s=>{const f=s.flags;return (f.kaneAlly?6:0)+(f.gateIntel?6:0)+(f.northGate?6:0)+(f.northGate&&f.promiseLien?6:0)+(f.usurperSecret?4:0)+(f.lienSafe?4:0)+(f.mercRespect?4:0)+(f.militia?4:0)+(f.villageTrust?4:0)+(f.villageReturned&&f.promiseVillage?4:0)+(f.osricRefused&&f.usurperSecret?6:0);},
-   success:{fx:{people:6},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:["노파 하나가 앞으로 나왔다. “내가 봤다. 그 집 부엌에서.”","군중이 성문으로 밀려간다. 근위병 몇이 창을 버린다.\n발코니는 비어 있다."]},
-   failure:{fx:{people:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"근위대가 방패를 앞세워 민다.\n군중과 함께 흩어진다."}}}},
+   success:{fx:{people:6},set:{throneTrialPassed:true},queue:[{id:"a4_kane_last",delay:0},{id:"a4_final",delay:0}],result:["노파 하나가 앞으로 나선다. “내가 봤어. 그 집 부엌에서.”","군중이 성문으로 밀려든다. 창을 내던지는 근위병도 몇.\n발코니는 비어 있다."]},
+   failure:{fx:{people:-8},add:{throneFails:1},queue:[{id:"a4_throne_trial",delay:2},{id:"a4_exile",delay:0}],result:"근위대가 방패를 세우고 밀고 들어온다.\n군중과 함께 흩어진다."}}}},
 {id:"a4_exile",acts:[4],queueOnly:true,dur:3,who:"닫힌 성문",role:"대관식 저녁",cond:s=>s.flags.throneFails>=2&&!s.flags.throneTrialPassed,
- text:"성문이 닫혔다. 종이 울린다. 섭정이 왕관을 썼다.\n새 벽보. 금화 오백 닢.",
+ text:"성문이 닫힌다. 종소리. 섭정 머리에 왕관.\n새 벽보엔 금화 오백 닢.",
  left:{label:"왕도를 떠난다",ending:"wanderer",result:"서문으로 빠져나왔다."},
  right:{label:"성문으로 걸어간다",ending:"fallen_gate",result:"근위병이 너를 알아봤다."}},
 {id:"a4_kane_last",acts:[4],queueOnly:true,dur:1,who:"케인",role:"왕좌의 방 앞",cond:s=>s.flags.throneTrialPassed&&!s.flags.kaneAlly,
- text:s=>"왕좌의 방 문 앞에 케인이 서 있다. 근위대장 휘장을 달았다."+(s.flags.kaneScar?"\n왼뺨의 칼자국이 하얗게 굳어 있다.":"")+"\n“섭정은 도망쳤다. 그래도 규칙은 남아 있다. 문은 내가 지킨다.”",
- left:{label:"칼을 뽑는다",duel:{n:"근위대장 케인",hp:4,w:{raise:3,breath:2,retreat:3,feint:3},dark:.15,intro:"케인이 칼을 뽑는다. 이번엔 망설이지 않는다.",
-   win:{fx:{military:4},set:{kaneYielded:true},result:"케인의 칼이 바닥에 떨어진다.\n그가 칼을 줍지 않고 옆으로 비켜선다.\n“규칙이 이긴 쪽 편이라면, 너다.”"},
+ text:s=>"왕좌의 방 문 앞에 케인. 근위대장 휘장을 달았다."+(s.flags.kaneScar?"\n왼뺨 칼자국이 하얗게 굳었다.":"")+"\n“섭정은 도망갔어. 그래도 규칙은 남아. 문은 내가 지킨다.”",
+ left:{label:"칼을 뽑는다",duel:{n:"근위대장 케인",hp:4,w:{raise:3,breath:2,retreat:3,feint:3},dark:.15,intro:"케인이 칼을 뽑는다. 이번엔 망설임이 없다.",
+   win:{fx:{military:4},set:{kaneYielded:true},result:"케인의 칼이 바닥에 떨어진다.\n주우려 하지 않고 옆으로 비켜선다.\n“규칙이 이긴 쪽 편이라면, 너야.”"},
    lose:{ending:"throne_door",result:"케인의 칼이 먼저 닿는다."}}},
  right:{label:"규칙이 틀렸다고 말한다",check:{stat:"people",base:60,bonus:s=>(s.flags.kaneKnown?16:0)+(s.flags.kaneBeaten?6:0),
-   success:{set:{kaneYielded:true},result:s=>s.flags.kaneKnown?"“규칙이 틀리면 어떻게 하지.”\n케인이 강가에서 했던 말을 네가 그대로 돌려준다.\n그가 오래 너를 보다 문을 연다.":"케인이 한참 말이 없다.\n문이 열린다."},
-   failure:{then:"a4_kane_last2",result:"“말로는 안 된다.” 케인이 칼을 뽑는다."}}}},
+   success:{set:{kaneYielded:true},result:s=>s.flags.kaneKnown?"“규칙이 틀리면, 그땐 어쩌지.”\n강가에서 케인이 했던 말을 그대로 돌려준다.\n한참 너를 보던 케인이 문을 연다.":"케인은 한참 말이 없다.\n그리고 문이 열린다."},
+   failure:{then:"a4_kane_last2",result:"“말로는 안 돼.” 케인이 칼을 뽑는다."}}}},
 {id:"a4_kane_last2",acts:[4],queueOnly:true,dur:1,who:"근위대장 케인",role:"왕좌의 방 앞",cond:s=>s.flags.throneTrialPassed&&!s.flags.kaneAlly&&!s.flags.kaneYielded,
- text:"케인이 칼끝을 너에게 겨눈다.",
+ text:"케인의 칼끝이 너를 겨눈다.",
  left:{label:"칼을 뽑는다",duel:{n:"근위대장 케인",hp:4,w:{raise:3,breath:2,retreat:3,feint:3},dark:.15,
-   win:{fx:{military:4},set:{kaneYielded:true},result:"케인의 칼이 바닥에 떨어진다.\n“규칙이 이긴 쪽 편이라면, 너다.”"},
+   win:{fx:{military:4},set:{kaneYielded:true},result:"케인의 칼이 바닥에 떨어진다.\n“규칙이 이긴 쪽 편이라면, 너야.”"},
    lose:{ending:"throne_door",result:"케인의 칼이 먼저 닿는다."}}},
- right:{label:"등을 돌려 성을 나온다",ending:"wanderer",result:"왕좌의 방 문은 열리지 않았다."}},
+ right:{label:"등을 돌려 성을 나온다",ending:"wanderer",result:"왕좌의 방 문은 끝내 안 열렸다."}},
 {id:"a4_final",acts:[4],queueOnly:true,dur:1,who:"빈 왕좌",role:"첫 판결",cond:s=>s.flags.throneTrialPassed,
  text:s=>s.flags.truthRevealed
-   ?"섭정은 국경으로 달아났다.\n근위대장이 왕관을 받쳐 들고 네 앞에 선다. 그는 너와 왕좌를 번갈아 본다."
-   :"섭정은 국경으로 달아났다.\n섭정 편 귀족 스물이 무릎 꿇린 채 판결을 기다린다."+(s.flags.tyrantPoints>=1?"\n그중 하나가 네가 턴 마을의 영주다.":""),
+   ?"섭정은 국경 너머로 달아났다.\n근위대장이 왕관을 받쳐 들고 네 앞에 선다. 너 한 번, 빈 왕좌 한 번."
+   :"섭정은 국경 너머로 달아났다.\n섭정 편 귀족 스물이 무릎 꿇린 채 판결을 기다린다."+(s.flags.tyrantPoints>=1?"\n그중 하나는 네가 턴 마을의 영주.":""),
  left:s=>s.flags.truthRevealed
    ?{label:"왕관을 바닥에 내려놓는다",fx:{people:4},ending:"last_bastard",result:"왕관을 광장 돌바닥에 내려놓는다.\n그 소리를 들은 건 맨 앞줄뿐."}
    :{label:"풀어주고 세금을 내린다",fx:{people:5,gold:-6},ending:"throne_reclaim",result:"그날 오후 첫 칙령. 올해 세금은 절반."},
  right:s=>s.flags.truthRevealed
-   ?{label:"그래도 왕관을 받는다",fx:{legitimacy:6},ending:"throne_reclaim",result:"왕관을 쓴다. 박수도 야유도 없다."}
-   :{label:"본보기로 처형한다",fx:{military:4,people:-8},add:{tyrantPoints:1},ending:"tyrant_ending",result:"다음 날 광장에서 스무 번 칼이 떨어졌다."}},
+   ?{label:"그래도 왕관을 받는다",fx:{legitimacy:6},ending:"throne_reclaim",result:"왕관을 쓴다. 박수도, 야유도 없다."}
+   :{label:"본보기로 처형한다",fx:{military:4,people:-8},add:{tyrantPoints:1},ending:"tyrant_ending",result:"이튿날 광장에서 칼이 스무 번 떨어진다."}},
+
+// ===== 쉬는 장면 (v5.7) =====
+// 스탯은 거의 안 움직이고 판정도 없다. 같이 있는 사람과 정이 드는 시간. 긴장된 장면 뒤에 끼어든다(restDue).
+{id:"rest_lien_song",acts:[1],queueOnly:true,rest:true,dur:1,who:"리엔",role:"강가, 불 없는 밤",cond:s=>s.flags.childSaved,
+ text:"불을 못 피우는 밤. 등에 업힌 리엔이 흥얼거린다.\n“갈대 마을 노래예요. 따라 해 봐요.”",
+ left:{label:"따라 부른다",fx:{people:1},add:{bondLien:1},result:"음이 자꾸 엇나간다. 리엔이 등을 두드리며 웃는다.\n“오빠 음치구나.”"},
+ right:{label:"조용히 하라고 한다",fx:{military:1},result:"노래가 뚝 끊긴다.\n한참 뒤, 등 뒤에서 작게. “…무서워서 그랬어요.”"}},
+{id:"rest_lien_blade",acts:[2,3],rest:true,dur:1,who:"리엔",role:"숫돌",cond:s=>s.flags.lienAccompanies,
+ text:"숫돌에 칼을 갈던 리엔이 손을 벤다. 피가 꽤 난다.\n“괜찮아요. 하나도 안 아파요.”\n아파 보인다.",
+ left:{label:"붕대를 감아 준다",fx:{people:1},add:{bondLien:1},result:"천을 찢어 감는다. 리엔이 고개를 돌린 채 말한다.\n“엄마도 꼭 이렇게 감았는데.”"},
+ right:{label:"칼 쥐는 법부터 다시 잡아 준다",fx:{military:1},add:{bondLien:1},result:"리엔이 감긴 손으로 숫돌을 다시 잡는다. 이번엔 안 벤다.\n“봤죠? 봤어요?”"}},
+{id:"rest_lien_mother",acts:[3],rest:true,dur:1,who:"리엔",role:"모닥불",cond:s=>s.flags.lienAccompanies&&s.flags.bondLien>=1,
+ text:"리엔이 갑자기 목소리를 낮게 깐다.\n“‘리엔, 신발 털고 들어와.’ 우리 엄마 흉내. 닮았어요?”",
+ left:{label:"똑같다고 한다",add:{bondLien:1},result:"“거짓말.”\n웃던 리엔이 그대로 무릎에 얼굴을 묻는다."},
+ right:{label:"엄마 얘기를 더 해 달라고 한다",add:{bondLien:1},result:"빵은 늘 태웠고, 노래는 잘했고, 화나면 이름을 세 번 불렀대.\n리엔은 새벽까지 떠든다."}},
+{id:"rest_bernan_home",acts:[2,3],rest:true,dur:1,who:"베르난",role:"수련 끝난 밤",cond:s=>s.flags.metMaster&&!s.flags.bernanGone,
+ text:"베르난이 술병을 딴다. 수련 끝난 밤에 술은 처음 본다.\n“고향이 남쪽 포도밭이야. 칼 잡기 전엔 포도나 밟았지.”",
+ left:{label:"한 잔 받는다",add:{bernardTrust:1},result:"독하다. 사레가 들린다.\n베르난이 처음으로 소리 내 웃는다."},
+ right:{label:"왜 안 돌아갔냐고 묻는다",add:{bernardTrust:1},result:"“전하를 두고 갈 순 없었다. 지금은… 너를 두고.”\n말끝을 흐리고 잔을 비운다."}},
+{id:"rest_bernan_coin",acts:[3,4],rest:true,dur:1,who:"베르난",role:"은화",cond:s=>s.flags.metMaster&&!s.flags.bernanGone&&s.flags.bernardTrust>=2,
+ text:s=>"베르난이 별 일곱 은화를 손끝으로 튕긴다.\n“네 생일마다 별궁에 은화 두고 온 거, 나다. 전하 심부름. 이름은 빼라 하셨고.”"
+   +(s.flags.rejectsFather?"\n그 아버지는 필요 없다고 했었지, 너는.":""),
+ left:{label:"왜 이름을 뺐냐고 묻는다",add:{bernardTrust:1},set:{knowsCoins:true},result:"“이름 넣었으면 섭정이 널 찾았겠지. 겁쟁이셨어도 바보는 아니었다.”"},
+ right:s=>s.flags.rejectsFather
+   ?{label:"그래도 필요 없다고 한다",fx:{legitimacy:-2},result:"베르난이 은화를 주머니에 넣는다.\n“그 말도 전해 드리고 싶구나. 늦었지만.”"}
+   :{label:"은화를 받아 둔다",fx:{legitimacy:2},set:{knowsCoins:true},result:"은화가 아직 따뜻하다."}},
+{id:"rest_kane_rules",acts:[3,4],rest:true,dur:1,who:"케인",role:"천막 입구",cond:s=>s.flags.kaneAlly,
+ text:"케인이 손때 묻은 수첩을 편다. 근위대 규칙이 빽빽하다.\n“아버지가 하수구 청소부였어. 규칙만 지키면 아무도 우릴 못 깔볼 줄 알았지.”",
+ left:{label:"규칙을 하나 새로 쓰자고 한다",add:{bondKane:1},result:"케인이 빈 쪽을 편다. 펜을 쥐고 한참 있다.\n‘하나. 하수구에서 났다고 무시하지 않는다.’"},
+ right:{label:"수첩을 태우라고 한다",result:"“이게 없으면 난 뭔데.”\n케인이 수첩을 도로 품에 넣는다."}},
+{id:"rest_bread_child",acts:[2],rest:true,dur:1,who:"우물가의 아이",role:"산골 마을",cond:s=>s.flags.stoleBread,
+ text:"우물가에서 웬 여자아이가 너를 빤히 본다.\n“빵 가져간 오빠다!”\n강가 농가의 그 아이. 엄마랑 이 마을로 옮겨 왔단다.",
+ left:{label:"미안하다고 한다",fx:{people:3},result:"아이가 고개를 갸웃한다. “엄마가 그러는데, 배고파서 그랬을 거래요.”\n다음 날 아이가 빵 반쪽을 들고 온다."},
+ right:{label:"모른 척한다",fx:{people:-2},result:"아이가 엄마 치마 뒤로 숨는다.\n한동안 그 집 앞은 돌아서 다닌다."}},
+{id:"a3_marta_gallows",acts:[3],queueOnly:true,dur:4,who:"행상인",role:"왕도 소식",cond:s=>!s.flags.martaAlive&&!s.flags.martaDead,
+ text:"행상인이 또 소식을 들고 왔다.\n아들 시신을 내려 달라고 성문 앞에서 버티던 노파가 잡혔다고. 마르타다.\n사흘 뒤 교수대.",
+ left:{label:"교수대로 간다",check:{stat:"military",base:54,bonus:s=>wpn(s)+(s.flags.kaneAlly?8:0)+(s.flags.mercRank>=2?8:0),
+   success:{set:{martaAlive:true},add:{bondMarta:1},queue:[{id:"rest_marta",delay:2}],result:["밧줄이 걸리기 직전, 군중을 헤치고 뛰어든다.","마르타를 들쳐 업고 골목으로 달린다.\n“업혀 다닐 나이는 아닌데.” 등에서 숨을 몰아쉬며."]},
+   failure:{fx:{people:-4},set:{martaDead:true},result:"늦었다. 광장에 닿았을 땐 밧줄이 벌써 흔들리고 있다."}}},
+ right:{label:"갈 수 없다",fx:{people:-3},set:{martaDead:true},result:"그날 밤엔 아무도 입을 열지 않는다."}},
+{id:"rest_marta",acts:[3,4],queueOnly:true,rest:true,dur:1,who:"마르타",role:"바느질",cond:s=>s.flags.martaAlive,
+ text:"마르타가 네 터진 소매를 꿰맨다. 바늘 끝이 떨린다.\n“엘레나는 바느질은 영 꽝이었어. 노래는 잘했지만.”",
+ left:{label:"그 노래를 불러 달라고 한다",add:{bondMarta:1},clue:"lullaby",result:"‘별이 이름을 적으면, 양치기도 왕.’\n쉰 목소리. 박자는 정확하다."},
+ right:{label:"아들 얘기를 묻는다",add:{bondMarta:1},result:s=>s.flags.buriedSeven?"“네가 묻어 줬잖니. 그럼 됐다.”\n마르타가 실을 이로 끊는다.":"“착한 애였어. 너보다 두 살 많았지.”\n마르타가 실을 이로 끊는다."}},
+{id:"a3_dragon_price",acts:[3,4],queueOnly:true,dur:2,who:"룬 검",role:"용이 쓰러진 자리",cond:s=>s.flags.hasLegendaryWeapon&&s.flags.dragonSlain,
+ text:"용의 피가 식어 간다. 칼자루 별 문양도 하나씩 꺼지고.\n왼손 손가락 둘이 굳어 안 펴진다.\n칼날 글귀. ‘힘은 대가를 원한다.’",
+ left:{label:"검을 바위에 다시 꽂는다",fx:{military:-4},set:{hasLegendaryWeapon:false},result:"손가락이 조금씩 풀린다.\n바위에 꽂힌 검은 다시 무거워 보인다."},
+ right:{label:"검을 계속 쥔다",fx:{military:4,people:-4},set:{swordBound:true},result:"손가락은 끝내 펴지지 않았다.\n검은 여전히 깃털처럼 가볍다."}},
+{id:"spire_last",acts:[3,4],queueOnly:true,dur:2,who:"이온",role:"원장 맨 뒷장",cond:s=>finalOpen(),
+ text:s=>`이온이 원장 맨 뒷장을 편다. 네 이름이 ${s.pastLives}번. 줄마다 끝이 다르다.\n“다 기억한다. 왕관 쓴 너도, 숲에 들어간 너도, 길에서 죽은 너도.”\n이온이 펜을 내민다. “이번엔 네가 쥐어라.”`,
+ left:{label:"원장을 불에 넣는다",ending:"blank_ledger",result:["원장이 불길에 말린다. 네 이름이 적힌 줄부터 탄다.","이온의 그림자가 바닥에서 떨어져 나와, 연기처럼 창밖으로 빠져나간다."]},
+ right:{label:"펜을 돌려준다",fx:{legitimacy:2},result:"“그래. 아직 쓸 게 남았구나.”\n이온이 원장을 덮는다."}},
 
 // ===== 위기 =====
 {id:"crisis_people_hi",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:2,who:"모여든 사람들",role:"위기 · 민심",cond:s=>s.stats.people>=CRISIS_HI,
- text:"사람들이 섭정의 징수관을 끌고 와 네 발치에 던진다.\n몇은 몽둥이를 들고 너를 본다.",
- left:{label:"징수관을 일으키고 해산시킨다",fx:{people:-12,legitimacy:4},result:"야유가 나왔다. 사람들이 몽둥이를 내렸다."},
- right:{label:"돌아선다",fx:{legitimacy:-6},add:{tyrantPoints:1},result:"등 뒤에서 함성이 올랐다가 끊겼다."}},
+ text:"사람들이 섭정 징수관을 끌고 와 네 발치에 내동댕이친다.\n몽둥이 든 몇이 네 눈치를 본다.",
+ left:{label:"징수관을 일으키고 해산시킨다",fx:{people:-12,legitimacy:4},result:"야유가 터진다. 그래도 몽둥이는 내려간다."},
+ right:{label:"돌아선다",fx:{legitimacy:-6},add:{tyrantPoints:1},result:"등 뒤에서 함성이 솟았다가, 뚝 끊긴다."}},
 {id:"crisis_people_lo",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:3,who:"닫힌 문",role:"위기 · 민심",cond:s=>s.stats.people<=CRISIS_LO,
- text:"사흘째 어느 마을도 문을 열지 않는다.\n아이들이 너를 보고 돌을 줍는다.",
- left:{label:"돈을 풀어 빵을 나눈다",fx:{gold:-12,people:12},result:"그날 밤, 열려 있는 헛간 하나."},
- right:{label:"밤에만 움직인다",fx:{military:3,gold:-2},result:"열흘 동안 아무와도 말하지 않는다."}},
+ text:"사흘째 문 열어 주는 마을이 없다.\n아이들이 너를 보더니 돌을 줍는다.",
+ left:{label:"돈을 풀어 빵을 나눈다",fx:{gold:-12,people:12},result:"그날 밤, 빗장이 풀린 헛간 하나."},
+ right:{label:"밤에만 움직인다",fx:{military:3,gold:-2},result:"열흘 동안 누구와도 말을 섞지 않는다."}},
 {id:"crisis_military_hi",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:3,who:"칼잡이들",role:"위기 · 무력",cond:s=>s.stats.military>=CRISIS_HI,
- text:"네 곁에 칼잡이 열둘이 모였다.\n“이렇게 센데 왜 굶나. 옆 마을 창고를 털자.”",
+ text:"어느새 네 곁에 칼잡이 열둘.\n“이렇게 센데 왜 굶어? 옆 마을 창고 털자고.”",
  left:{label:"흩어지게 한다",fx:{military:-12,people:4},result:"일곱이 떠났다."},
- right:{label:"앞장선다",fx:{gold:8,people:-10},add:{tyrantPoints:1},result:"자물쇠는 한 번에 부서졌다."}},
+ right:{label:"앞장선다",fx:{gold:8,people:-10},add:{tyrantPoints:1},result:"자물쇠는 한 방에 나간다."}},
 {id:"crisis_military_lo",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:6,who:"열병",role:"위기 · 무력",cond:s=>s.stats.military<=CRISIS_LO,
- text:"사흘째 열이 내리지 않는다. 검을 쥐면 손이 떨린다.",
- left:{label:"약값을 치르고 눕는다",fx:{military:12,gold:-8},set:{injury:0},result:"엿새를 잤다. 손이 멈췄다."},
+ text:"사흘째 열이 안 내린다. 검을 쥐면 손이 덜덜.",
+ left:{label:"약값을 치르고 눕는다",fx:{military:12,gold:-8},set:{injury:0},result:"엿새를 내리 잔다. 손 떨림이 멎었다."},
  right:{label:"그냥 걷는다",fx:{legitimacy:3,people:-2},result:"두 번 쓰러졌다."}},
 {id:"crisis_legit_hi",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:2,who:"무릎 꿇는 사람들",role:"위기 · 정통성",cond:s=>s.stats.legitimacy>=CRISIS_HI,
- text:"사람들이 네 손등에 입 맞추려고 줄을 선다.",
+ text:"네 손등에 입 맞추겠다고 사람들이 줄을 선다.",
  left:{label:"일으켜 세운다",fx:{legitimacy:-12,people:6},result:"줄이 흩어졌다."},
- right:{label:"손을 내민다",fx:{people:-6,gold:2},result:"해가 질 때까지 줄이 이어졌다."}},
+ right:{label:"손을 내민다",fx:{people:-6,gold:2},result:"줄은 해가 질 때까지 이어진다."}},
 {id:"crisis_legit_lo",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:2,who:"주막",role:"위기 · 정통성",cond:s=>s.stats.legitimacy<=CRISIS_LO,
- text:"누가 네 발 앞에 침을 뱉는다. “가짜 왕자.”\n주막이 웃는다.",
- left:{label:"별궁 이야기를 처음부터 한다",fx:{legitimacy:12,gold:-4},result:"자정에야 끝난다. 웃는 사람은 없다."},
- right:{label:"같이 웃는다",fx:{people:3,gold:-2},result:"사내가 술 한 잔을 밀어줬다."}},
+ text:"누가 발 앞에 침을 뱉는다. “가짜 왕자.”\n주막이 와르르 웃는다.",
+ left:{label:"별궁 이야기를 처음부터 한다",fx:{legitimacy:12,gold:-4},result:"자정이 돼서야 끝난다. 웃는 사람은 하나도 없다."},
+ right:{label:"같이 웃는다",fx:{people:3,gold:-2},result:"사내가 술 한 잔을 쓱 밀어 준다."}},
 {id:"crisis_gold_hi",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:3,who:"금화",role:"위기 · 금전",cond:s=>s.stats.gold>=CRISIS_HI,
- text:"모르는 얼굴들이 네 모닥불에 와서 앉는다.\n어젯밤 누가 네 짐을 뒤졌다.",
- left:{label:"우물과 다리를 고친다",fx:{gold:-14,people:8},result:"모르는 얼굴들이 하나씩 사라졌다."},
- right:{label:"더 깊이 숨긴다",fx:{people:-4,military:-2},result:"그 뒤로 신발을 벗고 자지 않는다."}},
+ text:"모르는 얼굴들이 네 모닥불가에 와 앉는다.\n간밤엔 누가 짐을 뒤졌고.",
+ left:{label:"우물과 다리를 고친다",fx:{gold:-14,people:8},result:"모르는 얼굴들이 하나둘 빠져나간다."},
+ right:{label:"더 깊이 숨긴다",fx:{people:-4,military:-2},result:"그 뒤론 신발을 신은 채 잔다."}},
 {id:"crisis_gold_lo",acts:[1,2,3,4],crisis:true,repeat:true,cooldown:8,dur:3,who:"빈 주머니",role:"위기 · 금전",cond:s=>s.stats.gold<=CRISIS_LO,
- text:"마지막 동전을 썼다. 신발 밑창이 떨어졌다.",
- left:{label:"남의 밭을 간다",fx:{gold:12,military:-6},result:"사흘 밭을 갈고 은화 여섯 닢."},
+ text:"마지막 동전마저 썼다. 신발 밑창도 덜렁.",
+ left:{label:"남의 밭을 간다",fx:{gold:12,military:-6},result:"사흘 밭을 갈고 받은 게 은화 여섯 닢."},
  right:{label:"버틴다",fx:{legitimacy:2,military:-2},result:"이틀을 굶는다."}},
 
 // ===== 일상 =====
 {id:"safe_hunt",acts:[1,2,3,4],fallback:true,repeat:true,cooldown:3,dur:2,who:"토끼",role:"저녁",
- text:"덫에 토끼가 걸렸다. 옆 모닥불의 나그네 짐이 비어 있다.",
- left:{label:"나눈다",fx:{people:3,military:-2},result:"나그네가 남쪽 길 검문소 위치를 알려줬다."},
+ text:"덫에 토끼 한 마리. 옆 모닥불 나그네의 짐 보따리는 텅 비었다.",
+ left:{label:"나눈다",fx:{people:3,military:-2},result:"나그네가 남쪽 길 검문소 자리를 귀띔해 준다."},
  right:{label:"혼자 먹는다",fx:{military:3,people:-2},result:"나그네는 새벽에 떠났다."}},
 {id:"safe_rest",acts:[1,2,3,4],fallback:true,repeat:true,cooldown:3,dur:3,who:"점성술사",role:"모닥불",clue:"candle",
- text:s=>"북쪽 하늘 낮은 곳에 노란 별 하나.\n점성술사가 네 손바닥을 본다. “왕좌와 무덤 사이를 오가는 손이군.”"+(s.pastLives>0?"\n“이 손, 전에 본 것 같은데.”":""),
+ text:s=>"북쪽 하늘 낮게 노란 별 하나.\n점성술사가 네 손바닥을 들여다본다. “왕좌랑 무덤 사이를 오가는 손이로군.”"+(s.pastLives>0?"\n“이 손, 전에 본 것 같은데.”":""),
  left:{label:"동전을 주고 더 듣는다",fx:{legitimacy:3,gold:-3},set:{heardSpire:true},queue:[{id:"a3_spire_gate",delay:3}],
-   result:"“저 노란 건 별이 아니야. 북쪽 별지기 첨탑 촛불이지. 왕가 족보 원본이 거기 있대.”"},
+   result:"“저 노란 건 별이 아니야. 북쪽 별지기 첨탑 촛불이지. 왕가 족보 원본이 거기 있다던데.”"},
  right:{label:"손을 거둔다",fx:{people:2,legitimacy:-2},result:"“다들 그러지.”"}},
 {id:"safe_work",acts:[1,2,3,4],fallback:true,repeat:true,cooldown:3,dur:4,who:"방앗간",role:"품팔이",
- text:"방앗간 일손. 사흘에 은화 몇 닢. 얼굴을 드러내야 한다.",
- left:{label:"일한다",fx:{gold:7,military:-2,legitimacy:-2},clue:"coin",result:"품삯 하나가 오래된 은화다. 뒷면에 별 일곱.\n“아르벤 때 돈이야.”"},
+ text:"방앗간 일손 구함. 사흘에 은화 몇 닢. 대신 얼굴을 드러내야 한다.",
+ left:{label:"일한다",fx:{gold:7,military:-2,legitimacy:-2},clue:"coin",result:"품삯 중 하나가 낡은 은화다. 뒷면에 별 일곱.\n“아르벤 때 돈이네.”"},
  right:{label:"지나친다",fx:{gold:-2,military:2},result:"그날 저녁은 굶는다."}},
 {id:"safe_rain",acts:[1,2,3,4],fallback:true,repeat:true,cooldown:3,dur:2,who:"장대비",role:"검문소 옆",
- text:"비가 쏟아진다. 지붕은 검문소 옆 마구간뿐이다.",
+ text:"장대비. 비 피할 데라곤 검문소 옆 마구간뿐.",
  left:{label:"마구간에 들어간다",fx:{gold:2,legitimacy:-3,people:2},result:"마부가 빵 반쪽을 건넨다. 아무것도 묻지 않고."},
  right:{label:"빗속을 걷는다",fx:{military:3,gold:-2},result:"검문소 앞엔 아무도 없다."}}
 ];
@@ -724,15 +798,15 @@ const CARD_MAP=Object.fromEntries(CARDS.map(c=>[c.id,c]));
 /* 왕도로 가지 않을 때 갈 수 있는 곳. 앞에서 쌓은 인연(플래그)이 있어야 열리고, 위에 있을수록 먼저 손을 끈다.
    몇몇은 바로 끝나지 않고 한 장면을 더 거친다 (그 장면의 판정에 따라 결말이 갈린다). */
 const LEAVE_ROUTES=[
-  {ok:f=>f.spireTruth,why:"고원 쪽에 첨탑이 있다. 원장 마지막 장이 비어 있다.",go:{label:"첨탑으로 간다",ending:"spire_keeper",result:"문은 두드리기 전에 열렸다."}},
-  {ok:f=>f.lienAccompanies&&f.promiseLien,why:"리엔은 동쪽 공사장으로 갔다. 같이 찾자고 한 약속이 남아 있다.",go:{label:"리엔을 쫓아 공사장으로",then:"a4_wall",result:"리엔이 남긴 발자국은 성벽 쪽으로 나 있었다."}},
-  {ok:f=>f.metMaster&&!f.bernanGone&&f.bernardTrust>=1,why:"베르난이 혼자 남쪽으로 갔다. 대관식 날 성문 앞에 서겠다고 했다.",go:{label:"베르난을 쫓아 남쪽으로",then:"a4_bernan_chase",result:"말을 바꿔 타며 사흘을 달린다."}},
-  {ok:f=>(f.promiseVillage||f.villageTrust)&&(f.militia||f.villageReturned),why:"산골 마을에서 사람이 왔다. 징수관이 대관식 기념세를 걷으러 온다고.",go:{label:"산골 마을로 돌아간다",then:"a4_village",result:"외양간 다락은 그대로였다."}},
-  {ok:f=>f.motherNorth&&(f.hairpin||f.heardSpire),why:"어머니가 흥얼거리던 노래의 고원이 북쪽에 있다.",go:{label:"어머니의 고원으로 간다",then:"a4_highland",result:"북쪽으로 열흘. 양 떼 냄새가 난다."}},
-  {ok:f=>f.dragonSlain,why:"북부 영주가 용을 벤 자에게 땅을 주겠다고 했다.",go:{label:"북부 영주에게 간다",ending:"legend_hero",result:"성문 위에 걸린 용의 머리."}},
-  {ok:f=>f.mercRank>=2,why:"까마귀들이 북부 진영에서 기다린다.",go:{label:"까마귀 진영으로 간다",ending:"mercenary_king",result:"하그가 누운 채 깃발을 네 쪽으로 민다."}},
-  {ok:f=>f.monkBond,why:"산중 수도원은 이틀 거리다.",go:{label:"수도원으로 간다",ending:"monk_ending",result:"테오가 아무것도 묻지 않고 국을 데웠다."}},
-  {ok:()=>true,why:"북쪽은 숲이다. 아무도 너를 모른다.",go:{label:"북쪽 숲으로 들어간다",ending:"hermit",result:"도끼와 소금을 샀다."}}
+  {ok:f=>f.spireTruth,why:"고원 쪽 첨탑. 원장 마지막 장이 아직 비어 있다.",go:{label:"첨탑으로 간다",ending:"spire_keeper",result:"두드리기도 전에 문이 열린다."}},
+  {ok:f=>f.lienAccompanies&&f.promiseLien,why:"리엔은 동쪽 공사장으로 떠났다. 같이 찾자던 약속은 아직이고.",go:{label:"리엔을 쫓아 공사장으로",then:"a4_wall",result:"리엔 발자국이 성벽 쪽으로 찍혀 있다."}},
+  {ok:f=>f.metMaster&&!f.bernanGone&&f.bernardTrust>=1,why:"베르난이 혼자 남쪽으로 갔다. 대관식 날 성문 앞에 서겠다면서.",go:{label:"베르난을 쫓아 남쪽으로",then:"a4_bernan_chase",result:"말을 바꿔 타며 사흘을 달린다."}},
+  {ok:f=>(f.promiseVillage||f.villageTrust)&&(f.militia||f.villageReturned),why:"산골 마을에서 사람이 왔다. 징수관이 대관식 기념세를 걷으러 온단다.",go:{label:"산골 마을로 돌아간다",then:"a4_village",result:"외양간 다락은 그대로였다."}},
+  {ok:f=>f.motherNorth&&(f.hairpin||f.heardSpire),why:"어머니 자장가 속 그 고원이 북쪽에 있다.",go:{label:"어머니의 고원으로 간다",then:"a4_highland",result:"북쪽으로 열흘. 양 떼 냄새가 바람에 실려 온다."}},
+  {ok:f=>f.dragonSlain,why:"용을 벤 자에게 땅을 주겠다고, 북부 영주가 포고를 냈다.",go:{label:"북부 영주에게 간다",ending:"legend_hero",result:"성문 위에 걸린 용의 머리."}},
+  {ok:f=>f.mercRank>=2,why:"까마귀들은 북부 진영에서 기다리는 중.",go:{label:"까마귀 진영으로 간다",ending:"mercenary_king",result:"드러누운 하그가 깃발을 네 쪽으로 밀어 준다."}},
+  {ok:f=>f.monkBond,why:"산중 수도원까진 이틀.",go:{label:"수도원으로 간다",ending:"monk_ending",result:"테오가 아무것도 묻지 않고 국을 데운다."}},
+  {ok:()=>true,why:"북쪽은 숲. 아무도 너를 모르는 곳.",go:{label:"북쪽 숲으로 들어간다",ending:"hermit",result:"도끼와 소금을 샀다."}}
 ];
 function leaveRoutes(s){return LEAVE_ROUTES.filter(x=>x.ok(s.flags));}
 
@@ -755,22 +829,22 @@ const T_ENEMY={1:{n:"그림자 병사",hp:2,w:{raise:3,breath:3,retreat:2,feint:
 const TELL_NAME={raise:"크게 치켜든다",breath:"숨을 고른다",retreat:"물러선다",feint:"허상이 생긴다"};
 const STYLE_OF={"케인":"blade","근위대장 케인":"blade","순찰병":"club","징수관 호위병":"spear","용":"beast","그림자 병사":"shade","석상 기사":"stone","그림자":"shade"};
 const TELLS={
- blade:{raise:["칼을 머리 위로 치켜든다. 내려칠 기세다.","두 손으로 칼자루를 쥐고 높이 든다."],breath:["어깨가 내려간다. 숨을 몰아쉰다.","칼끝이 처진다. 가슴이 크게 오르내린다."],retreat:["한 걸음 뒤로 물러선다. 발끝으로 거리를 잰다.","칼을 거두며 뒤로 빠진다."],feint:["몸이 비틀린다. 칼끝이 둘로 보인다.","왼쪽으로 들어오는 척, 어깨는 반대로 돈다."]},
- club:{raise:["몽둥이를 머리 위로 휘두른다.","몽둥이를 어깨 뒤로 크게 젖힌다."],breath:["몽둥이를 짚고 헐떡인다.","땀을 훔치느라 손이 내려간다."],retreat:["뒷걸음질 친다.","동료 쪽으로 슬금슬금 물러난다."],feint:["발을 구르며 어느 쪽으로 올지 감춘다.","몽둥이를 이 손 저 손으로 옮긴다."]},
- spear:{raise:["창을 높이 들어 내리찍을 자세를 잡는다.","창 자루를 머리 위로 들어 올린다."],breath:["창끝이 흔들린다. 숨을 고른다.","창을 땅에 짚고 숨을 들이켠다."],retreat:["창 길이만큼 물러선다.","창을 겨눈 채 뒤로 빠진다."],feint:["창끝이 찌르는 척 멈칫한다.","창 자루를 돌려 반대쪽 끝을 내민다."]},
- beast:{raise:["꼬리를 높이 치켜든다.","앞발을 들어 올린다. 발톱이 횃불에 번뜩인다."],breath:["목덜미가 들썩인다. 숨을 들이켠다.","콧구멍에서 연기가 샌다. 가슴이 부푼다."],retreat:["머리를 뒤로 뺀다.","몸을 웅크리며 동굴 안쪽으로 물러선다."],feint:["날개를 펼친다. 그림자가 둘이 된다.","고개는 이쪽으로, 꼬리는 저쪽으로 흔든다."]},
- shade:{raise:["그림자 칼날이 천장까지 길어진다.","검은 팔이 머리 위로 솟는다."],breath:["윤곽이 흐려진다. 다시 모양을 잡는 중이다.","촛불 쪽으로 몸이 쏠린다. 빛을 마시는 것 같다."],retreat:["벽 속으로 반쯤 스며든다.","바닥을 따라 미끄러지듯 물러난다."],feint:["몸이 둘로 갈라진다. 하나는 그림자다.","등잔 불빛에 그림자가 셋으로 늘어난다."]},
- stone:{raise:["돌팔이 삐걱이며 머리 위로 올라간다.","석검을 들어 올린다. 돌가루가 쏟아진다."],breath:["무릎 이음매에서 모래가 흘러내린다. 움직임이 멎는다.","가슴의 금 사이로 빛이 꺼졌다 켜진다."],retreat:["무거운 발이 한 칸 뒤로 끌린다.","석상이 제자리로 돌아가려는 듯 물러선다."],feint:["석상 뒤에서 똑같은 석상이 하나 더 움직인다.","돌방패가 기울며 몸통을 가린다."]}
+ blade:{raise:["칼을 머리 위로 번쩍. 내려칠 기세.","두 손으로 칼자루를 움켜쥐고 높이 든다."],breath:["어깨가 처진다. 숨이 거칠다.","칼끝이 내려간다. 가슴이 들썩들썩."],retreat:["한 발 물러선다. 발끝으로 거리를 재면서.","칼을 거두며 뒤로 빠진다."],feint:["몸을 비튼다. 칼끝이 둘로 보이고.","왼쪽으로 들어오는 척, 어깨는 반대로."]},
+ club:{raise:["몽둥이가 머리 위에서 붕붕 돈다.","몽둥이를 어깨 뒤로 한껏 젖힌다."],breath:["몽둥이를 짚고 헐떡인다.","땀 훔치느라 손이 내려갔다."],retreat:["뒷걸음질 친다.","동료 쪽으로 슬금슬금."],feint:["발을 구르며 어느 쪽으로 올지 숨긴다.","몽둥이를 이 손 저 손으로 바꿔 쥔다."]},
+ spear:{raise:["창을 높이 들고 내리찍을 자세.","창 자루가 머리 위로 올라간다."],breath:["창끝이 흔들린다. 숨 고르는 중.","창을 땅에 짚고 크게 숨을 들이켠다."],retreat:["창 길이만큼 물러선다.","창을 겨눈 채 뒤로 쭉 빠진다."],feint:["찌르는 척, 창끝이 멈칫.","창 자루를 휙 돌려 반대쪽 끝을 내민다."]},
+ beast:{raise:["꼬리를 높이 치켜든다.","앞발이 들린다. 발톱이 횃불에 번뜩."],breath:["목덜미가 들썩인다. 숨을 들이켠다.","콧구멍에서 연기가 샌다. 가슴이 부풀고."],retreat:["머리를 뒤로 뺀다.","몸을 웅크리며 동굴 안쪽으로."],feint:["날개를 펼친다. 그림자가 둘이 된다.","고개는 이쪽, 꼬리는 저쪽."]},
+ shade:{raise:["그림자 칼날이 천장까지 늘어난다.","검은 팔이 머리 위로 솟구친다."],breath:["윤곽이 흐려진다. 모양을 다시 잡는 중.","몸이 촛불 쪽으로 쏠린다. 빛을 마시기라도 하듯."],retreat:["벽 속으로 반쯤 스며든다.","바닥을 타고 스르륵 물러난다."],feint:["몸이 둘로 갈라진다. 하나는 그림자.","등잔 불빛에 그림자가 셋으로."]},
+ stone:{raise:["돌팔이 삐걱대며 머리 위로.","석검이 들린다. 돌가루가 우수수."],breath:["무릎 이음매에서 모래가 흘러내린다. 동작이 멎었다.","가슴 금 사이로 빛이 꺼졌다 켜졌다."],retreat:["무거운 발이 한 칸 뒤로 끌린다.","제자리로 돌아가려는 듯 석상이 물러선다."],feint:["석상 뒤에서 똑같은 석상이 하나 더 움직인다.","돌방패가 기울어 몸통을 가린다."]}
 };
 const HITS={ // 결과 종류별 묘사. 상대 종류에 따로 없으면 _ 를 쓴다
- parry:{_:["칼날끼리 부딪쳐 불꽃이 튄다. 손목이 저리지만 버텼다.","내려친 일격을 칼등으로 흘려보낸다. 쇳소리가 귀를 찢는다."],club:["몽둥이가 칼자루에 막혀 튕겨 나간다.","몽둥이를 칼로 받는다. 나무 부스러기가 튄다."],beast:["꼬리가 칼 위로 떨어진다. 무릎이 꺾일 뻔했지만 버텼다.","발톱이 칼날에 걸려 미끄러진다. 불똥이 튄다."],shade:["그림자 칼날이 네 칼에 닿자 연기처럼 흩어진다."],stone:["돌주먹이 칼등을 때린다. 팔이 울리지만 막았다."]},
- evade:{_:["상대가 물러선 자리로 바람만 지나간다.","서로 거리를 잰다. 발밑 흙이 밀린다."],beast:["용이 머리를 뒤로 뺀다. 뜨거운 숨만 얼굴을 스친다."],shade:["그림자가 벽으로 물러난다. 등잔불이 흔들린다."]},
- wait:{_:["칼을 세우고 기다리는 사이, 상대가 숨을 다 고른다. 틈이 닫혔다.","너무 오래 막고만 섰다. 상대가 다시 자세를 잡는다."],beast:["용이 숨을 들이켜는 동안 방패처럼 서 있었다. 목덜미가 다시 비늘에 덮인다."]},
- hit:{_:["숨 고르는 틈으로 칼이 파고든다. 상대가 비틀거린다.","칼끝이 갑옷 이음매를 뚫는다. 손에 묵직한 감촉."],beast:["비늘 사이 맨살에 칼이 박힌다. 동굴이 울음소리로 찬다.","목덜미를 긋는다. 뜨거운 피가 눈밭에 떨어진다."],shade:["칼이 그림자를 가른다. 찢어진 자리에서 찬바람이 샌다."],stone:["돌 틈에 칼이 박힌다. 쩍, 금이 간다."],club:["칼등으로 손목을 친다. 몽둥이가 진흙에 떨어진다."]},
- hitFeint:{_:["갈라진 둘 중 진짜를 벤다. 허상이 연기처럼 꺼진다.","속임수를 읽었다. 돌아 들어오는 옆구리에 칼이 먼저 닿는다."],beast:["날개 그림자를 무시하고 몸통을 벤다."]},
- trade:{_:["서로의 칼이 동시에 닿는다. 피가 튄다, 둘 다.","먼저 베었지만 내려친 칼도 피하지 못했다."],beast:["칼이 비늘을 긁는 순간 꼬리가 옆구리를 친다."],stone:["석검과 네 칼이 엇갈린다. 돌이 깨지고, 네 어깨도."]},
- hurtFeint:{_:["막은 쪽은 허상이다. 진짜가 옆구리를 친다.","엉뚱한 쪽을 막았다. 갈비뼈에 둔탁한 충격."],beast:["날개 그림자를 막았다. 진짜 발톱은 반대편에서 왔다."]},
- whiff:{_:["헛친 칼. 되돌아온 일격이 어깨를 친다.","물러선 상대를 쫓아 휘두른 칼이 허공을 가른다. 반격이 들어온다."],beast:["허공을 벤 칼. 물러났던 머리가 그대로 들이받는다."]}
+ parry:{_:["칼날끼리 부딪쳐 불꽃이 튄다. 손목이 저릿. 그래도 버텼다.","내리친 칼을 칼등으로 흘려 낸다. 귀를 찢는 쇳소리."],club:["몽둥이가 칼자루에 걸려 튕겨 나간다.","몽둥이를 칼로 받는다. 나무 부스러기가 튄다."],beast:["꼬리가 칼 위로 떨어진다. 무릎이 꺾일 뻔. 버텼다.","발톱이 칼날에 걸려 미끄러진다. 불똥."],shade:["그림자 칼날이 네 칼에 닿는 순간 연기처럼 흩어진다."],stone:["돌주먹이 칼등을 때린다. 팔이 울리지만, 막았다."]},
+ evade:{_:["상대가 빠진 자리로 바람만 휙.","서로 거리를 잰다. 발밑 흙이 밀린다."],beast:["용이 머리를 뺀다. 뜨거운 숨만 얼굴을 훑고 간다."],shade:["그림자가 벽 쪽으로 물러난다. 등잔불이 흔들리고."]},
+ wait:{_:["칼만 세우고 기다리는 사이 상대가 숨을 다 골랐다. 틈이 닫혔다.","너무 오래 막기만 했다. 상대가 다시 자세를 잡는다."],beast:["용이 숨 들이켜는 동안 멀뚱히 서 있었다. 목덜미가 다시 비늘로 덮인다."]},
+ hit:{_:["숨 고르는 틈으로 칼이 파고든다. 상대가 휘청.","칼끝이 갑옷 이음매를 뚫는다. 손에 묵직하게 전해지는 감촉."],beast:["비늘 틈 맨살에 칼이 박힌다. 동굴 가득 울음소리.","목덜미를 긋는다. 뜨거운 피가 눈밭에 후드득."],shade:["칼이 그림자를 가른다. 찢긴 자리로 찬바람이 샌다."],stone:["돌 틈에 칼이 박힌다. 쩍, 금이 간다."],club:["칼등으로 손목을 내리친다. 몽둥이가 진흙에 처박힌다."]},
+ hitFeint:{_:["갈라진 둘 중 진짜를 벤다. 허상은 연기처럼 꺼지고.","속임수가 보였다. 돌아 들어오는 옆구리에 칼이 먼저 닿는다."],beast:["날개 그림자는 무시. 몸통을 벤다."]},
+ trade:{_:["칼과 칼이 동시에 닿는다. 피가 튄다. 양쪽 다.","먼저 베긴 했는데, 내려오는 칼을 못 피했다."],beast:["칼이 비늘을 긁는 순간 꼬리가 옆구리를 후린다."],stone:["석검과 네 칼이 엇갈린다. 돌이 깨지고, 네 어깨도."]},
+ hurtFeint:{_:["막은 쪽이 허상이었다. 진짜가 옆구리를 친다.","엉뚱한 데를 막았다. 갈비뼈에 둔탁한 충격."],beast:["날개 그림자를 막았는데, 진짜 발톱은 반대편에서 온다."]},
+ whiff:{_:["헛친다. 되돌아온 일격이 어깨를 때린다.","물러선 상대를 쫓아 휘두른 칼이 허공만 벤다. 곧장 반격."],beast:["허공을 벤 칼. 물러났던 머리가 그대로 들이받는다."]}
 };
 const HIT_HEAD={start:"싸움",parry:"막아냈다",evade:"거리를 쟀다",wait:"틈을 놓쳤다",hit:"명중",hitFeint:"간파",trade:"맞교환",hurtFeint:"속았다",whiff:"빗나감",charm:"부적이 막았다",trap:"함정"};
 function josa(w,a,b){const c=String(w).charCodeAt(String(w).length-1);if(c<0xAC00||c>0xD7A3)return b;return (c-0xAC00)%28?a:b;}
@@ -826,11 +900,11 @@ function towerResolve(act){
     const dealt=c.dealt?dmg:0; e.hp-=dealt;
     let r=linePick(HITS[c.kind],style), kind=c.kind, taken=0;
     if(c.taken){const m=hurt(); if(m){r+="\n"+m; if(!dealt) kind="charm";} else taken=1;}
-    if(dealt>1) r+="\n룬 검이 빛을 토한다. 상처가 두 배로 벌어진다.";
+    if(dealt>1) r+="\n룬 검이 번쩍. 상처가 두 배로 벌어진다.";
     out.hit={kind,dealt,taken,style,finish:e.hp<=0?"win":t.hp<=0?"lose":null,view:{n:e.n,hp:Math.max(0,e.hp),max:e.max,my:Math.max(0,t.hp),mymax:t.max,prevHp,prevMy}};
     if(e.hp<=0){r+=`\n\n${e.n}${josa(e.n,"이","가")} 무너진다.`;t.phase="door";t.enemy=null;t.step++;}
     else {e.tell=wpick(T_ENEMY[t.floor].w);e.dark=darkRoll(t);e.tellText=tellLine(style,e.tell);
-      if(t.hp===1) r+="\n숨이 가쁘다. 한 번만 더 맞으면 끝이다.";}
+      if(t.hp===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝.";}
     out.result=r;
   }
   if(t.hp<=0) return {result:[out.result,"눈앞이 하얘진다. 계단을 굴러 떨어진다.\n눈을 뜨니 첨탑 문밖 눈밭. 문은 닫혀 있다."],tower:null,then:null,set:{spireSealed:true,regionOverride:null,injury:4},fx:{military:-8},hit:out.hit};
@@ -856,10 +930,10 @@ function duelResolve(act){
   const c=clash(d.tell,act); if(c.learn) learnTell(d.tell,act);
   const dealt=c.dealt?dmg:0; d.hp-=dealt; d.my-=c.taken;
   let r=linePick(HITS[c.kind],style);
-  if(dealt>1) r+="\n룬 검이 빛을 토한다. 상처가 두 배로 벌어진다.";
+  if(dealt>1) r+="\n룬 검이 번쩍. 상처가 두 배로 벌어진다.";
   const hit={kind:c.kind,dealt,taken:c.taken,style,finish:d.hp<=0?"win":d.my<=0?"lose":null,
     view:{n:d.n,hp:Math.max(0,d.hp),max:d.max,my:Math.max(0,d.my),mymax:d.mymax,prevHp:state.duel.hp,prevMy:state.duel.my}};
-  if(!hit.finish){ if(d.my===1) r+="\n숨이 가쁘다. 한 번만 더 맞으면 끝이다."; else if(d.hp===1) r+="\n상대 무릎이 흔들린다. 한 번이면 된다."; }
+  if(!hit.finish){ if(d.my===1) r+="\n숨이 턱까지 찼다. 한 대만 더 맞으면 끝."; else if(d.hp===1) r+="\n상대 무릎이 휘청인다. 한 번이면 된다."; }
   const fin=br=>({result:[r,...pagesOf(br.result||"")].filter(Boolean),fx:br.fx||{},set:br.set||{},add:br.add||{},queue:br.queue||[],then:br.then||null,ending:br.ending||null,duel:null,hit});
   if(d.hp<=0) return fin(d.win);
   if(d.my<=0) return fin(d.lose);
@@ -871,6 +945,7 @@ function duelResolve(act){
 const ENDINGS={
   last_bastard:{title:"마지막 사생아",tag:"숨겨진 결말"},
   spire_keeper:{title:"별지기",tag:"숨겨진 결말"},
+  blank_ledger:{title:"빈 원장",tag:"최종 결말"},
   throne_reclaim:{title:"왕좌",tag:"왕도"},
   regent_heir:{title:"섭정의 양자",tag:"왕도"},
   last_knight:{title:"마지막 근위기사",tag:"베르난"},
@@ -899,6 +974,7 @@ const ENDINGS={
 const ENDING_HINT={
   last_bastard:"북쪽의 노란 별에서 들은 것을, 왕도 사람들 앞에서.",
   spire_keeper:"북쪽의 노란 별에서 들은 것을 안고, 왕도를 등진다.",
+  blank_ledger:"결말을 열둘 모은 뒤, 첨탑 꼭대기에서 왕의 피를 묻는다.",
   throne_reclaim:"증거와 사람을 모아 대관식 날 성문 앞에 선다.",
   tyrant_ending:"왕좌에 앉은 첫날, 자비 대신 본보기를.",
   regent_heir:"반지와 장부를 둘 다 쥐고 대관식 전날 밤을 맞는다. 손님이 온다.",
@@ -920,39 +996,61 @@ const ENDING_HINT={
   death_gold_0:"금전이 바닥난다.",death_gold_100:"금전이 넘친다."
 };
 const DEATH_TEXT={
-  death_military_0:["강을 건너던 중 다리에 힘이 빠진다.\n물살이 너를 하류로 데려간다. 사공이 건져 올린 건 사흘 뒤.",
-    "열병. 외양간 다락에서 일어나지 못한다.\n사다리를 오르는 장화 소리.",
-    "칼을 들 힘이 없다. 협곡 길에서 산적 셋.\n까마귀 깃발도 섭정 휘장도 없는 자들.",
-    "성문 앞. 창을 막을 팔이 올라가지 않는다."],
-  death_military_100:["근위병 둘을 베고 나니 멈출 수가 없다.\n나루터 마을이 통째로 네 칼 아래 엎드린다. 케인이 오는 데는 하루면 충분하다.",
-    "마을 젊은이들이 네 칼을 들고 징수관 숙소에 불을 지른다.\n다음 달, 병사 삼백이 골짜기를 메운다.",
-    "따르는 칼잡이가 쉰을 넘는다.\n어느 밤 그중 셋이 네 천막에 들어온다. 네가 가르친 대로.",
-    "성벽을 먼저 넘은 건 네 부하들이다. 왕도가 사흘 동안 탄다.\n불이 꺼진 뒤 왕좌에 앉을 사람은 남지 않는다. 너도."],
-  death_people_0:["강 건너 어느 마을도 문을 열지 않는다.\n마지막 마을 촌장이 재워준 그 밤. 새벽의 근위대. 촌장 손의 금화 주머니.",
-    "산골 마을이 너를 내놓기로 한다.\n다락 사다리를 올라온 건 촌장의 아들.",
-    "북부 마을들이 너를 보면 돌을 던진다.\n현상금 이백 닢은 결국 누군가의 몫.",
-    "광장의 누구도 길을 비켜주지 않는다.\n근위대가 닿을 때까지."],
-  death_people_100:["나루터 마을 사람들이 네 이름을 외치며 근위대 막사로 몰려간다.\n그날 밤 붉은 강물. 맨 앞줄에 너.",
-    "마을 사람들이 징수관을 끌어내 목을 맨다.\n섭정은 그 골짜기를 반역 마을로 정한다. 다락까지 오르는 불.",
-    "천 명이 넘게 따라온다. 멈추라는 말은 뒷줄까지 닿지 않는다.\n국경 수비대와 먼저 마주친 건 맨 앞의 너.",
-    "대관식 날, 군중이 성문을 부순다. 너를 왕으로 세우려고.\n밀려든 사람들 속에서 넘어진 너를 아무도 보지 못한다."],
-  death_legitimacy_0:["반지도 이름도 버리고 강을 건넌다.\n그해 겨울, 강가 마을에서 이름 없는 일꾼 하나가 얼어 죽는다.",
-    "‘일꾼 오빠’ 말고는 남은 이름이 없다.\n그 이름으로 묻힌다. 산골 마을 뒷산.",
-    "주막마다 가짜 왕자 노래. 까마귀들도 너를 그 제목으로 부른다.\n깃발 없이 혼자 남은 아침. 그 밤의 협곡.",
-    "광장에서 아무도 네 반지를 믿지 않는다.\n‘위조범’ 팻말을 목에 건 채, 성문 위."],
-  death_legitimacy_100:["반지를 손가락에 끼고 다닌다. 장터마다 사람들이 무릎을 꿇는다.\n케인이 찾는 데 하루도 걸리지 않는다.",
-    "‘전하’라고 부르지 않는 사람은 마을에 두지 않는다.\n그 밤 다락 문을 연 건 촌장.",
-    "베르난조차 네 앞에서 고개를 들지 못한다.\n손등에 입 맞추려는 줄 어딘가의 자객.",
-    "대관식 전날, 네 이름을 새긴 왕관을 미리 만든다.\n그 왕관을 받쳐 든 시종이 섭정의 사람."],
-  death_gold_0:["신발도 짐도 없이 맞는 첫 겨울.\n강가 갈대밭.",
-    "다락 값을 못 낸다. 산골 마을을 떠나는 날 눈이 온다.\n봄에 나무꾼이 너를 찾는다.",
-    "까마귀 품삯을 못 준다.\n그 밤 깃발을 뺏어 든 건 네가 믿던 고참.",
-    "여관비도 없는 대관식 전날 밤. 다리 밑.\n아침 순찰이 깨우지 못한다."],
-  death_gold_100:["장터 상인들이 네 주머니 소문을 퍼뜨린다.\n현상금보다 가벼운 금화는 없다.",
-    "금화를 숨긴 다락에 도둑이 든다. 칼을 든 도둑.",
-    "네 몫의 금화를 세던 까마귀가 셈을 끝내고 일어선다.",
-    "섭정 쪽 귀족이 금화로 네 사람들을 하나씩 산다.\n마지막에 남은 사람이 문을 연다."]
+  death_military_0:["강 한복판에서 다리가 풀린다.\n물살에 떠밀려 하류로. 사공이 건져 올린 건 사흘 뒤.",
+    "열병. 외양간 다락에서 몸을 못 일으킨다.\n사다리를 오르는 장화 소리가 들리는데도.",
+    "칼 들 힘조차 없다. 협곡 길, 산적 셋.\n까마귀 깃발도 섭정 휘장도 안 단 놈들.",
+    "성문 앞. 창을 막아야 할 팔이 안 올라간다."],
+  death_military_100:["근위병 둘을 베고 나니 멈출 수가 없다.\n나루터 마을 하나가 통째로 네 칼 앞에. 케인이 오는 데 하루면 족했지.",
+    "마을 젊은이들이 네 칼을 들고 징수관 숙소에 불을 놓는다.\n다음 달, 병사 삼백이 골짜기를 메운다.",
+    "따르는 칼잡이가 쉰을 넘었다.\n어느 밤, 그중 셋이 천막 안으로 들어온다. 네가 가르친 그대로.",
+    "성벽을 먼저 넘은 건 네 부하들. 왕도가 사흘을 탄다.\n불이 꺼지고 나니 왕좌에 앉을 사람이 없다. 너까지도."],
+  death_people_0:["강 건너 어느 마을도 문을 안 연다.\n겨우 재워 준 마지막 마을 촌장. 새벽의 근위대. 촌장 손엔 금화 주머니.",
+    "산골 마을이 너를 넘기기로 한다.\n다락 사다리를 올라온 건 촌장 아들.",
+    "북부 마을마다 돌이 날아온다.\n현상금 이백 닢은 결국 누군가 챙겨 갔다.",
+    "광장 누구도 길을 비켜 주지 않는다.\n근위대가 닿을 때까지."],
+  death_people_100:["나루터 사람들이 네 이름을 외치며 근위대 막사로 몰려간다.\n그 밤 강물이 붉다. 맨 앞줄에 네가 있었고.",
+    "마을 사람들이 징수관을 끌어내 목을 맨다.\n섭정은 골짜기에 반역 낙인을 찍고. 불길이 다락까지 올라온다.",
+    "따라오는 사람이 천을 넘는다. 멈추라는 말은 뒷줄까지 안 닿는다.\n국경 수비대와 제일 먼저 마주친 건, 맨 앞의 너.",
+    "대관식 날, 군중이 성문을 부순다. 너를 왕으로 세우겠다고.\n밀려드는 사람들 틈에 넘어진 너를 아무도 못 본다."],
+  death_legitimacy_0:["반지도 이름도 버리고 강을 건넌다.\n그해 겨울, 강가 마을에서 이름 모를 일꾼 하나가 얼어 죽는다.",
+    "‘일꾼 오빠’ 말고는 남은 이름이 없다.\n그 이름으로 묻혔다. 산골 마을 뒷산에.",
+    "주막마다 가짜 왕자 노래. 까마귀들까지 너를 그 노래 제목으로 부른다.\n깃발 하나 없이 혼자 남은 아침. 그리고 그 밤의 협곡.",
+    "광장 누구도 네 반지를 안 믿는다.\n‘위조범’ 팻말을 목에 건 채, 성문 위로."],
+  death_legitimacy_100:["반지를 보란 듯이 끼고 다닌다. 장터마다 사람들이 무릎을 꿇고.\n케인이 찾아내는 데 하루도 안 걸렸다.",
+    "‘전하’라 부르지 않는 사람은 마을에서 내쫓는다.\n그 밤 다락 문을 연 사람, 촌장.",
+    "베르난마저 네 앞에선 고개를 못 든다.\n손등에 입 맞추겠다는 줄 어딘가에 자객이 섞여 있었다.",
+    "대관식 전날, 네 이름 새긴 왕관을 미리 맞춘다.\n그걸 받쳐 든 시종이 섭정 쪽 사람일 줄이야."],
+  death_gold_0:["신발도 짐도 없이 맞는 첫 겨울.\n강가 갈대밭에서.",
+    "다락 값이 밀린다. 산골 마을을 뜨는 날 눈발이 날리고.\n봄에 나무꾼이 너를 발견한다.",
+    "까마귀 품삯이 밀린다.\n그 밤 깃발을 빼앗아 든 건, 제일 믿던 고참.",
+    "여관비도 없는 대관식 전날 밤. 다리 밑.\n아침 순찰이 아무리 흔들어도 안 깬다."],
+  death_gold_100:["네 주머니가 두둑하단 소문이 장터에 퍼진다.\n현상금보다 가벼운 금화는 없는 법.",
+    "금화 숨긴 다락에 도둑이 든다. 칼 든 도둑.",
+    "네 몫 금화를 세던 까마귀가 셈을 마치고 일어선다.",
+    "섭정 쪽 귀족이 금화로 네 사람들을 하나씩 사들인다.\n끝까지 남은 한 사람이, 문을 열어 준다."]
 };
+/* ---------------- 회차 반응 ---------------- */
+function lastKind(){const e=getMeta().lastEnding;if(!e)return null;if(e.startsWith("death_"))return"death";
+  if(["throne_reclaim","tyrant_ending","regent_heir"].includes(e))return"crown";if(["last_bastard","spire_keeper","blank_ledger"].includes(e))return"star";
+  if(["fallen_gate","throne_door"].includes(e))return"gate";return"away";}
+function motherDream(){return {crown:"\n어머니가 웃는다. “꿈에 네가 왕관을 썼더라. 하나도 안 어울렸어.”",death:"\n어머니가 네 손을 세게 쥔다. “꿈에서 네가 죽더라. 오늘은 꼭 살아.”",
+  gate:"\n“꿈에 성문 앞에 쓰러진 너를 봤어. 거긴 가지 마.”",away:"\n“꿈에서 넌 아주 멀리 있더라. 그래도 웃고 있었지.”",star:"\n어머니가 하늘을 본다. “별이 또 네 이름을 적었구나.”"}[lastKind()]||"";}
+/* ---------------- 공략집: 원장의 여백 ----------------
+   결말을 처음 볼 때마다 영혼 1개. 일반 결말 공략은 영혼 1개, 숨겨진·최종 결말 공략은 2개로 연다. */
+const FINAL_NEED=12;
+function finalOpen(){return getDisc().length>=FINAL_NEED;}
+const isHiddenEnd=id=>/숨겨진|최종/.test((ENDINGS[id]||{}).tag||"");
+const guideCost=id=>isHiddenEnd(id)?2:1;
+function soulsLeft(){const m=getMeta();return getDisc().length-(m.guides||[]).reduce((a,id)=>a+guideCost(id),0);}
+function buyGuide(id){const m=getMeta();m.guides=m.guides||[];if(m.guides.includes(id)||soulsLeft()<guideCost(id))return false;m.guides.push(id);setMeta(m);return true;}
+// 공략을 연 결말의 고리를 채우면 알림, 그리고 지난 생들에 밟은 고리는 영구 기록
+function trackTrail(ending){
+  const m=getMeta();m.trail=m.trail||{};const g=m.guides||[];state.trailNow=state.trailNow||{};const news=[];
+  for(const id in ENDING_TRAIL){const L=ENDING_TRAIL[id];const now=L.map(([ok],i)=>{try{return ok(state.flags)?i:-1;}catch(e){return -1;}}).filter(i=>i>=0);
+    const had=state.trailNow[id]||[];if(g.includes(id))now.filter(i=>!had.includes(i)).forEach(i=>news.push(L[i][1]));
+    state.trailNow[id]=now;if(ending||g.includes(id)){m.trail[id]=[...new Set([...(m.trail[id]||[]),...now])];}}
+  setMeta(m);if(news.length&&!ending)toast("원장 한 줄이 채워졌다 · "+news[0]);}
+function toast(t){if(typeof document==="undefined"||!document.querySelector)return;const el=$("toast");if(!el)return;el.textContent=t;el.classList.remove("on");void el.offsetWidth;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),2600);}
 /* 결말 화면의 "이 결말까지 이어진 일": 이번 생에 실제로 켜진 연결 고리만 보여 준다 */
 const ENDING_TRAIL={
   lien_wall:[[f=>f.childSaved,"불탄 마을 어귀에서 리엔을 업었다"],[f=>f.lienAccompanies,"리엔과 함께 북쪽으로 갔다"],[f=>f.promiseLien,"어머니를 같이 찾자고 약속했다"],[f=>f.kaneAlly,"케인이 경비 교대표를 알고 있었다"],[f=>f.militia,"산골 젊은이들이 따라왔다"]],
@@ -971,8 +1069,12 @@ const ENDING_TRAIL={
   fallen_gate:[[f=>f.throneFails>=2,"성문 앞에서 두 번 밀려났다"],[f=>f.path==="leave","베르난을 쫓아 광장에 뛰어들었다"]]
 };
 ENDING_TRAIL.village_ash=ENDING_TRAIL.village_guard;
+ENDING_TRAIL.hermit=[[f=>f.path==="leave","대관식 한 달 전, 왕도로 가지 않는다"],[f=>leaveRoutes({flags:f}).length===1,"아무 인연도 끝까지 이어 가지 않는다"]];
+ENDING_TRAIL.wanderer=[[f=>f.path==="leave"||f.throneFails>=2,"왕도를 등지거나, 성문에서 두 번 밀려난다"],[f=>f.sawHighland||leaveRoutes({flags:f}).length===1||f.throneFails>=2,"마음 둘 곳 없이 길에 선다"]];
+ENDING_TRAIL.blank_ledger=[[f=>f.spireFloor>0,"별지기 첨탑에 오른다"],[f=>f.spireTruth,"꼭대기에서 왕의 피가 무엇인지 묻는다"],[()=>finalOpen(),"결말을 열두 개 이상 모았다"]];
 function endingTrail(id,st){return (ENDING_TRAIL[id]||[]).filter(([ok])=>ok(st.flags)).map(([,t])=>t);}
 function yearsText(st){const y=Math.floor(st.totalDays/365);return y<1?"한 해도 안 되어":`${y}년 만에`;}
+function martaLine(f){return f.martaAlive?"마르타가 대관식 맨 앞줄에 섰다. 손수건을 꼭 쥐고.":f.martaDead?"성 밖 일곱 무덤 옆에 하나가 더 있다. 마르타.":"";}
 function lienLine(f,throne){
   if(f.lienAccompanies&&f.promiseLien&&f.northGate) return "리엔은 어머니와 갈대 마을로 돌아갔다. 봄에 한 번 성에 들렀다.";
   if(f.lienAccompanies) return throne?"리엔은 성 동쪽 공사장 명부를 한 장씩 넘겼다. 어머니 이름은 없었다.":"리엔은 왕도에 남아 어머니를 찾았다.";
@@ -985,143 +1087,149 @@ function endingDesc(id,st){
   const where=f.regionOverride||ACTS[st.act].region;
   if(DEATH_TEXT[id]){const t=DEATH_TEXT[id][Math.max(1,Math.min(4,st.act))-1];return `${t}\n\n${st.year}년, ${where}. ${st.age}세.`+(st.flags.lastWords?`\n마지막 선택: ${st.flags.lastWords}`:"");}
   const P=[], add=x=>{if(x)P.push(x);};
+  if(id==="blank_ledger"){
+    add(`원장이 다 타는 데 한나절 걸렸다. ${st.pastLives}번의 생이 한꺼번에 재가 됐다.\n이온은 재를 쓸어 창밖으로 날렸다. 그림자는 돌아오지 않았다.`);
+    add("그해 섭정은 왕관을 썼다. 이름 적을 책 없이.\n사람들은 그 왕관을 오래 믿지 않았다.");
+    add("고원을 내려와 하룻밤 잔다. 눈을 뜨니, 별궁이 타고 있지 않다.\n다음 장은 없다. 이제부턴 그냥 살면 돼.");
+    return P.join("\n\n");
+  }
   if(id==="last_bastard"){
-    add("왕관은 해가 질 때까지 광장에 놓여 있었다. 아무도 줍지 않았다.");
-    add("이듬해 봄, 마을마다 한 사람씩 성으로 왔다. 의자는 둥글게 놓였다."+(f.kaneAlly?"\n근위대 해산 문서에 케인이 처음 서명했다.":"")+(f.scribeWitness?"\n오틀린이 회의 기록을 맡았다.":""));
-    add([bern?"베르난은 고향으로 갔다. 에드릭의 검을 두고.":"",lienLine(f,true)].filter(Boolean).join("\n"));
-    add("그해 북쪽 하늘의 노란 별이 꺼졌다."+(f.hairpin?"\n엘레나의 머리핀은 첨탑 책상 위에 두고 왔다.":""));
+    add("왕관은 해 질 때까지 광장 바닥에 있었다. 줍는 사람이 없었다.");
+    add("이듬해 봄, 마을마다 한 사람씩 성에 온다. 의자는 둥글게."+(f.kaneAlly?"\n근위대 해산 문서에 케인이 처음 서명했다.":"")+(f.scribeWitness?"\n오틀린이 회의 기록을 맡았다.":""));
+    add([bern?"베르난은 고향으로 갔다. 에드릭의 검을 두고.":"",lienLine(f,true),martaLine(f)].filter(Boolean).join("\n"));
+    add("그해 북쪽 하늘 노란 별이 꺼졌다."+(f.hairpin?"\n엘레나의 머리핀은 첨탑 책상 위에 두고 왔다.":""));
     return P.join("\n\n");
   }
   if(id==="spire_keeper"){
-    add("이온에게 잉크 개는 법을 배웠다. 원장에 이름 적는 법은 배우지 않았다.\n“그건 쓰는 사람이 정한다.”");
-    add("이온은 이듬해 봄에 죽었다. 그림자는 남아 네 발밑에 붙었다.");
-    add("섭정 이름이 들어갈 줄은 아직 비어 있다.\n문을 두드리는 사람이 있으면 너는 묻는다. “너는 누구냐.”");
+    add("이온에게 잉크 개는 법은 배웠다. 원장에 이름 적는 법은 안 배웠고.\n“그건 쓰는 사람이 정하는 거다.”");
+    add("이듬해 봄, 이온이 죽었다. 그림자만 남아 이제 네 발밑에 붙어 다닌다.");
+    add("섭정 이름 들어갈 줄은 아직 비어 있다.\n누가 문을 두드리면 너는 묻는다. “너는 누구냐.”");
     return P.join("\n\n");
   }
   if(id==="throne_reclaim"){
     if(f.truthRevealed){
-      add("모두가 원장을 들은 뒤에 왕관을 썼다.");
-      add("원장은 성 지하에 봉인했다. 열쇠는 네가 죽으면 마을 대표들에게 간다.");
+      add("모두 원장 낭독을 들은 다음에야 왕관을 썼다.");
+      add("원장은 성 지하에 봉인. 열쇠는 네가 죽으면 마을 대표들 몫이다.");
       add([bern?"베르난은 대관식 다음 날 고향으로 떠났다.":"",lienLine(f,true)].filter(Boolean).join("\n"));
       return P.join("\n\n");
     }
     const way=f.northGate?"북문 배수구로 들어갔다.":f.gateIntel?"케인의 옛 부하들이 남문을 열었다.":"정문으로 들어갔다.";
     const proof=f.forgedLedger?"원장에 네 이름이 있었다. 네가 적은 대로.":f.hasRing&&f.document?"반지와 장부가 한 글자도 다르지 않았다.":f.document?"반지 없이 장부로 증명했다.":f.hasRing?"반지 하나로 버텼다.":"증거 없이 함성으로 들어갔다.";
     add(`${yearsText(st)} 왕도로 돌아왔다. ${way}\n${proof}`);
-    add((f.tyrantPoints>=1?"첫 칙령은 세금 감면. 까마귀가 털었던 마을들은 칙령문을 아궁이에 넣었다.":"첫 칙령은 세금 감면.")
+    add((f.tyrantPoints>=1?"첫 칙령은 세금 감면. 까마귀한테 털린 마을들은 그 칙령문을 아궁이에 넣었다.":"첫 칙령은 세금 감면.")
       +(f.buriedSeven?"\n성 밖 일곱 무덤에 비석을 세웠다.":"")+(f.villageReturned&&f.promiseVillage?"\n산골 촌장이 다리를 절며 대관식에 왔다.":""));
-    add([bern?(f.bernardTrust>=2?"베르난은 무릎을 꿇었다가 일어서며 네 이름을 불렀다.":"베르난은 다음 날 고향으로 떠났다."):"",
-         f.kaneAlly?"케인은 근위대장이 됐다. 첫 명령은 하수구 청소부 품삯 인상이었다.":f.kaneYielded?"케인은 그날 칼을 바닥에 둔 채 성을 나갔다. 휘장도 두고 갔다.":"",
-         lienLine(f,true)].filter(Boolean).join("\n"));
+    add([bern?(f.bernardTrust>=2?"베르난은 무릎을 꿇었다 일어서며 네 이름을 불렀다.":"베르난은 다음 날 고향으로 떠났다."):"",
+         f.kaneAlly?"케인은 근위대장. 첫 명령이 하수구 청소부 품삯 인상이었다.":f.kaneYielded?"케인은 그날 칼도 휘장도 바닥에 두고 성을 나갔다.":"",
+         lienLine(f,true),martaLine(f)].filter(Boolean).join("\n"));
     return P.join("\n\n");
   }
   if(id==="tyrant_ending"){
-    add("귀족 스물이 하루에 처형됐다. 섭정의 근위대와 징수관이 그대로 네 것이 됐다.");
-    add([f.kaneAlly?"케인은 열 번째 칼이 떨어진 뒤 자리를 떴다. 다음 날 막사가 비어 있었다.":"",
+    add("귀족 스물이 하루 만에 목이 잘렸다. 섭정의 근위대와 징수관은 고스란히 네 것.");
+    add([f.kaneAlly?"열 번째 칼이 떨어지자 케인이 자리를 떴다. 이튿날 막사는 비어 있었다.":"",
          bern?"베르난은 왕좌의 방 문간에 에드릭의 검을 세워 두고 사라졌다.":"",
          f.lienAccompanies?"리엔은 성을 나갔다. 어머니를 데리고 갈대 마을로 갔다는 말이 왔다.":""].filter(Boolean).join("\n"));
-    add("빈민가 아이들이 새 왕 노래를 부른다. 근위대가 그 노래를 금지했다.");
+    add("빈민가 아이들이 새 왕 노래를 부른다. 근위대는 그 노래를 금지했고.");
     return P.join("\n\n");
   }
   if(id==="regent_heir"){
-    add("대관식 날 발코니. 왕관을 쓴 오스릭이 네 이름을 불렀다. 아들이라고.\n광장은 조용했다.");
+    add("대관식 날 발코니. 왕관 쓴 오스릭이 네 이름을 부른다. 아들이라고.\n광장은 쥐 죽은 듯 조용했다.");
     add([f.kaneAlly?"케인은 그날 밤 부관 휘장을 탁자에 두고 갔다.":"",
          bern?"베르난은 에드릭의 검을 부러뜨려 성문 앞에 두고 북쪽으로 갔다.":"",
          f.lienAccompanies?"리엔은 광장에서 너를 한 번 올려다보고 돌아섰다.":"",
          f.usurperSecret?"리엔의 할머니는 증언하러 오지 않았다. 올 이유가 없어졌다.":"",
          f.scribeWitness?"오틀린은 장부가 섭정 손에 들어간 날 도서관 지하실 문을 안에서 잠갔다.":""].filter(Boolean).join("\n"));
-    add("오스릭은 칠 년을 더 살았다. 원장엔 네 이름이 그의 아들로 적혀 있다.\n에드릭의 반지는 섭정의 보물 상자 안에 있다. 아무 손가락에도 맞지 않는다.");
+    add("오스릭은 칠 년을 더 살았다. 원장엔 네가 그의 아들로 적혀 있다.\n에드릭의 반지는 섭정 보물 상자 속. 누구 손가락에도 안 맞는다.");
     return P.join("\n\n");
   }
   if(id==="last_knight"){
     if(f.knightSaved){
-      add("베르난과 등을 맞대고 서문을 나섰다. 근위대는 따라오지 않았다. 따라올 이유를 찾지 못했다.");
-      add("베르난은 고향 마을에 칼 가는 집을 냈다. 에드릭의 검은 벽에 걸렸다.\n“전하 아들한테 진 빚은 이걸로 됐다.”"+(f.bernardTrust>=3?"\n가끔 네 이름을 두 번 따라 부른다. 처음 만난 밤처럼.":""));
-      add(f.kaneAlly?"케인은 서문에서 손을 한 번 들고 남았다. 다음 해 근위대장이 됐다.":"대관식은 하루 늦게 치러졌다. 광장 돌바닥을 닦느라.");
+      add("베르난과 등을 맞대고 서문을 나선다. 근위대는 안 따라왔다. 따라올 핑계를 못 찾은 거지.");
+      add("베르난은 고향 마을에 칼 가는 가게를 냈다. 벽엔 에드릭의 검.\n“전하 아들한테 진 빚은 이걸로 갚았다.”"+(f.bernardTrust>=3?"\n가끔 네 이름을 두 번 따라 부른다. 처음 만난 밤처럼.":""));
+      add(f.kaneAlly?"케인은 서문에서 손을 한 번 들고 남았다. 다음 해 근위대장이 됐다.":"대관식은 하루 늦게 치러졌다. 광장 돌바닥 닦느라고.");
     }else{
-      add("언덕에서 끝까지 봤다. 창 열두 자루.");
-      add("베르난은 에드릭과 같은 언덕에 묻혔다. 네가 묻었다."+(f.masterTrialPassed?"\n에드릭의 검은 같이 묻지 않았다. 아직 네 허리에 있다.":""));
-      add("그 뒤로 누가 이름을 물으면, 베르난이 광장에서 마지막에 외친 그대로 대답한다.");
+      add("언덕에서 끝까지 지켜봤다. 창 열두 자루.");
+      add("베르난은 에드릭과 같은 언덕에 묻혔다. 네 손으로."+(f.masterTrialPassed?"\n에드릭의 검은 같이 묻지 않았다. 아직 네 허리에 있다.":""));
+      add("그 뒤로 누가 이름을 물으면, 베르난이 광장에서 마지막으로 외친 그대로 답한다.");
     }
     return P.join("\n\n");
   }
   if(id==="lien_wall"){
     if(f.wallFreed===2){
-      add("그날 새벽 성벽 밖으로 걸어 나간 일꾼은 백스무 명이었다. 대관식 축포가 울릴 때 그들은 강을 건너고 있었다.");
-      add("리엔의 어머니는 갈대 마을 할머니 집 문간에서 주저앉았다. 리엔은 그날 처음으로 울었다."+(f.childSaved?"\n“이번엔 내가 빚졌네요. 또.”":""));
-      add((f.kaneAlly?"케인이 공사장 감독 명부를 불태웠다. 섭정은 그 일꾼들을 끝내 다 찾지 못했다.":"섭정은 공사장 명부를 다시 쓰라고 했다. 빈칸이 백스무 줄.")+"\n왕관은 남의 머리에 얹혔다. 너는 갈대 마을에서 겨울을 났다.");
+      add("그 새벽 성벽 밖으로 걸어 나간 일꾼이 백스무 명. 대관식 축포가 터질 즈음엔 다들 강을 건너는 중이었다.");
+      add("갈대 마을 할머니 집 문간에서 리엔 엄마가 주저앉는다. 리엔은 그날 처음 울었다."+(f.childSaved?"\n“이번엔 내가 빚졌네요. 또.”":""));
+      add((f.kaneAlly?"케인이 공사장 명부를 불살랐다. 섭정은 그 일꾼들을 끝내 다 못 찾았다.":"섭정은 공사장 명부를 다시 쓰라고 했다. 빈칸이 백스무 줄.")+"\n왕관은 남의 머리 위에. 너는 갈대 마을에서 겨울을 났다.");
     }else if(f.wallFreed===1){
-      add("명부에서 지워진 이름은 하나였다. 리엔의 어머니는 ‘병사(病死)’로 적혔다.");
-      add("나머지 백열아홉은 그 겨울을 공사장에서 났다. 봄에 반이 남았다.");
-      add("리엔은 어머니와 갈대 마을로 돌아갔다. 해마다 말린 생선 한 두름이 네게 온다. 쪽지는 없다.");
+      add("명부에서 지워진 이름은 딱 하나. 리엔 엄마는 ‘병사(病死)’로 적혔다.");
+      add("남은 백열아홉은 그 겨울을 공사장에서 버텼다. 봄에 살아남은 건 반.");
+      add("리엔은 엄마와 갈대 마을로 돌아갔다. 해마다 말린 생선 한 두름. 쪽지는 없이.");
     }else{
-      add("리엔과 어머니는 배수구로 빠져나갔다. 너는 셋째 줄 사슬에 묶였다.");
-      add("겨울 내내 돌을 날랐다. 아무도 네 얼굴을 벽보와 맞춰 보지 않았다. 사슬 찬 사생아는 찾는 사람이 없었다.");
-      add("봄, 감독관 막사에 불이 났다. 그 밤 네 사슬 고리 하나가 끊어져 있었다.\n고리에 리엔의 머리끈이 묶여 있었다.");
+      add("리엔과 엄마는 배수구로 빠져나갔다. 대신 셋째 줄 사슬엔 네가 묶였다.");
+      add("겨우내 돌을 날랐다. 벽보랑 네 얼굴을 맞춰 보는 사람은 없었다. 사슬 찬 사생아를 누가 찾겠나.");
+      add("봄, 감독관 막사에 불이 난다. 그 밤 네 사슬 고리 하나가 끊겨 있다.\n고리에 묶인 리엔의 머리끈.");
     }
     return P.join("\n\n");
   }
   if(id==="village_guard"){
     if(f.villageWay==="coin"){
-      add("해마다 마을 몫의 세금을 대신 냈다. 금화가 모자란 해엔 장터에서 품을 팔았다.");
-      add("징수관은 너를 ‘마을 대리인’이라고 불렀다. 섭정의 장부에 처음으로 네 이름이 적혔다. 왕자도 사생아도 아닌 이름으로.");
+      add("해마다 마을 몫 세금을 대신 냈다. 금화가 모자란 해엔 장터에서 품을 팔고.");
+      add("징수관은 너를 ‘마을 대리인’이라 불렀다. 섭정 장부에 처음 네 이름이 올랐다. 왕자도 사생아도 아닌 이름으로.");
     }else{
-      add("골짜기 입구에 망루를 세웠다. 젊은이들이 돌아가며 섰다."+(f.militia?" 처음 칼을 배운 넷이 맨 앞이었다.":""));
-      add("섭정의 장부에 이 골짜기는 ‘반역’으로 적혔다가, 몇 해 뒤 지워졌다. 걷으러 올 사람이 없어서.");
+      add("골짜기 입구에 망루를 세웠다. 젊은이들이 돌아가며 선다."+(f.militia?" 처음 칼을 배운 넷이 맨 앞이었다.":""));
+      add("섭정 장부에 이 골짜기는 ‘반역’으로 적혔다가 몇 해 뒤 지워졌다. 걷으러 오겠다는 사람이 없어서.");
     }
-    add("아이들은 여전히 너를 ‘일꾼 오빠’라고 부른다."+(f.villageTrust?"\n촌장 집 저녁상엔 그릇이 하나 더 놓인다.":"")+(f.hasRing?"\n반지는 다락 들보에 못으로 박아 두었다.":""));
+    add("아이들은 아직도 너를 ‘일꾼 오빠’라고 부른다."+(f.villageTrust?"\n촌장네 저녁상엔 여전히 그릇이 하나 더.":"")+(f.hasRing?"\n반지는 다락 들보에 못 박아 걸어 뒀다.":""));
     return P.join("\n\n");
   }
   if(id==="village_ash"){
-    add("창고와 집 열한 채가 탔다. 사람들은 산으로 올라가 살아남았다.");
-    add("촌장은 그 겨울을 넘기지 못했다. 장례에서 촌장 아들은 너를 보지 않았다."+(f.promiseVillage?"\n“약속은 쉽지.” 촌장이 처음 했던 말을 아들이 그대로 했다.":""));
-    add("이듬해 봄까지 그 골짜기에서 집을 지었다. 열한 채 가운데 아홉 채.\n벽보는 거기까지 올라오지 않았다.");
+    add("창고와 집 열한 채가 탔다. 사람들은 산으로 올라가 겨우 살았고.");
+    add("촌장은 그 겨울을 못 넘겼다. 장례 내내 촌장 아들은 너를 안 쳐다봤다."+(f.promiseVillage?"\n“약속이야 쉽죠.” 촌장이 처음 했던 말을, 아들이 똑같이 한다.":""));
+    add("이듬해 봄까지 그 골짜기에서 집을 지었다. 열한 채 가운데 아홉 채.\n벽보는 거기까지 안 올라왔다.");
     return P.join("\n\n");
   }
   if(id==="shepherd"){
-    add("고원의 돌집 하나를 받았다. 엘레나가 열여섯 살까지 살던 집이라고 했다.");
-    add("양 마흔 마리의 이름을 외웠다. 장부는 쓰지 않았다."+(f.hairpin?"\n머리핀은 문 위 못에 걸어 두었다.":"")+(f.spireFloor>0?"\n고원에서 첨탑 촛불이 보인다. 이온이 한 번 내려와 국을 얻어먹고 갔다.":""));
-    add("남쪽 하늘이 붉었다는 소식이 올라왔다. 대관식 불꽃이라고 했다.\n자장가를 끝까지 배웠다. ‘별이 이름을 적으면, 양치기도 왕. 양치기는 이름을 안 적어도 양을 안다.’");
+    add("고원 돌집 하나를 얻었다. 엘레나가 열여섯 살까지 살던 집이라고.");
+    add("양 마흔 마리 이름을 다 외웠다. 장부는 안 쓴다."+(f.hairpin?"\n머리핀은 문 위 못에 걸어 두었다.":"")+(f.spireFloor>0?"\n고원에서 첨탑 촛불이 보인다. 이온이 한 번 내려와 국을 얻어먹고 갔다.":""));
+    add("남쪽 하늘이 붉었다는 소식이 올라온다. 대관식 불꽃이라나.\n자장가는 끝까지 배웠다. ‘별이 이름을 적으면, 양치기도 왕. 양치기는 이름을 안 적어도 양을 안다.’");
     return P.join("\n\n");
   }
   if(id==="legend_hero"){
-    add("영주의 땅을 받지 않았다. 기사단에 들어가 국경을 지켰다.");
-    add("대관식 소식은 열흘 늦게 왔다. 막사에서 그 얘기를 하는 사람은 없었다.");
-    add("북부 아이들은 용을 벤 사람 노래를 부른다. 이름은 나오지 않는다."+(f.puppetSaved?"\n장터 인형극에 용 인형이 생겼다.":""));
+    add("영주가 준다는 땅은 마다했다. 기사단에 들어가 국경을 지켰다."+(f.swordBound?"\n왼손 손가락 둘은 끝내 안 펴졌다. 검은 여전히 가볍다.":"\n룬 검은 고개 바위에 꽂아 두고 왔다."));
+    add("대관식 소식은 열흘 늦게 왔다. 막사에서 그 얘길 꺼내는 사람은 없었고.");
+    add("북부 아이들은 용 벤 사람 노래를 부른다. 이름은 안 나온다."+(f.puppetSaved?"\n장터 인형극에 용 인형이 생겼다.":""));
     return P.join("\n\n");
   }
   if(id==="mercenary_king"){
-    add("하그는 그해 겨울 죽었다. 까마귀는 삼백이 됐다. 북부 세 영지가 세금을 너에게 냈다.");
-    add(f.mercRespect?"까마귀는 보급대만 털었다. 마을들은 깃발을 보면 문을 열었다.":"까마귀는 마을도 털었다. 마을들은 깃발을 보면 아이들을 숨겼다.");
-    add("이듬해 섭정이 협상 사신을 보냈다. 사흘을 기다리게 했다.");
+    add("하그는 그해 겨울에 죽었다. 까마귀는 삼백으로 불었고, 북부 세 영지가 세금을 네게 바쳤다.");
+    add(f.mercRespect?"까마귀는 보급대만 털었다. 마을마다 깃발을 보면 문을 열어 줬다.":"까마귀는 마을도 털었다. 깃발이 보이면 마을마다 아이들을 숨겼다.");
+    add("이듬해 섭정이 협상 사신을 보냈다. 사흘을 문 앞에 세워 뒀지.");
     return P.join("\n\n");
   }
   if(id==="monk_ending"){
-    add("테오가 머리를 깎아 주었다. 명부에 이름 칸이 빈 줄이 하나 생겼다.");
-    add("새벽마다 종을 쳤다. 겨울이면 산 아래 병자를 돌봤다."+(f.tyrantPoints>=1?"\n까마귀가 털었던 마을에도 갔다.":""));
-    add("근위대가 한 번 수도원을 뒤졌다. 이름 칸이 빈 줄은 그냥 넘겼다.");
+    add("테오가 머리를 깎아 줬다. 명부에 이름 칸 빈 줄이 하나 늘었다.");
+    add("새벽마다 종을 친다. 겨울이면 산 아래 병자들을 돌보고."+(f.tyrantPoints>=1?"\n까마귀가 털었던 마을에도 갔다.":""));
+    add("근위대가 수도원을 한 번 뒤졌다. 이름 칸 빈 줄은 그냥 넘어갔다.");
     return P.join("\n\n");
   }
   if(id==="hermit"){
-    add("시냇가에 오두막을 지었다. 첫 겨울엔 지붕이 샜다. 둘째 겨울엔 새지 않았다.");
-    add("가죽을 팔러 내려가면 벽보가 있었다. 해마다 덜 닮아갔다.");
-    add("대관식 소식은 석 달 늦게 왔다. 장작을 마저 패고 들어갔다.");
+    add("시냇가에 오두막을 지었다. 첫 겨울엔 지붕이 샜고, 둘째 겨울엔 안 샜다.");
+    add("가죽 팔러 내려가면 벽보가 붙어 있다. 해마다 덜 닮아 간다.");
+    add("대관식 소식은 석 달 늦게 왔다. 장작이나 마저 패고 들어갔다.");
     return P.join("\n\n");
   }
   if(id==="wanderer"){
-    add((f.sawHighland?"고원에서 들은 자장가 끝 소절을 가는 곳마다 흥얼거렸다.\n":"")+"어디에도 오래 머물지 않았다."+(f.hasRing?" 반지는 팔지 않았다.":""));
-    add("몇 해가 지나자 벽보가 붙지 않았다.");
-    add(f.puppetSaved?"어느 장터에서 양치기 인형극을 봤다. 양치기 인형 옆에 칼 든 인형이 하나 더 있었다. 순찰병을 쓰러뜨리는 역이었다.":"어느 장터에서 양치기 인형극을 봤다. 순찰병은 오지 않았다.");
+    add((f.sawHighland?"고원에서 들은 자장가 끝 소절을 가는 곳마다 흥얼거렸다.\n":"")+"어디서도 오래 머물지 않았다."+(f.hasRing?" 반지는 팔지 않았다.":""));
+    add("몇 해 지나자 벽보도 더는 안 붙었다.");
+    add(f.puppetSaved?"어느 장터에서 양치기 인형극을 봤다. 양치기 옆에 칼 든 인형이 하나 늘었더라. 순찰병 때려눕히는 역.":"어느 장터에서 양치기 인형극을 봤다. 이번엔 순찰병이 안 왔다.");
     return P.join("\n\n");
   }
   if(id==="throne_door"){
-    add("왕좌의 방 앞 돌바닥.\n케인은 칼을 거두고 문 앞에 다시 섰다.");
-    add("사흘 뒤 섭정이 돌아왔다. 문을 열어 준 사람은 케인이었다."+(f.kaneScar?"\n케인의 왼뺨에는 네가 낸 칼자국이 있었다.":""));
+    add("왕좌의 방 앞 돌바닥.\n케인이 칼을 거두고 다시 문 앞에 선다.");
+    add("사흘 뒤 섭정이 돌아왔다. 문을 열어 준 건 케인."+(f.kaneScar?"\n그 왼뺨엔 네가 낸 칼자국.":""));
     add(`${st.year}년, 왕도. ${st.age}세.`);
     return P.join("\n\n");
   }
   if(id==="fallen_gate"){
-    add("근위병의 창이 먼저 닿았다."+(f.kaneAlly?"\n케인이 뛰어들었다. 늦었다.":"")+(f.path==="leave"&&bern?"\n베르난과 같은 날, 같은 광장이었다.":""));
+    add("근위병의 창이 한발 빨랐다."+(f.kaneAlly?"\n케인이 뛰어들었지만, 늦었다.":"")+(f.path==="leave"&&bern?"\n베르난과 같은 날, 같은 광장.":""));
     add(f.path==="leave"&&bern?"성 밖 언덕에 무덤이 둘 늘었다. 나란히.":bern?"성 밖 언덕에 베르난이 무덤을 하나 팠다.":"성 밖 언덕에 무덤이 하나 늘었다.");
     add(`${st.year}년, 왕도. ${st.age}세.`);
     return P.join("\n\n");
@@ -1130,6 +1238,8 @@ function endingDesc(id,st){
 }
 
 /* ---------------- 인물 ---------------- */
+const BOND_WORD=["낯섦","경계","동행","신뢰","정","가족"];
+const bondWord=n=>BOND_WORD[Math.max(0,Math.min(5,n||0))];
 const CHARS={
   elena:{name:"엘레나",group:"가족",rel:s=>"어머니",facts:s=>{const f=s.flags,a=["별궁 세탁장 시녀. 불타는 별궁에 남았다."];
     if(f.motherNorth)a.push("북쪽 고원 출신. 자장가를 ‘양치기’로 불렀다.");
@@ -1137,26 +1247,28 @@ const CHARS={
     if((f.hairpin||f.motherNorth)&&f.spireFloor>=2)a.push("별지기 이온의 견습생이었다.");
     return a;}},
   edric:{name:"에드릭",group:"가족",rel:s=>"아버지",facts:s=>{const a=["제2왕자. 섭정에게 처형됐다."];
+    if(s.flags.knowsCoins)a.push("이름 없는 은화는 베르난을 시켜 보낸 것이었다.");
     if(seen("a1_dawn_father"))a.push("생일마다 이름 없이 은화를 보냈다.");
     if(seen("a2_bernan_past"))a.push("별궁을 떠날 때 돌아보지 않았다.");
     return a;}},
-  marta:{name:"마르타",group:"가족",rel:s=>"유모",facts:s=>{const a=["개울가에서 근위대 개를 반대쪽으로 끌고 갔다."];
+  marta:{name:"마르타",group:"가족",rel:s=>s.flags.martaDead?"유모 · 세상을 떠났다":s.flags.martaAlive?"유모 · "+bondWord(s.flags.bondMarta+1):"유모",facts:s=>{const a=["개울가에서 근위대 개를 반대쪽으로 끌고 갔다."];
+    if(s.flags.martaAlive)a.push("살아 있었다. 네 옷을 꿰매 준다.");if(s.flags.martaDead)a.push("아들 시신을 달라고 버티다 교수대에 올랐다.");
     if(seen("a3_execution"))a.push("아들이 처형됐다.");return a;}},
   lien:{name:"리엔",group:s=>s.flags.childAbandoned&&!s.flags.lienForgave?"그 밖":"곁",
-    rel:s=>{const f=s.flags;return f.lienAccompanies?"동행":f.childSaved?"갈대 마을":f.lienForgave?"너를 놓아준 사람":"네가 지나친 사람";},
+    rel:s=>{const f=s.flags;return (f.lienAccompanies?"동행":f.childSaved?"갈대 마을":f.lienForgave?"너를 놓아준 사람":"네가 지나친 사람")+(f.childSaved?" · "+bondWord(f.bondLien):"");},
     facts:s=>{const f=s.flags,a=["어머니가 세금 대신 왕도 성벽 공사에 끌려갔다."];
       if(f.childSaved)a.push("네가 강 건너까지 업어 줬다.");
       if(f.lienHesitated)a.push("나루터에서 너를 가리키지 않았다.");
       if(seen("a3_lien_betray"))a.push("노잣돈 때문에 네 위치를 팔았다.");
       if(f.promiseLien)a.push("어머니를 같이 찾기로 약속했다.");
       return a;}},
-  bernan:{name:"베르난",group:"곁",rel:s=>{const f=s.flags;return f.bernanGone?"떠났다":f.metMaster?"스승":"거절했다";},
+  bernan:{name:"베르난",group:"곁",rel:s=>{const f=s.flags;return f.bernanGone?"떠났다":f.metMaster?"스승 · "+bondWord(f.bernardTrust):"거절했다";},
     facts:s=>{const f=s.flags,a=["에드릭의 근위기사. 너를 왕으로 만들려 한다."];
       if(seen("a2_bernan_past"))a.push("에드릭이 별궁을 떠날 때 말을 재촉했다.");
       if(f.masterTrialPassed)a.push("에드릭의 검을 네게 주었다.");
       if(seen("a2_bernan_crown"))a.push("대관식엔 별지기가 이름을 적어야 한다고 했다.");
       return a;}},
-  kane:{name:"케인",group:s=>s.flags.kaneAlly?"곁":"적",rel:s=>s.flags.kaneAlly?"부관":"근위대 부대장",
+  kane:{name:"케인",group:s=>s.flags.kaneAlly?"곁":"적",rel:s=>s.flags.kaneAlly?"부관 · "+bondWord(s.flags.bondKane):"근위대 부대장",
     facts:s=>{const f=s.flags,a=[`너를 ${f.kaneEscaped}번 놓쳤다.`];
       if(f.kaneKnown)a.push("하수구 청소부 아들. 규칙을 믿는다.");
       if(f.kaneScar)a.push("왼뺨에 네 칼자국.");
@@ -1301,10 +1413,14 @@ function commit(){
   state.history=state.history.slice(0,30);
   addClues([...(c.clue?[c.clue]:[]),...p.out.clues]);
   state.chainNext=p.out.then||null;
+  if(c.crisis||p.out.check||(round&&p.out.hit&&p.out.hit.finish)) state.restDue=true; // 긴장된 장면 뒤엔 숨 고르기
   pending=null; sync();
   if(p.ending){const before=RELICS.filter(r=>hasRelic(r.id)).map(r=>r.id);state.ended=p.ending;addDisc(p.ending);
     state.newRelics=RELICS.filter(r=>hasRelic(r.id)&&!before.includes(r.id)).map(r=>r.id);
-    const m=getMeta();m.runs++;setMeta(m);save();render();return;}
+    const m=getMeta();m.runs++;m.lastEnding=p.ending;m.lastPath=state.flags.path||null;
+    m.lienPast=state.flags.childSaved?"saved":state.flags.childAbandoned?"left":m.lienPast;setMeta(m);
+    trackTrail(true);save();render();return;}
+  trackTrail(false);
   const next=pickNext();
   state.currentId=next.id;
   if(next.id==="tower"){if(!state.tower)state.tower=newTower();towerSync();}
@@ -1349,6 +1465,8 @@ function pickNext(){
     if(q.at>state.decisions) continue;
     if(c.acts.includes(state.act)&&condOk(c)){state.queue.splice(i,1);return c;}
   }
+  // 2.5) 긴장된 장면 뒤, 같이 있는 사람과 쉬는 장면
+  if(state.restDue){state.restDue=false;const rs=CARDS.filter(c=>c.rest&&!c.queueOnly&&c.acts.includes(state.act)&&condOk(c)&&!seen(c.id));if(rs.length) return pick(rs);}
   // 3) 일반 풀
   const elig=CARDS.filter(c=>!c.forced&&!c.queueOnly&&!c.crisis&&c.acts.includes(state.act)&&condOk(c)&&c.id!==state.currentId&&!state.queue.some(q=>q.id===c.id));
   const fresh=elig.filter(c=>!c.repeat&&!seen(c.id));
@@ -1606,9 +1724,9 @@ function nextResult(side){
 }
 const GROUP_ORDER=["가족","곁","적","그 밖"];
 const INTRO=[
-  {t:"아르벤 왕국",b:"노왕이 죽었다.\n노왕의 서자라고 주장하는 섭정 오스릭이 나라를 쥐었다.\n노왕 삼년상이 끝나는 날, 그는 왕관을 쓴다."},
-  {t:"너",b:"제2왕자 에드릭의 사생아. 에드릭은 너를 인정하지 않았다.\n너는 별궁 세탁장에서 어머니 엘레나와 스무 해를 살았다.\n사흘 전 섭정이 에드릭을 반역죄로 처형했다.\n오늘 밤, 별궁에 불이 붙는다."},
-  {t:"하는 법",b:"카드를 좌우로 끌어 놓으면 고른다.\n끄는 동안 영향받는 게이지가 노랗게 바뀐다.\n\n무력 · 민심 · 정통성 · 금전.\n하나라도 바닥나거나 가득 차면 그 생은 끝난다.\n\n싸움에서는 상대의 자세를 보고 막거나 벤다.\n\n죽어도 단서와 결말은 남는다. 결말을 모으면 다음 생이 조금씩 쉬워진다.\n막히면 상단의 ‘기록’을 연다."}
+  {t:"아르벤 왕국",b:"노왕이 죽었다.\n노왕 서자를 자칭하는 섭정 오스릭이 나라를 쥐었고.\n삼년상이 끝나는 날, 그가 왕관을 쓴다."},
+  {t:"너",b:"제2왕자 에드릭의 사생아. 에드릭은 끝내 너를 인정하지 않았다.\n별궁 세탁장에서 어머니 엘레나와 스무 해.\n사흘 전, 섭정이 에드릭을 반역죄로 처형했다.\n그리고 오늘 밤, 별궁에 불이 붙는다."},
+  {t:"하는 법",b:"카드를 좌우로 끌어다 놓으면 고른다.\n끄는 동안 영향받는 게이지가 노랗게 켜진다.\n\n무력 · 민심 · 정통성 · 금전.\n하나라도 바닥나거나 꽉 차면, 그 생은 끝.\n\n싸움에선 상대 자세를 보고 막거나 벤다.\n\n죽어도 단서와 결말은 남는다. 결말을 처음 볼 때마다 영혼 하나, 그걸로 공략을 연다.\n막히면 위쪽 ‘기록’을 열어 보자."}
 ];
 const PLACES=[
   {n:"별궁",d:"왕도 외곽. 에드릭이 귀양살이하던 곳. 불탔다.",k:()=>true},
@@ -1632,6 +1750,8 @@ function recordNow(){
   return sec("목표",`<div class="text-[15px] text-stone-100">${esc(val(A.goal))}</div><div class="text-[12px] text-stone-500 mt-1">${A.name} · ${state.flags.regionOverride||A.region} · ${state.age}세</div>`)
    +sec("곁에 있는 사람",mates.length?mates.map(x=>chip(x)).join(""):`<span class="text-[13px] text-stone-500">아직 혼자다.</span>`)
    +sec("왕좌를 증명할 것",ev.length?ev.map(x=>chip(x)).join(""):`<span class="text-[13px] text-stone-500">아직 없다.</span>`)
+   +((m.guides||[]).length?sec("따라가는 공략",(m.guides||[]).map(id=>{const L=ENDING_TRAIL[id]||[],now=(state.trailNow||{})[id]||[];
+      return `<div class="mb-3"><div class="text-[13px] text-amber-200 mb-1">${getDisc().includes(id)?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</div>${L.map(([,t],i)=>`<div class="text-[12px] ${now.includes(i)?"text-stone-200":"text-stone-500"}">${now.includes(i)?"☑":"☐"} ${esc(t)}</div>`).join("")}</div>`;}).join("")):"")
    +sec("싸움 요령",`<div class="text-[12px] text-stone-500 mb-2">싸우면서 알게 된 것만 적힌다.</div>`+Object.keys(TELL_NAME).map(k=>`<div class="flex justify-between text-[13px] py-1 border-t border-stone-800"><span class="text-stone-300">상대가 ${TELL_NAME[k]}</span><span class="${tells[k]?"text-amber-200":"text-stone-600"}">${tells[k]?ACT_NAME[tells[k]]:"?"}</span></div>`).join(""))
    +sec("이 세계",`<div class="text-[13px] leading-7 text-stone-400">노왕이 죽었다. 섭정 오스릭이 삼년상이 끝나는 날 왕관을 쓴다.<br>너는 제2왕자 에드릭의 사생아다.</div><button id="rec-intro" class="mt-2 underline text-[12px] text-stone-500">처음 소개 다시 보기</button>`)
    +sec("가 본 곳",PLACES.filter(p=>p.k()).map(p=>`<details class="border-t border-stone-800 py-2"><summary class="text-[13px] text-stone-200 cursor-pointer">${p.n}</summary><div class="text-[12px] text-stone-400 mt-1">${p.d}</div></details>`).join(""));
@@ -1662,19 +1782,33 @@ function recordEndings(){
     +sec("죽음",`<div class="grid grid-cols-4 gap-2">${deaths.map(dtile).join("")}</div>`)
     +sec("유물",RELICS.map(r=>hasRelic(r.id)?`<div class="border-t border-stone-800 py-2"><div class="text-[13px] text-stone-100">${r.name}</div><div class="text-[12px] text-stone-400">${r.desc}</div></div>`:`<div class="border-t border-stone-800 py-2 text-[13px] text-stone-600">??? · 결말 ${r.need}개</div>`).join(""));
 }
-const REC_TABS=[["now","지금"],["people","인물"],["clues","단서"],["endings","결말"]];
+const REC_TABS=[["now","지금"],["people","인물"],["clues","단서"],["endings","결말"],["guide","공략"]];
+function guideChart(id,open){
+  const m=getMeta(), L=ENDING_TRAIL[id]||[], past=(m.trail||{})[id]||[], now=(state.trailNow||{})[id]||[], disc=getDisc().includes(id);
+  const nodes=L.map(([,t],i)=>open?`<div class="gnode ${now.includes(i)?"now":past.includes(i)?"lit":""}">${now.includes(i)?"✓ ":""}${esc(t)}</div>`:`<div class="gnode lock">잠긴 칸</div>`);
+  nodes.push(`<div class="gnode ${disc?"lit":"lock"}"><b>${disc?esc(ENDINGS[id].title):"?"}</b> <span class="text-[11px] text-stone-500">${esc(ENDINGS[id].tag)}</span></div>`);
+  return nodes.join(`<div class="garrow">↓</div>`);}
+function recordGuide(){
+  const m=getMeta(), g=m.guides||[], ids=Object.keys(ENDINGS).filter(k=>ENDING_TRAIL[k]), left=soulsLeft();
+  return `<div class="flex justify-between items-baseline mb-1"><div class="text-[15px] text-stone-100">영혼 ${left}개</div><div class="text-[12px] text-stone-500">결말을 처음 볼 때마다 1개</div></div>
+    <div class="text-[12px] text-stone-500 mb-4 leading-5">공략을 열면 그 결말까지 이어지는 일이 칸으로 드러난다. 노란 칸은 지난 생에 밟아 본 길, ✓는 이번 생에 채운 칸.<br>숨겨진 결말과 최종 결말은 영혼 2개.${finalOpen()?"":` 최종 결말은 결말 ${FINAL_NEED}개를 모으면 길이 생긴다.`}</div>`
+   +ids.map(id=>{const open=g.includes(id), cost=guideCost(id), disc=getDisc().includes(id);
+     return `<details class="border-t border-stone-800 py-3" ${open?"open":""}><summary class="cursor-pointer flex justify-between items-center"><span class="text-[14px] ${disc?"text-stone-100":"text-stone-400"}">${disc?esc(ENDINGS[id].title):"? "+esc(ENDING_HINT[id]||"")}</span><span class="text-[11px] ${open?"text-amber-300":"text-stone-500"} shrink-0 ml-2">${open?"열림":"영혼 "+cost}</span></summary>
+       <div class="mt-3">${guideChart(id,open)}</div>
+       ${open?"":`<button data-buy="${id}" class="mt-3 w-full py-2 rounded-[10px] text-[13px] ${left>=cost?"bg-amber-200 text-[#1a1612]":"bg-stone-800 text-stone-500"}" ${left>=cost?"":"disabled"}>영혼 ${cost}개로 공략 열기</button>`}</details>`;}).join("");}
 function openRecord(tab){
   if(tab==="world")tab="now";
-  const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings}[tab]();
+  const body={now:recordNow,people:recordPeople,clues:recordClues,endings:recordEndings,guide:recordGuide}[tab]();
   $("panel").innerHTML=`<div class="fixed inset-0 bg-black/80 z-[65] flex justify-center items-start overflow-y-auto p-4" id="panel-bg">
     <div class="bg-[#151311] border border-stone-800 rounded-[20px] w-full max-w-[480px] my-6 fade overflow-hidden">
       <div class="flex justify-between items-center px-5 pt-5"><h2 class="text-[17px] font-bold">기록</h2><button id="panel-close" class="text-stone-400 text-[13px]">닫기 ✕</button></div>
-      <div class="grid grid-cols-4 gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"}">${l}</button>`).join("")}</div>
+      <div class="grid grid-cols-5 gap-1 px-5 pt-4 pb-3 border-b border-stone-800 sticky top-0 bg-[#151311]">${REC_TABS.map(([k,l])=>`<button data-tab="${k}" class="py-2 rounded-[10px] text-[13px] ${k===tab?"bg-stone-800 text-amber-200":"text-stone-400"}">${l}</button>`).join("")}</div>
       <div class="p-5">${body}</div>
     </div></div>`;
   $("panel-close").onclick=closePeople;
   $("panel-bg").onclick=e=>{if(e.target.id==="panel-bg")closePeople();};
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openRecord(b.dataset.tab));
+  document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{if(buyGuide(b.dataset.buy)){trackTrail(false);openRecord("guide");}});
   const ri=$("rec-intro"); if(ri) ri.onclick=()=>showIntro(0);
 }
 function openPeople(){openRecord("people");}

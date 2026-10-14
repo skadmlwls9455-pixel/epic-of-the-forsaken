@@ -1,2 +1,4 @@
 assets/raw/
 /*.png
+__pycache__/
+*.pyc

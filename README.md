@@ -67,3 +67,6 @@ I wrote the story and game design and built the game up to v5.4. From there I
 iterated with an AI coding assistant, using playtest critiques to drive each
 round. The illustrations were generated with image models from the prompts in
 `docs/`.
+
+## Copyright
+Copyright (c) 2026 Katherine Nahm (남의진). All rights reserved. See [LICENSE](LICENSE).
